@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LabOS — Laboratory Management System</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{
+    --bg:#f4f6fa;--card:#ffffff;--card-hover:#f8f9fc;
+    --border:#e5e7eb;--border-light:#f0f1f3;
+    --text:#111827;--text-secondary:#6b7280;--text-muted:#9ca3af;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.04);
+    --shadow-md:0 4px 16px rgba(0,0,0,.06);
+    --shadow-lg:0 12px 40px rgba(0,0,0,.08);
+    --radius:12px;--radius-lg:16px;
+    --transition:all .25s ease;
+    /* Chughtai Teal */
+    --chgt:#0d9488;--chgt-dark:#0f766e;--chgt-light:#ccfbf1;--chgt-bg:#f0fdfa;
+    --chgt-accent:#14b8a6;--chgt-glow:rgba(13,148,136,.12);
+    /* IDC Navy */
+    --idc:#1e3a5f;--idc-dark:#152a45;--idc-light:#dbeafe;--idc-bg:#eff6ff;
+    --idc-accent:#2563eb;--idc-glow:rgba(30,58,95,.10);
+    /* Status */
+    --collected:#f59e0b;--collected-bg:#fef3c7;
+    --processing:#3b82f6;--processing-bg:#dbeafe;
+    --verified:#10b981;--verified-bg:#d1fae5;
+    --reported:#8b5cf6;--reported-bg:#ede9fe;
+    --critical:#ef4444;--critical-bg:#fee2e2;
+    --high:#f97316;--high-bg:#ffedd5;
+    --low:#06b6d4;--low-bg:#cffafe;
+    --normal:#10b981;
+    --sidebar-w:260px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+.mono{font-family:'JetBrains Mono',monospace;}
+h1,h2,h3,h4,h5{font-family:'Sora',sans-serif;font-weight:700;}
+
+/* Sidebar */
+.sidebar{width:var(--sidebar-w);height:100vh;position:fixed;left:0;top:0;background:#111827;z-index:100;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.06);}
+.sb-brand{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.06);}
+.sb-brand-row{display:flex;align-items:center;gap:12px;}
+.sb-logo{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--chgt),var(--idc-accent));display:flex;align-items:center;justify-content:center;color:white;font-size:18px;flex-shrink:0;}
+.sb-brand h2{font-size:17px;font-weight:800;color:#f9fafb;letter-spacing:-.3px;}
+.sb-brand p{font-size:10px;color:#6b7280;margin-top:2px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;}
+.sb-nav{flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:2px;}
+.sb-label{font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:1.5px;padding:16px 12px 6px;}
+.sb-link{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;color:#9ca3af;font-size:13px;font-weight:500;cursor:pointer;transition:var(--transition);text-decoration:none;border:none;background:none;width:100%;text-align:left;}
+.sb-link:hover{color:#e5e7eb;background:rgba(255,255,255,.05);}
+.sb-link.active{color:#f9fafb;background:rgba(13,148,136,.12);}
+.sb-link.active i{color:var(--chgt);}
+.sb-link i{width:18px;text-align:center;font-size:14px;color:#6b7280;transition:var(--transition);}
+.sb-link:hover i{color:var(--chgt);}
+.sb-link .sb-badge{margin-left:auto;min-width:20px;height:20px;border-radius:10px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 6px;}
+.sb-badge.collected{background:var(--collected-bg);color:var(--collected);}
+.sb-badge.processing{background:var(--processing-bg);color:var(--processing);}
+.sb-badge.critical{background:var(--critical-bg);color:var(--critical);animation:badgePulse 2s ease infinite;}
+@keyframes badgePulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+.sb-footer{padding:14px 16px;border-top:1px solid rgba(255,255,255,.06);}
+.sb-user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,.03);}
+.sb-user-avatar{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--chgt),var(--chgt-dark));display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px;}
+.sb-user-info{flex:1;min-width:0;}
+.sb-user-name{font-size:13px;font-weight:600;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-user-role{font-size:10px;color:#6b7280;}
+
+/* Main */
+.main{margin-left:var(--sidebar-w);min-height:100vh;padding:0;}
+.topbar{height:60px;background:var(--card);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;gap:16px;position:sticky;top:0;z-index:50;}
+.topbar-title{font-size:16px;font-weight:700;color:var(--text);flex:1;}
+.topbar-title span{color:var(--text-muted);font-weight:400;font-size:13px;}
+.topbar-clock{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-muted);font-weight:500;}
+.topbar-btn{width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:var(--transition);}
+.topbar-btn:hover{background:var(--bg);color:var(--text);}
+.page{padding:24px 28px;display:none;animation:fadeUp .3s ease;}
+.page.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* Stats Grid */
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 16px;transition:var(--transition);position:relative;overflow:hidden;}
+.stat-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
+.stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.stat-card.sc-collected::after{background:var(--collected);}
+.stat-card.sc-processing::after{background:var(--processing);}
+.stat-card.sc-verified::after{background:var(--verified);}
+.stat-card.sc-reported::after{background:var(--reported);}
+.stat-card.sc-critical::after{background:var(--critical);}
+.stat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:10px;}
+.sc-collected .stat-icon{background:var(--collected-bg);color:var(--collected);}
+.sc-processing .stat-icon{background:var(--processing-bg);color:var(--processing);}
+.sc-verified .stat-icon{background:var(--verified-bg);color:var(--verified);}
+.sc-reported .stat-icon{background:var(--reported-bg);color:var(--reported);}
+.sc-critical .stat-icon{background:var(--critical-bg);color:var(--critical);}
+.stat-value{font-family:'Sora',sans-serif;font-size:28px;font-weight:800;line-height:1;}
+.stat-label{font-size:12px;color:var(--text-muted);margin-top:4px;font-weight:500;}
+
+/* Card */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
+.card-header{padding:18px 20px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;}
+.card-header h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.card-header h3 i{font-size:14px;color:var(--text-muted);}
+.card-body{padding:20px;}
+
+/* Table */
+.data-table{width:100%;border-collapse:collapse;font-size:13px;}
+.data-table thead th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);background:var(--bg);white-space:nowrap;}
+.data-table tbody td{padding:11px 14px;border-bottom:1px solid var(--border-light);vertical-align:middle;}
+.data-table tbody tr{transition:var(--transition);}
+.data-table tbody tr:hover{background:var(--card-hover);}
+.data-table .patient-cell{display:flex;align-items:center;gap:10px;}
+.data-table .patient-avatar{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:white;flex-shrink:0;}
+.data-table .patient-name{font-weight:600;color:var(--text);}
+.data-table .patient-id{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);}
+
+/* Status pills */
+.status-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+.status-pill .dot{width:6px;height:6px;border-radius:50%;}
+.sp-collected{background:var(--collected-bg);color:#92400e;}.sp-collected .dot{background:var(--collected);}
+.sp-processing{background:var(--processing-bg);color:#1e40af;}.sp-processing .dot{background:var(--processing);}
+.sp-verified{background:var(--verified-bg);color:#065f46;}.sp-verified .dot{background:var(--verified);}
+.sp-reported{background:var(--reported-bg);color:#5b21b6;}.sp-reported .dot{background:var(--reported);}
+.sp-critical{background:var(--critical-bg);color:#991b1b;}.sp-critical .dot{background:var(--critical);animation:badgePulse 1.5s ease infinite;}
+
+/* Buttons */
+.btn{padding:8px 16px;border:none;border-radius:8px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:var(--transition);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn-sm{padding:6px 12px;font-size:11px;border-radius:7px;}
+.btn-chgt{background:var(--chgt);color:white;}.btn-chgt:hover{background:var(--chgt-dark);box-shadow:0 4px 12px var(--chgt-glow);}
+.btn-idc{background:var(--idc);color:white;}.btn-idc:hover{background:var(--idc-dark);box-shadow:0 4px 12px var(--idc-glow);}
+.btn-outline{background:var(--card);color:var(--text-secondary);border:1px solid var(--border);}.btn-outline:hover{background:var(--bg);color:var(--text);}
+.btn-ghost{background:transparent;color:var(--text-secondary);}.btn-ghost:hover{background:var(--bg);color:var(--text);}
+.btn-danger{background:var(--critical);color:white;}.btn-danger:hover{background:#dc2626;}
+.btn-success{background:var(--verified);color:white;}.btn-success:hover{background:#059669;}
+
+/* Form */
+.form-group{margin-bottom:16px;}
+.form-label{display:block;font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.form-input,.form-select,.form-textarea{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;color:var(--text);background:var(--card);transition:var(--transition);outline:none;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--chgt);box-shadow:0 0 0 3px var(--chgt-glow);}
+.form-textarea{resize:vertical;min-height:70px;}
+.form-select{cursor:pointer;}
+.form-select option{background:var(--card);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+/* Grid layouts */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+
+/* Test entry rows */
+.test-entry{display:grid;grid-template-columns:2.5fr 1fr 1fr 1fr 1fr 40px;gap:8px;align-items:end;padding:10px 0;border-bottom:1px solid var(--border-light);}
+.test-entry-header{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding-bottom:8px;align-items:end;}
+.te-input{padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:'Inter',sans-serif;font-size:12px;color:var(--text);background:var(--card);outline:none;transition:var(--transition);}
+.te-input:focus{border-color:var(--chgt);box-shadow:0 0 0 2px var(--chgt-glow);}
+.te-input.te-result{font-family:'JetBrains Mono',monospace;font-weight:600;}
+.te-remove{width:32px;height:32px;border:none;border-radius:6px;background:var(--critical-bg);color:var(--critical);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:var(--transition);}
+.te-remove:hover{background:var(--critical);color:white;}
+.te-flag{text-align:center;font-size:11px;font-weight:700;}
+.te-flag.f-normal{color:var(--normal);}
+.te-flag.f-high{color:var(--high);}
+.te-flag.f-low{color:var(--low);}
+.te-flag.f-critical{color:var(--critical);animation:badgePulse 1.5s ease infinite;}
+
+/* ============================================
+   CHUGHTAI REPORT FORMAT
+   ============================================ */
+.chgt-report{background:white;border:1px solid #d1d5db;border-radius:4px;font-family:'Inter',sans-serif;color:#111827;position:relative;overflow:hidden;}
+.chgt-report-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:80px;font-weight:900;color:rgba(13,148,136,.03);pointer-events:none;white-space:nowrap;letter-spacing:12px;font-family:'Sora',sans-serif;z-index:0;}
+.chgt-report-topbar{height:5px;background:linear-gradient(90deg,#0d9488,#14b8a6,#0d9488);}
+.chgt-report-header{padding:24px 32px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #0d9488;position:relative;z-index:1;}
+.chgt-logo-area{display:flex;align-items:center;gap:16px;}
+.chgt-logo{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#0d9488,#0f766e);display:flex;align-items:center;justify-content:center;color:white;font-size:22px;box-shadow:0 4px 12px rgba(13,148,136,.25);}
+.chgt-brand h2{font-size:20px;font-weight:800;color:#0d9488;letter-spacing:-.3px;}
+.chgt-brand p{font-size:10px;color:#6b7280;font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+.chgt-brand .chgt-reg{font-family:'JetBrains Mono',monospace;font-size:10px;color:#0d9488;font-weight:600;margin-top:3px;}
+.chgt-header-right{text-align:right;}
+.chgt-report-id{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#374151;background:#f3f4f6;padding:6px 14px;border-radius:6px;letter-spacing:.5px;}
+.chgt-header-right .chgt-label{font-size:9px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.chgt-report-body{padding:20px 32px;position:relative;z-index:1;}
+.chgt-section{margin-bottom:18px;}
+.chgt-section-title{font-size:10px;font-weight:800;color:#0d9488;text-transform:uppercase;letter-spacing:1.5px;padding-bottom:6px;border-bottom:2px solid #0d9488;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.chgt-section-title i{font-size:10px;}
+.chgt-info-row{display:grid;grid-template-columns:repeat(4,1fr);gap:0;}
+.chgt-info-cell{padding:8px 12px;border:1px solid #e5e7eb;font-size:12px;}
+.chgt-info-cell .ci-label{font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
+.chgt-info-cell .ci-value{font-weight:600;color:#111827;}
+.chgt-info-cell .ci-value.mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:#0f766e;letter-spacing:.3px;}
+.chgt-test-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
+.chgt-test-table thead th{background:#0d9488;color:white;padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+.chgt-test-table thead th:nth-child(n+2){text-align:center;}
+.chgt-test-table tbody td{padding:8px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle;}
+.chgt-test-table tbody td:nth-child(n+2){text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;}
+.chgt-test-table .flag-high{color:#ea580c;font-weight:700;}
+.chgt-test-table .flag-low{color:#0891b2;font-weight:700;}
+.chgt-test-table .flag-critical{color:#dc2626;font-weight:700;}
+.chgt-test-table .flag-normal{color:#059669;}
+.chgt-remarks{padding:12px 14px;border:1px solid #e5e7eb;border-left:4px solid #0d9488;border-radius:0 6px 6px 0;font-size:12px;line-height:1.7;color:#4b5563;}
+.chgt-stamp-area{display:flex;align-items:flex-end;justify-content:space-between;padding-top:16px;border-top:1px solid #e5e7eb;margin-top:16px;}
+.chgt-signature{text-align:center;}
+.chgt-signature .sig-line{width:160px;height:1px;background:#d1d5db;margin:6px auto 4px;}
+.chgt-signature .sig-name{font-size:13px;font-weight:700;color:#111827;}
+.chgt-signature .sig-role{font-size:11px;color:#6b7280;}
+.chgt-signature .sig-id{font-family:'JetBrains Mono',monospace;font-size:10px;color:#0d9488;font-weight:600;margin-top:2px;}
+.chgt-stamp-circle{width:80px;height:80px;border-radius:50%;border:3px solid #0d9488;display:flex;align-items:center;justify-content:center;flex-direction:column;opacity:.85;}
+.chgt-stamp-circle.verified{border-color:#059669;color:#059669;}
+.chgt-stamp-circle.pending{border-color:#f59e0b;color:#f59e0b;animation:stampPulse 2s ease infinite;}
+@keyframes stampPulse{0%,100%{opacity:.85;}50%{opacity:.4;}}
+.chgt-stamp-text{font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;text-align:center;line-height:1.1;}
+.chgt-stamp-icon{font-size:16px;margin-bottom:2px;}
+.chgt-qr-row{display:flex;align-items:center;gap:14px;margin-top:14px;padding:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;}
+.chgt-qr-box{width:60px;height:60px;border-radius:4px;background:white;border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex-shrink:0;}
+.chgt-qr-pattern{width:100%;height:100%;background:repeating-conic-gradient(#374151 0% 25%,transparent 0% 50%) 50%/8px 8px;opacity:.06;}
+.chgt-qr-icon{position:absolute;font-size:16px;color:#0d9488;}
+.chgt-qr-info{flex:1;}
+.chgt-qr-info .qr-label{font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;}
+.chgt-qr-info .qr-code{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#111827;margin-top:2px;}
+.chgt-qr-info .qr-hash{font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;margin-top:2px;}
+.chgt-report-footer{background:#f9fafb;padding:10px 32px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;font-weight:500;}
+
+/* ============================================
+   IDC REPORT FORMAT
+   ============================================ */
+.idc-report{background:white;border:2px solid #1e3a5f;border-radius:2px;font-family:'Inter',sans-serif;color:#111827;position:relative;overflow:hidden;}
+.idc-report-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:90px;font-weight:900;color:rgba(30,58,95,.03);pointer-events:none;white-space:nowrap;letter-spacing:15px;font-family:'Sora',sans-serif;z-index:0;}
+.idc-header{background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:22px 32px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;}
+.idc-header-left{display:flex;align-items:center;gap:14px;}
+.idc-emblem{width:54px;height:54px;border-radius:50%;border:2px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06);}
+.idc-emblem-inner{width:42px;height:42px;border-radius:50%;border:2px dashed rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex-direction:column;}
+.idc-emblem-text{font-size:6px;font-weight:900;color:white;letter-spacing:.8px;text-align:center;line-height:1.1;text-transform:uppercase;}
+.idc-emblem-icon{font-size:13px;color:white;}
+.idc-title h2{font-size:15px;font-weight:800;color:white;letter-spacing:.3px;text-transform:uppercase;}
+.idc-title p{font-size:9px;color:rgba(255,255,255,.6);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
+.idc-header-right{text-align:right;}
+.idc-doc-no{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:white;background:rgba(255,255,255,.1);padding:6px 14px;border-radius:4px;letter-spacing:.5px;}
+.idc-class{font-size:8px;color:rgba(255,255,255,.5);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-top:6px;}
+.idc-accent-bar{height:4px;background:linear-gradient(90deg,#1e3a5f,#2563eb,#1e3a5f);}
+.idc-sub-bar{background:#f8fafc;padding:8px 32px;display:flex;justify-content:space-between;font-size:11px;color:#6b7280;font-weight:500;border-bottom:1px solid #e5e7eb;}
+.idc-body{padding:18px 32px;position:relative;z-index:1;}
+.idc-section-title{font-size:10px;font-weight:800;color:#1e3a5f;text-transform:uppercase;letter-spacing:1.2px;padding-bottom:5px;border-bottom:2px solid #1e3a5f;margin-bottom:10px;display:flex;align-items:center;gap:5px;}
+.idc-section-title i{font-size:9px;}
+.idc-info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:16px;}
+.idc-cell{padding:7px 10px;border:1px solid #e5e7eb;font-size:12px;}
+.idc-cell .ic-label{font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:1px;}
+.idc-cell .ic-value{font-weight:600;color:#111827;}
+.idc-cell .ic-value.mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:#2563eb;letter-spacing:.3px;}
+.idc-test-table{width:100%;border-collapse:collapse;font-size:12px;}
+.idc-test-table thead th{background:#1e3a5f;color:white;padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+.idc-test-table thead th:nth-child(n+2){text-align:center;}
+.idc-test-table tbody td{padding:7px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle;}
+.idc-test-table tbody td:nth-child(n+2){text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;}
+.idc-test-table .flag-high{color:#ea580c;font-weight:700;}
+.idc-test-table .flag-low{color:#0891b2;font-weight:700;}
+.idc-test-table .flag-critical{color:#dc2626;font-weight:700;}
+.idc-test-table .flag-normal{color:#059669;}
+.idc-remarks{padding:12px;border:1px solid #e5e7eb;border-left:4px solid #1e3a5f;border-radius:0 4px 4px 0;font-size:12px;line-height:1.7;color:#4b5563;margin-bottom:16px;}
+.idc-stamp-area{display:flex;align-items:flex-end;justify-content:space-between;padding-top:14px;border-top:1px solid #e5e7eb;}
+.idc-signature{text-align:center;}
+.idc-signature .sig-line{width:160px;height:1px;background:#d1d5db;margin:6px auto 4px;}
+.idc-signature .sig-name{font-size:13px;font-weight:700;color:#111827;}
+.idc-signature .sig-role{font-size:11px;color:#6b7280;}
+.idc-signature .sig-id{font-family:'JetBrains Mono',monospace;font-size:10px;color:#2563eb;font-weight:600;margin-top:2px;}
+.idc-stamp-circle{width:76px;height:76px;border-radius:50%;border:3px solid #1e3a5f;display:flex;align-items:center;justify-content:center;flex-direction:column;}
+.idc-stamp-circle.verified{border-color:#059669;color:#059669;}
+.idc-stamp-circle.pending{border-color:#f59e0b;color:#f59e0b;animation:stampPulse 2s ease infinite;}
+.idc-stamp-text{font-size:6px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;text-align:center;line-height:1.1;}
+.idc-stamp-icon{font-size:14px;margin-bottom:2px;}
+.idc-qr-row{display:flex;align-items:center;gap:14px;margin-top:12px;padding:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:4px;}
+.idc-qr-box{width:60px;height:60px;border-radius:2px;background:white;border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;flex-shrink:0;}
+.idc-qr-pattern{width:100%;height:100%;background:repeating-conic-gradient(#1e3a5f 0% 25%,transparent 0% 50%) 50%/8px 8px;opacity:.05;}
+.idc-qr-icon{position:absolute;font-size:16px;color:#1e3a5f;}
+.idc-qr-info{flex:1;}
+.idc-qr-info .qr-label{font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;}
+.idc-qr-info .qr-code{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#111827;margin-top:2px;}
+.idc-qr-info .qr-hash{font-family:'JetBrains Mono',monospace;font-size:9px;color:#9ca3af;margin-top:2px;}
+.idc-footer{background:#f8fafc;padding:10px 32px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;font-weight:500;}
+
+/* Format Toggle in report modal */
+.format-switch{display:flex;gap:0;border-radius:8px;overflow:hidden;border:2px solid var(--border);margin-bottom:20px;}
+.format-switch-btn{flex:1;padding:10px 20px;border:none;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:var(--transition);display:flex;align-items:center;justify-content:center;gap:8px;background:var(--bg);color:var(--text-secondary);}
+.format-switch-btn.active-chgt{background:#0d9488;color:white;}
+.format-switch-btn.active-idc{background:#1e3a5f;color:white;}
+
+/* Analysis Panel */
+.analysis-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;border-left:4px solid var(--border);transition:var(--transition);}
+.analysis-card:hover{box-shadow:var(--shadow-sm);}
+.analysis-card.a-critical{border-left-color:var(--critical);background:#fffbfb;}
+.analysis-card.a-high{border-left-color:var(--high);background:#fffdf7;}
+.analysis-card.a-low{border-left-color:var(--low);background:#f8fffe;}
+.analysis-card.a-normal{border-left-color:var(--normal);background:#f9fdfb;}
+.analysis-card .ac-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.analysis-card .ac-test{font-size:14px;font-weight:700;}
+.analysis-card .ac-flag{font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;}
+.analysis-card.a-critical .ac-flag{background:var(--critical-bg);color:var(--critical);}
+.analysis-card.a-high .ac-flag{background:var(--high-bg);color:var(--high);}
+.analysis-card.a-low .ac-flag{background:var(--low-bg);color:var(--low);}
+.analysis-card.a-normal .ac-flag{background:var(--verified-bg);color:var(--normal);}
+.analysis-card .ac-details{display:flex;gap:16px;font-size:12px;color:var(--text-secondary);}
+.analysis-card .ac-details span{display:flex;align-items:center;gap:4px;}
+.analysis-card .ac-details strong{color:var(--text);}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);display:none;justify-content:center;align-items:flex-start;z-index:200;padding:24px 16px;overflow-y:auto;}
+.modal-overlay.show{display:flex;}
+.modal-box{background:var(--bg);width:100%;max-width:780px;border-radius:16px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.2);transform:scale(.95) translateY(16px);opacity:0;transition:all .35s cubic-bezier(.34,1.56,.64,1);}
+.modal-overlay.show .modal-box{transform:scale(1) translateY(0);opacity:1;}
+.modal-top{padding:20px 24px;display:flex;align-items:center;justify-content:space-between;background:var(--card);border-bottom:1px solid var(--border);}
+.modal-top h3{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.modal-close{width:36px;height:36px;border:none;border-radius:8px;background:var(--bg);color:var(--text-muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:var(--transition);}
+.modal-close:hover{background:var(--critical-bg);color:var(--critical);}
+.modal-content{padding:24px;overflow-x:auto;}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text-muted);}
+.empty-state i{font-size:36px;margin-bottom:12px;opacity:.15;display:block;}
+.empty-state p{font-size:13px;}
+
+/* Toast */
+.toast-container{position:fixed;top:72px;right:24px;z-index:5000;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--card);border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 30px rgba(0,0,0,.12);border-left:4px solid var(--chgt);font-size:13px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .4s cubic-bezier(.34,1.56,.64,1);min-width:280px;}
+.toast.show{transform:translateX(0);}
+.toast i{font-size:16px;}
+.toast .t-ok{color:var(--verified);}.toast .t-warn{color:var(--collected);}.toast .t-err{color:var(--critical);}.toast .t-info{color:var(--processing);}
+
+/* Responsive */
+@media(max-width:1200px){.stats-grid{grid-template-columns:repeat(3,1fr);}.grid-2{grid-template-columns:1fr;}}
+@media(max-width:768px){.sidebar{transform:translateX(-100%);}.main{margin-left:0;}.stats-grid{grid-template-columns:1fr 1fr;}.test-entry{grid-template-columns:1fr 1fr;gap:6px;}.chgt-info-row,.idc-info-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:480px){.stats-grid{grid-template-columns:1fr;}}
+html{scroll-behavior:smooth;}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+    <div class="sb-brand">
+        <div class="sb-brand-row">
+            <div class="sb-logo"><i class="fas fa-flask"></i></div>
+            <div><h2>LabOS</h2><p>Lab Management</p></div>
+        </div>
+    </div>
+    <nav class="sb-nav">
+        <div class="sb-label">Workstation</div>
+        <button class="sb-link active" onclick="switchPage('dashboard')"><i class="fas fa-th-large"></i> Dashboard</button>
+        <button class="sb-link" onclick="switchPage('worklist')"><i class="fas fa-list-check"></i> Sample Worklist <span class="sb-badge collected" id="wlBadge">0</span></button>
+        <button class="sb-link" onclick="switchPage('entry')"><i class="fas fa-keyboard"></i> Result Entry</button>
+        <button class="sb-link" onclick="switchPage('analysis')"><i class="fas fa-chart-bar"></i> Basic Analysis <span class="sb-badge critical" id="anBadge" style="display:none;">0</span></button>
+        <div class="sb-label">Reports</div>
+        <button class="sb-link" onclick="switchPage('reports')"><i class="fas fa-file-medical"></i> Generated Reports</button>
+        <div class="sb-label">System</div>
+        <button class="sb-link"><i class="fas fa-cog"></i> Settings</button>
+        <button class="sb-link"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </nav>
+    <div class="sb-footer">
+        <div class="sb-user">
+            <div class="sb-user-avatar">BR</div>
+            <div class="sb-user-info"><div class="sb-user-name">Bilal Raza</div><div class="sb-user-role">Senior Lab Technician</div></div>
+        </div>
+    </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+    <div class="topbar">
+        <div class="topbar-title">LabOS <span>— HealthOnCall Central Lab</span></div>
+        <div class="topbar-clock" id="clock"></div>
+        <button class="topbar-btn" title="Notifications"><i class="fas fa-bell"></i></button>
+        <button class="topbar-btn" title="Fullscreen" onclick="document.documentElement.requestFullscreen()"><i class="fas fa-expand"></i></button>
+    </div>
+
+    <!-- ===== DASHBOARD ===== -->
+    <div class="page active" id="page-dashboard">
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-clock"></i> Recent Samples</h3><button class="btn btn-sm btn-outline" onclick="switchPage('worklist')">View All</button></div>
+                <div class="card-body" style="padding:0;"><table class="data-table"><thead><tr><th>Patient</th><th>Test Panel</th><th>Status</th><th>Time</th></tr></thead><tbody id="recentSamples"></tbody></table></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3><i class="fas fa-exclamation-triangle"></i> Critical Alerts</h3></div>
+                <div class="card-body" id="criticalAlerts"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== WORKLIST ===== -->
+    <div class="page" id="page-worklist">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-list-check"></i> Sample Worklist</h3>
+                <div style="display:flex;gap:8px;">
+                    <select class="form-select" style="width:160px;padding:7px 10px;font-size:12px;" id="wlFilter" onchange="renderWorklist()">
+                        <option value="all">All Status</option>
+                        <option value="collected">Collected</option>
+                        <option value="processing">Processing</option>
+                        <option value="verified">Verified</option>
+                        <option value="reported">Reported</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <table class="data-table"><thead><tr><th>Sample ID</th><th>Patient</th><th>Panel</th><th>Collected</th><th>Status</th><th>Actions</th></tr></thead><tbody id="worklistBody"></tbody></table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== RESULT ENTRY ===== -->
+    <div class="page" id="page-entry">
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header"><h3><i class="fas fa-keyboard"></i> Result Entry</h3></div>
+            <div class="card-body">
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Select Sample</label><select class="form-select" id="entrySample" onchange="loadSampleForEntry()"><option value="">— Choose —</option></select></div>
+                    <div class="form-group"><label class="form-label">Sample Type</label><input type="text" class="form-input" id="entrySampleType" readonly></div>
+                </div>
+            </div>
+        </div>
+        <div class="card" id="entryTestsCard" style="display:none;">
+            <div class="card-header"><h3><i class="fas fa-vials"></i> Enter Results</h3><button class="btn btn-sm btn-chgt" onclick="autoFillNormal()"><i class="fas fa-magic"></i> Auto-fill Normal</button></div>
+            <div class="card-body" style="padding:12px 20px;">
+                <div class="test-entry test-entry-header"><div>Test Name</div><div>Result</div><div>Unit</div><div>Ref. Range</div><div>Flag</div><div></div></div>
+                <div id="entryTestRows"></div>
+            </div>
+            <div style="padding:0 20px 20px;display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn btn-outline" onclick="clearEntry()"><i class="fas fa-times"></i> Clear</button>
+                <button class="btn btn-chgt" onclick="saveResults()"><i class="fas fa-save"></i> Save Results</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== BASIC ANALYSIS ===== -->
+    <div class="page" id="page-analysis">
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header"><h3><i class="fas fa-chart-bar"></i> Basic Report Analysis</h3>
+                <div style="display:flex;gap:8px;">
+                    <select class="form-select" style="width:200px;padding:7px 10px;font-size:12px;" id="analysisSample" onchange="runAnalysis()"><option value="">— Select Sample —</option></select>
+                </div>
+            </div>
+        </div>
+        <div id="analysisContent"></div>
+    </div>
+
+    <!-- ===== REPORTS ===== -->
+    <div class="page" id="page-reports">
+        <div class="card">
+            <div class="card-header"><h3><i class="fas fa-file-medical"></i> Generated Reports</h3></div>
+            <div class="card-body" style="padding:0;">
+                <table class="data-table"><thead><tr><th>Report ID</th><th>Patient</th><th>Panel</th><th>Format</th><th>Generated</th><th>Actions</th></tr></thead><tbody id="reportsBody"></tbody></table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Preview Modal -->
+<div class="modal-overlay" id="reportModal">
+    <div class="modal-box">
+        <div class="modal-top">
+            <h3 id="rmTitle">Report Preview</h3>
+            <button class="modal-close" onclick="closeReportModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-content" id="rmContent"></div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastBox"></div>
+
+<script>
+/* ============================================================
+   DATA — Test Panels, Reference Ranges, Samples
+   ============================================================ */
+
+// Test panels with reference ranges and critical values
+const testPanels = {
+    'CBC': [
+        {name:'Hemoglobin',short:'Hb',unit:'g/dL',low:12,high:16,criticalLow:7,criticalHigh:20,decimals:1},
+        {name:'WBC Count',short:'WBC',unit:'×10³/μL',low:4,high:11,criticalLow:2,criticalHigh:30,decimals:1},
+        {name:'Platelets',short:'PLT',unit:'×10³/μL',low:150,high:400,criticalLow:50,criticalHigh:1000,decimals:0},
+        {name:'RBC Count',short:'RBC',unit:'×10⁶/μL',low:4,high:5.5,criticalLow:2,criticalHigh:7,decimals:1},
+        {name:'Hematocrit',short:'HCT',unit:'%',low:36,high:46,criticalLow:20,criticalHigh:60,decimals:1},
+        {name:'MCV',short:'MCV',unit:'fL',low:80,high:100,criticalLow:60,criticalHigh:120,decimals:0},
+        {name:'MCH',short:'MCH',unit:'pg',low:27,high:33,criticalLow:18,criticalHigh:42,decimals:0},
+        {name:'RDW',short:'RDW',unit:'%',low:11.5,high:14.5,criticalLow:0,criticalHigh:25,decimals:1}
+    ],
+    'Lipid Profile': [
+        {name:'Total Cholesterol',short:'TC',unit:'mg/dL',low:0,high:200,criticalLow:0,criticalHigh:300,decimals:0},
+        {name:'LDL Cholesterol',short:'LDL',unit:'mg/dL',low:0,high:100,criticalLow:0,criticalHigh:190,decimals:0},
+        {name:'HDL Cholesterol',short:'HDL',unit:'mg/dL',low:40,high:0,criticalLow:20,criticalHigh:0,decimals:0,lowOnly:true},
+        {name:'Triglycerides',short:'TG',unit:'mg/dL',low:0,high:150,criticalLow:0,criticalHigh:500,decimals:0},
+        {name:'VLDL',short:'VLDL',unit:'mg/dL',low:0,high:40,criticalLow:0,criticalHigh:80,decimals:0},
+        {name:'Non-HDL',short:'Non-HDL',unit:'mg/dL',low:0,high:130,criticalLow:0,criticalHigh:220,decimals:0}
+    ],
+    'LFT': [
+        {name:'ALT (SGPT)',short:'ALT',unit:'U/L',low:0,high:40,criticalLow:0,criticalHigh:500,decimals:0},
+        {name:'AST (SGOT)',short:'AST',unit:'U/L',low:0,high:40,criticalLow:0,criticalHigh:500,decimals:0},
+        {name:'Alkaline Phosphatase',short:'ALP',unit:'U/L',low:40,high:129,criticalLow:0,criticalHigh:800,decimals:0},
+        {name:'Total Bilirubin',short:'T.Bil',unit:'mg/dL',low:0.2,high:1.2,criticalLow:0,criticalHigh:10,decimals:1},
+        {name:'Direct Bilirubin',short:'D.Bil',unit:'mg/dL',low:0,high:0.3,criticalLow:0,criticalHigh:5,decimals:1},
+        {name:'Total Protein',short:'TP',unit:'g/dL',low:6,high:8.3,criticalLow:4,criticalHigh:12,decimals:1},
+        {name:'Albumin',short:'ALB',unit:'g/dL',low:3.5,high:5,criticalLow:2,criticalHigh:0,decimals:1,lowOnly:true},
+        {name:'GGT',short:'GGT',unit:'U/L',low:0,high:49,criticalLow:0,criticalHigh:500,decimals:0}
+    ],
+    'RFT': [
+        {name:'Blood Urea',short:'Urea',unit:'mg/dL',low:7,high:20,criticalLow:0,criticalHigh:100,decimals:0},
+        {name:'Serum Creatinine',short:'Creat',unit:'mg/dL',low:0.6,high:1.2,criticalLow:0,criticalHigh:8,decimals:1},
+        {name:'Uric Acid',short:'UA',unit:'mg/dL',low:2.5,high:6,criticalLow:0,criticalHigh:13,decimals:1},
+        {name:'BUN',short:'BUN',unit:'mg/dL',low:7,high:20,criticalLow:0,criticalHigh:60,decimals:0},
+        {name:'eGFR',short:'eGFR',unit:'mL/min',low:90,high:0,criticalLow:15,criticalHigh:0,decimals:0,lowOnly:true},
+        {name:'Sodium',short:'Na',unit:'mEq/L',low:136,high:145,criticalLow:120,criticalHigh:160,decimals:0},
+        {name:'Potassium',short:'K',unit:'mEq/L',low:3.5,high:5,criticalLow:2.5,criticalHigh:6.5,decimals:1},
+        {name:'Chloride',short:'Cl',unit:'mEq/L',low:98,high:106,criticalLow:80,criticalHigh:120,decimals:0}
+    ],
+    'Urine DR': [
+        {name:'Color',short:'Color',unit:'—',low:0,high:0,criticalLow:0,criticalHigh:0,decimals:0,textVal:true,textNormal:'Pale Yellow'},
+        {name:'Transparency',short:'Transp',unit:'—',low:0,high:0,criticalLow:0,criticalHigh:0,decimals:0,textVal:true,textNormal:'Clear'},
+        {name:'pH',short:'pH',unit:'—',low:4.5,high:8,criticalLow:0,criticalHigh:0,decimals:1},
+        {name:'Specific Gravity',short:'SG',unit:'—',low:1.005,high:1.030,criticalLow:0,criticalHigh:0,decimals:3},
+        {name:'Protein',short:'Protein',unit:'—',low:0,high:0,criticalLow:0,criticalHigh:0,decimals:0,textVal:true,textNormal:'Negative'},
+        {name:'Glucose',short:'Glucose',unit:'—',low:0,high:0,criticalLow:0,criticalHigh:0,decimals:0,textVal:true,textNormal:'Negative'},
+        {name:'RBC',short:'RBC',unit:'/HPF',low:0,high:2,criticalLow:0,criticalHigh:20,decimals:0},
+        {name:'WBC',short:'WBC',unit:'/HPF',low:0,high:5,criticalLow:0,criticalHigh:50,decimals:0}
+    ]
+};
+
+// Patient data
+const patients = [
+    {name:'Esha Maham',id:'PAT-2024-0451',age:'26F',gender:'Female',ageYears:26,bg:'B+',phone:'03001234567',referred:'Dr. Ahmed Ali'},
+    {name:'Ahmed Ali Khan',id:'PAT-2024-0523',age:'45M',gender:'Male',ageYears:45,bg:'O+',phone:'03219876543',referred:'Dr. Sara Malik'},
+    {name:'Fatima Noor',id:'PAT-2024-0602',age:'34F',gender:'Female',ageYears:34,bg:'A+',phone:'03335556789',referred:'Dr. Kamran Shahid'},
+    {name:'Usman Tariq',id:'PAT-2024-0718',age:'52M',gender:'Male',ageYears:52,bg:'AB+',phone:'03009876543',referred:'Dr. Nadia Fatima'},
+    {name:'Sana Rafiq',id:'PAT-2024-0801',age:'29F',gender:'Female',ageYears:29,bg:'O-',phone:'03215678901',referred:'Dr. Zain Ahmed'},
+    {name:'Hassan Mehmood',id:'PAT-2024-0845',age:'61M',gender:'Male',ageYears:61,bg:'B-',phone:'03339876543',referred:'Dr. Asma Naz'}
+];
+
+// Samples
+let samples = [
+    {id:'SMP-260920-001',patientIdx:0,panel:'CBC',sampleType:'Blood',status:'collected',collectedAt:'2026-09-26 08:15',results:null,verified:false},
+    {id:'SMP-260920-002',patientIdx:1,panel:'Lipid Profile',sampleType:'Blood',status:'processing',collectedAt:'2026-09-26 08:30',results:null,verified:false},
+    {id:'SMP-260920-003',patientIdx:2,panel:'LFT',sampleType:'Blood',status:'collected',collectedAt:'2026-09-26 09:00',results:null,verified:false},
+    {id:'SMP-260920-004',patientIdx:3,panel:'RFT',sampleType:'Blood',status:'reported',collectedAt:'2026-09-25 07:45',results:{'Blood Urea':'28','Serum Creatinine':'1.8','Uric Acid':'8.2','BUN':'14','eGFR':'42','Sodium':'138','Potassium':'5.2','Chloride':'100'},verified:true},
+    {id:'SMP-260920-005',patientIdx:4,panel:'Urine DR',sampleType:'Urine',status:'verified',collectedAt:'2026-09-25 10:15',results:{'Color':'Pale Yellow','Transparency':'Clear','pH':'6.0','Specific Gravity':'1.015','Protein':'Trace','Glucose':'Negative','RBC':'0-1','WBC':'2-3'},verified:true},
+    {id:'SMP-260920-006',patientIdx:5,panel:'CBC',sampleType:'Blood',status:'collected',collectedAt:'2026-09-26 09:30',results:null,verified:false}
+];
+
+let generatedReports = [];
+let currentReportFormat = 'chgt';
+let entryResults = {};
+
+/* ============================================================
+   UTILITY
+   ============================================================ */
+
+function genId(prefix){return prefix+'-'+Date.now().toString(36).toUpperCase();}
+
+function getPatient(idx){return patients[idx];}
+
+function flagResult(test, value){
+    if(test.textVal) return value === test.textNormal ? 'normal' : 'abnormal';
+    const v = parseFloat(value);
+    if(isNaN(v)) return 'normal';
+    if(test.criticalHigh && v >= test.criticalHigh) return 'critical';
+    if(test.criticalLow && test.criticalLow > 0 && v <= test.criticalLow) return 'critical';
+    if(!test.lowOnly && test.high && v > test.high) return 'high';
+    if(test.low && v < test.low) return 'low';
+    if(test.lowOnly && test.low && v < test.low) return 'low';
+    return 'normal';
+}
+
+function flagLabel(flag){
+    const m = {normal:'N',high:'H',low:'L',critical:'C',abnormal:'A'};
+    return m[flag]||'N';
+}
+function flagClass(flag){return 'f-'+flag;}
+
+function statusPill(status){
+    const m = {collected:'sp-collected',processing:'sp-processing',verified:'sp-verified',reported:'sp-reported'};
+    const l = {collected:'Collected',processing:'Processing',verified:'Verified',reported:'Reported'};
+    return `<span class="status-pill ${m[status]}"><span class="dot"></span>${l[status]}</span>`;
+}
+
+function statusCount(status){return samples.filter(s=>s.status===status).length;}
+
+function countCritical(sample){
+    if(!sample.results) return 0;
+    const tests = testPanels[sample.panel]||[];
+    return tests.filter(t=>sample.results[t.name]!==undefined && flagResult(t,sample.results[t.name])==='critical').length;
+}
+
+/* Clock */
+function updateClock(){
+    const now=new Date();
+    document.getElementById('clock').textContent=now.toLocaleDateString('en-PK',{day:'2-digit',month:'short',year:'numeric'})+' '+now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+}
+setInterval(updateClock,1000);updateClock();
+
+/* Toast */
+function toast(msg,type='ok'){
+    const c=document.getElementById('toastBox');
+    const t=document.createElement('div');t.className='toast';
+    const icons={ok:'<i class="fas fa-check-circle t-ok"></i>',warn:'<i class="fas fa-exclamation-circle t-warn"></i>',err:'<i class="fas fa-times-circle t-err"></i>',info:'<i class="fas fa-info-circle t-info"></i>'};
+    const colors={ok:'var(--verified)',warn:'var(--collected)',err:'var(--critical)',info:'var(--processing)'};
+    t.style.borderLeftColor=colors[type]||colors.ok;
+    t.innerHTML=(icons[type]||icons.ok)+' '+msg;
+    c.appendChild(t);requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+    setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),400);},3200);
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+
+function switchPage(page){
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById('page-'+page).classList.add('active');
+    document.querySelectorAll('.sb-link').forEach(l=>l.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    if(page==='dashboard') renderDashboard();
+    if(page==='worklist') renderWorklist();
+    if(page==='entry') populateEntrySampleSelect();
+    if(page==='analysis') populateAnalysisSelect();
+    if(page==='reports') renderReports();
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+
+function renderDashboard(){
+    const stats = [
+        {cls:'sc-collected',icon:'fa-vial',label:'Collected',value:statusCount('collected')},
+        {cls:'sc-processing',icon:'fa-spinner',label:'Processing',value:statusCount('processing')},
+        {cls:'sc-verified',icon:'fa-check-double',label:'Verified',value:statusCount('verified')},
+        {cls:'sc-reported',icon:'fa-file-medical',label:'Reported',value:statusCount('reported')},
+        {cls:'sc-critical',icon:'fa-exclamation-triangle',label:'Critical Values',value:samples.filter(s=>countCritical(s)>0).length}
+    ];
+    document.getElementById('statsGrid').innerHTML = stats.map(s=>`
+        <div class="stat-card ${s.cls}"><div class="stat-icon"><i class="fas ${s.icon}"></i></div><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div></div>
+    `).join('');
+
+    // Recent samples
+    const recent = [...samples].reverse().slice(0,6);
+    document.getElementById('recentSamples').innerHTML = recent.map(s=>{
+        const p=getPatient(s.patientIdx);
+        const crit=countCritical(s);
+        return `<tr>
+            <td><div class="patient-cell"><div class="patient-avatar" style="background:${crit?'var(--critical)':'var(--chgt)'};">${p.name.charAt(0)}</div><div><div class="patient-name">${p.name}</div><div class="patient-id">${p.id}</div></div></div></td>
+            <td><span style="font-weight:600;">${s.panel}</span><br><span style="font-size:11px;color:var(--text-muted);">${s.sampleType}</span></td>
+            <td>${statusPill(s.status)}${crit?` <span class="status-pill sp-critical" style="margin-left:4px;"><span class="dot"></span>${crit} Critical</span>`:''}</td>
+            <td class="mono" style="font-size:12px;color:var(--text-muted);">${s.collectedAt.split(' ')[1]}</td>
+        </tr>`;
+    }).join('');
+
+    // Critical alerts
+    const critSamples = samples.filter(s=>countCritical(s)>0);
+    if(!critSamples.length){
+        document.getElementById('criticalAlerts').innerHTML='<div class="empty-state"><i class="fas fa-check-circle"></i><p>No critical alerts</p></div>';
+    } else {
+        document.getElementById('criticalAlerts').innerHTML = critSamples.map(s=>{
+            const p=getPatient(s.patientIdx);
+            const tests=testPanels[s.panel]||[];
+            const critTests=tests.filter(t=>s.results&&s.results[t.name]!==undefined&&flagResult(t,s.results[t.name])==='critical');
+            return `<div style="padding:12px 14px;background:var(--critical-bg);border-radius:8px;margin-bottom:8px;border-left:3px solid var(--critical);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="font-weight:700;font-size:13px;color:var(--critical);"><i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i>${p.name}</span>
+                    <span class="mono" style="font-size:11px;color:var(--text-muted);">${s.id}</span>
+                </div>
+                ${critTests.map(t=>`<div style="font-size:12px;color:#991b1b;margin-bottom:2px;"><strong>${t.short}:</strong> ${s.results[t.name]} ${t.unit} (Critical: ${t.criticalLow>0?'< '+t.criticalLow:'> '+t.criticalHigh})</div>`).join('')}
+            </div>`;
+        }).join('');
+    }
+
+    // Badges
+    const wlCount = statusCount('collected')+statusCount('processing');
+    const anCount = samples.filter(s=>countCritical(s)>0).length;
+    document.getElementById('wlBadge').textContent=wlCount;
+    document.getElementById('wlBadge').style.display=wlCount?'flex':'none';
+    document.getElementById('anBadge').textContent=anCount;
+    document.getElementById('anBadge').style.display=anCount?'flex':'none';
+}
+
+/* ============================================================
+   WORKLIST
+   ============================================================ */
+
+function renderWorklist(){
+    const filter=document.getElementById('wlFilter').value;
+    const filtered=filter==='all'?samples:samples.filter(s=>s.status===filter);
+    document.getElementById('worklistBody').innerHTML = filtered.map(s=>{
+        const p=getPatient(s.patientIdx);
+        const crit=countCritical(s);
+        let actions='';
+        if(s.status==='collected') actions=`<button class="btn btn-sm btn-chgt" onclick="startProcessing('${s.id}')"><i class="fas fa-play"></i> Process</button>`;
+        else if(s.status==='processing') actions=`<button class="btn btn-sm btn-outline" onclick="switchPage('entry')"><i class="fas fa-keyboard"></i> Enter</button>`;
+        else if(s.status==='verified') actions=`<button class="btn btn-sm btn-idc" onclick="generateReport('${s.id}')"><i class="fas fa-file-medical"></i> Report</button>`;
+        else if(s.status==='reported') actions=`<button class="btn btn-sm btn-outline" onclick="viewReport('${s.id}','chgt')"><i class="fas fa-eye"></i> View</button>`;
+        return `<tr>
+            <td class="mono" style="font-size:12px;font-weight:600;color:var(--chgt-dark);">${s.id}</td>
+            <td><div class="patient-cell"><div class="patient-avatar" style="background:var(--chgt);">${p.name.charAt(0)}</div><div><div class="patient-name">${p.name}</div><div class="patient-id">${p.id}</div></div></div></td>
+            <td style="font-weight:600;">${s.panel}<br><span style="font-size:11px;color:var(--text-muted);">${s.sampleType}</span></td>
+            <td class="mono" style="font-size:12px;color:var(--text-muted);">${s.collectedAt}</td>
+            <td>${statusPill(s.status)}${crit?` <span class="status-pill sp-critical"><span class="dot"></span>${crit}C</span>`:''}</td>
+            <td>${actions}</td>
+        </tr>`;
+    }).join('');
+}
+
+function startProcessing(id){
+    const s=samples.find(x=>x.id===id);if(!s)return;
+    s.status='processing';
+    toast('Sample '+id+' is now processing','info');
+    renderWorklist();renderDashboard();
+}
+
+/* ============================================================
+   RESULT ENTRY
+   ============================================================ */
+
+function populateEntrySampleSelect(){
+    const sel=document.getElementById('entrySample');
+    const processing=samples.filter(s=>s.status==='processing');
+    sel.innerHTML='<option value="">— Choose Sample —</option>'+processing.map(s=>{
+        const p=getPatient(s.patientIdx);
+        return `<option value="${s.id}">${s.id} — ${p.name} — ${s.panel}</option>`;
+    }).join('');
+    document.getElementById('entryTestsCard').style.display='none';
+}
+
+function loadSampleForEntry(){
+    const id=document.getElementById('entrySample').value;
+    if(!id){document.getElementById('entryTestsCard').style.display='none';return;}
+    const s=samples.find(x=>x.id===id);if(!s)return;
+    document.getElementById('entrySampleType').value=s.sampleType+' — '+s.panel;
+    const tests=testPanels[s.panel]||[];
+    entryResults={};
+    document.getElementById('entryTestRows').innerHTML=tests.map((t,i)=>{
+        const existing=s.results?((s.results[t.name])||''):'';
+        const val=existing||'';
+        if(val) entryResults[t.name]=val;
+        const flag=val?flagResult(t,val):'';
+        return `<div class="test-entry" data-idx="${i}" data-test="${t.name}">
+            <div style="font-size:13px;font-weight:600;padding-top:8px;"><span style="color:var(--text-muted);font-size:11px;font-weight:400;">${t.short}</span> ${t.name}</div>
+            <input type="text" class="te-input te-result" placeholder="—${t.textVal?'':'0'}" value="${val}" oninput="onResultInput(this,${i})" data-test="${t.name}">
+            <div style="font-size:12px;color:var(--text-muted);padding-top:8px;">${t.unit}</div>
+            <div style="font-size:11px;color:var(--text-muted);padding-top:8px;">${t.textVal?'—':(t.lowOnly?t.low+' <':'')+(t.lowOnly?'':t.low+' – '+t.high)}</div>
+            <div class="te-flag ${flagClass(flag)}" id="flag-${i}">${flagLabel(flag)}</div>
+            ${tests.length>1?`<button class="te-remove" title="Remove"><i class="fas fa-times"></i></button>`:'<div></div>'}
+        </div>`;
+    }).join('');
+    document.getElementById('entryTestsCard').style.display='block';
+}
+
+function onResultInput(input,idx){
+    const testName=input.dataset.test;
+    const val=input.value.trim();
+    entryResults[testName]=val;
+    const sample=document.getElementById('entrySample').value;
+    const s=samples.find(x=>x.id===sample);
+    if(!s)return;
+    const tests=testPanels[s.panel]||[];
+    const test=tests[idx];
+    if(!test)return;
+    const flag=val?flagResult(test,val):'';
+    const flagEl=document.getElementById('flag-'+idx);
+    flagEl.className='te-flag '+flagClass(flag);
+    flagEl.textContent=flagLabel(flag);
+    if(flag==='critical'){
+        toast(test.short+': '+val+' '+test.unit+' — CRITICAL VALUE','err');
+    }
+}
+
+function autoFillNormal(){
+    const id=document.getElementById('entrySample').value;
+    const s=samples.find(x=>x.id===id);if(!s)return;
+    const tests=testPanels[s.panel]||[];
+    tests.forEach((t,i)=>{
+        let val;
+        if(t.textVal){val=t.textNormal;}
+        else{
+            const mid=t.lowOnly?t.low*1.2:((t.low+t.high)/2);
+            val=mid.toFixed(t.decimals);
+        }
+        entryResults[t.name]=val;
+        const row=document.querySelector(`.test-entry[data-idx="${i}"]`);
+        if(row){row.querySelector('.te-result').value=val;}
+        const flagEl=document.getElementById('flag-'+i);
+        flagEl.className='te-flag f-normal';
+        flagEl.textContent='N';
+    });
+    toast('All values filled with normal ranges','ok');
+}
+
+function clearEntry(){
+    document.querySelectorAll('.te-result').forEach(i=>{i.value='';});
+    document.querySelectorAll('.te-flag').forEach(f=>{f.className='te-flag';f.textContent='—';});
+    entryResults={};
+}
+
+function saveResults(){
+    const id=document.getElementById('entrySample').value;
+    if(!id){toast('Select a sample first','warn');return;}
+    const s=samples.find(x=>x.id===id);if(!s)return;
+    const tests=testPanels[s.panel]||[];
+    const empty=tests.some(t=>!entryResults[t.name]);
+    if(empty){toast('Please fill all test results','warn');return;}
+    s.results={...entryResults};
+    s.status='verified';
+    s.verified=true;
+    toast('Results saved and verified for '+s.id,'ok');
+    if(countCritical(s)>0) toast(countCritical(s)+' critical value(s) detected — notify physician','err');
+    populateEntrySampleSelect();
+    renderDashboard();renderWorklist();
+}
+
+/* ============================================================
+   BASIC ANALYSIS
+   ============================================================ */
+
+function populateAnalysisSelect(){
+    const sel=document.getElementById('analysisSample');
+    const withResults=samples.filter(s=>s.results);
+    sel.innerHTML='<option value="">— Select Sample —</option>'+withResults.map(s=>{
+        const p=getPatient(s.patientIdx);
+        return `<option value="${s.id}">${s.id} — ${p.name} — ${s.panel}</option>`;
+    }).join('');
+    document.getElementById('analysisContent').innerHTML='<div class="empty-state"><i class="fas fa-chart-bar"></i><p>Select a sample to run basic analysis</p></div>';
+}
+
+function runAnalysis(){
+    const id=document.getElementById('analysisSample').value;
+    if(!id){document.getElementById('analysisContent').innerHTML='<div class="empty-state"><i class="fas fa-chart-bar"></i><p>Select a sample to run basic analysis</p></div>';return;}
+    const s=samples.find(x=>x.id===id);if(!s||!s.results)return;
+    const p=getPatient(s.patientIdx);
+    const tests=testPanels[s.panel]||[];
+
+    const normalCount=tests.filter(t=>s.results[t.name]!==undefined&&flagResult(t,s.results[t.name])==='normal').length;
+    const abnormalCount=tests.filter(t=>s.results[t.name]!==undefined&&flagResult(t,s.results[t.name])!=='normal').length;
+    const critCount=tests.filter(t=>s.results[t.name]!==undefined&&flagResult(t,s.results[t.name])==='critical').length;
+    const highCount=tests.filter(t=>s.results[t.name]!==undefined&&flagResult(t,s.results[t.name])==='high').length;
+    const lowCount=tests.filter(t=>s.results[t.name]!==undefined&&flagResult(t,s.results[t.name])==='low').length;
+
+    let html=`
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;">
+        <div class="stat-card"><div class="stat-value" style="color:var(--text);">${tests.length}</div><div class="stat-label">Total Tests</div></div>
+        <div class="stat-card" style="border-top:3px solid var(--normal);"><div class="stat-value" style="color:var(--normal);">${normalCount}</div><div class="stat-label">Normal</div></div>
+        <div class="stat-card" style="border-top:3px solid var(--high);"><div class="stat-value" style="color:var(--high);">${highCount}</div><div class="stat-label">High</div></div>
+        <div class="stat-card" style="border-top:3px solid var(--low);"><div class="stat-value" style="color:var(--low);">${lowCount}</div><div class="stat-label">Low</div></div>
+        <div class="stat-card" style="border-top:3px solid var(--critical);"><div class="stat-value" style="color:var(--critical);">${critCount}</div><div class="stat-label">Critical</div></div>
+    </div>
+    <div style="margin-bottom:16px;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);display:flex;align-items:center;gap:16px;">
+        <div class="patient-avatar" style="width:44px;height:44px;border-radius:12px;background:var(--chgt);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:16px;">${p.name.charAt(0)}</div>
+        <div style="flex:1;"><div style="font-weight:700;font-size:15px;">${p.name}</div><div style="font-size:12px;color:var(--text-muted);">${p.id} — ${p.age} — ${s.panel} — ${s.sampleType}</div></div>
+        <div class="mono" style="font-size:12px;color:var(--text-muted);">${s.id}</div>
+    </div>
+    <h4 style="font-size:14px;font-weight:700;margin-bottom:12px;">Test-by-Test Analysis</h4>`;
+
+    tests.forEach(t=>{
+        const val=s.results[t.name];
+        if(val===undefined)return;
+        const flag=flagResult(t,val);
+        const cls=flag==='critical'?'a-critical':flag==='high'?'a-high':flag==='low'?'a-low':'a-normal';
+        const flagText=flag==='critical'?'CRITICAL':flag==='high'?'HIGH':flag==='low'?'LOW':'NORMAL';
+        const interpretation=flag==='critical'?'Immediate physician notification required':flag==='high'?'Above reference range — clinical correlation needed':flag==='low'?'Below reference range — monitor and recheck':'Within normal limits';
+
+        html+=`<div class="analysis-card ${cls}">
+            <div class="ac-header"><div class="ac-test">${t.name} <span style="color:var(--text-muted);font-weight:400;font-size:12px;">(${t.short})</span></div><span class="ac-flag">${flagText}</span></div>
+            <div class="ac-details">
+                <span>Result: <strong class="mono">${val}</strong></span>
+                <span>Unit: <strong>${t.unit}</strong></span>
+                ${!t.textVal?`<span>Range: <strong>${t.lowOnly?'< '+t.low:t.low+' – '+t.high}</strong></span>`:''}
+                ${!t.textVal&&t.criticalHigh?`<span>Critical: <strong style="color:var(--critical);">${t.criticalLow>0?'< '+t.criticalLow:'> '+t.criticalHigh}</strong></span>`:''}
+            </div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);"><i class="fas fa-stethoscope" style="margin-right:4px;font-size:11px;"></i>${interpretation}</div>
+        </div>`;
+    });
+
+    html+=`<div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-chgt" onclick="generateReport('${s.id}','chgt')"><i class="fas fa-file-medical"></i> Chughtai Format</button>
+        <button class="btn btn-idc" onclick="generateReport('${s.id}','idc')"><i class="fas fa-file-medical"></i> IDC Format</button>
+    </div>`;
+
+    document.getElementById('analysisContent').innerHTML=html;
+}
+
+/* ============================================================
+   REPORT GENERATION — Chughtai & IDC
+   ============================================================ */
+
+function generateReport(id,format){
+    const s=samples.find(x=>x.id===id);if(!s||!s.results)return;
+    s.status='reported';
+    const existing=generatedReports.find(r=>r.sampleId===id&&r.format===format);
+    if(!existing){
+        generatedReports.push({sampleId:id,format:format,generatedAt:new Date().toLocaleString('en-PK'),reportId:format==='chgt'?genId('CHGT'):genId('IDC')});
+    }
+    viewReport(id,format);
+    renderDashboard();renderWorklist();renderReports();
+    toast((format==='chgt'?'Chughtai':'IDC')+' format report generated','ok');
+}
+
+function viewReport(id,format){
+    currentReportFormat=format||'chgt';
+    const s=samples.find(x=>x.id===id);if(!s||!s.results)return;
+    const p=getPatient(s.patientIdx);
+    const tests=testPanels[s.panel]||[];
+    const report=generatedReports.find(r=>r.sampleId===id&&r.format===currentReportFormat);
+    const reportId=report?report.reportId:(currentReportFormat==='chgt'?genId('CHGT'):genId('IDC'));
+    const critCount=tests.filter(t=>s.results[t.name]!==undefined&&flagResult(t,s.results[t.name])==='critical').length;
+
+    document.getElementById('rmTitle').innerHTML=`<i class="fas fa-file-medical" style="color:${currentReportFormat==='chgt'?'var(--chgt)':'var(--idc)'};"></i> ${currentReportFormat==='chgt'?'Chughtai':'IDC'} Report`;
+
+    let html=`<div class="format-switch">
+        <button class="format-switch-btn ${currentReportFormat==='chgt'?'active-chgt':''}" onclick="switchReportFormat('${id}','chgt')"><i class="fas fa-flask"></i> Chughtai Format</button>
+        <button class="format-switch-btn ${currentReportFormat==='idc'?'active-idc':''}" onclick="switchReportFormat('${id}','idc')"><i class="fas fa-fingerprint"></i> IDC Format</button>
+    </div>`;
+
+    if(currentReportFormat==='chgt'){
+        html+=buildChughtaiReport(s,p,tests,reportId,critCount);
+    } else {
+        html+=buildIdcReport(s,p,tests,reportId,critCount);
+    }
+
+    document.getElementById('rmContent').innerHTML=html;
+    document.getElementById('reportModal').classList.add('show');
+    document.body.style.overflow='hidden';
+}
+
+function switchReportFormat(id,fmt){
+    viewReport(id,fmt);
+}
+
+function closeReportModal(){
+    document.getElementById('reportModal').classList.remove('show');
+    document.body.style.overflow='';
+}
+
+/* ===== CHUGHTAI FORMAT BUILDER ===== */
+function buildChughtaiReport(s,p,tests,reportId,critCount){
+    const now=new Date().toLocaleString('en-PK');
+    return `<div class="chgt-report">
+        <div class="chgt-report-watermark">CHUGHTAI LAB</div>
+        <div class="chgt-report-topbar"></div>
+        <div class="chgt-report-header">
+            <div class="chgt-logo-area">
+                <div class="chgt-logo"><i class="fas fa-flask"></i></div>
+                <div class="chgt-brand">
+                    <h2>Chughtai Lab</h2>
+                    <p>Clinical Laboratory — HealthOnCall Central</p>
+                    <div class="chgt-reg">Reg: HOC-LAB-FSD-2019-0042</div>
+                </div>
+            </div>
+            <div class="chgt-header-right">
+                <div class="chgt-label">Report No</div>
+                <div class="chgt-report-id">${reportId}</div>
+                <div class="chgt-label" style="margin-top:8px;">Printed</div>
+                <div style="font-size:12px;color:#6b7280;font-weight:500;">${now}</div>
+            </div>
+        </div>
+        <div class="chgt-report-body">
+            <div class="chgt-section">
+                <div class="chgt-section-title"><i class="fas fa-user"></i> Patient Information</div>
+                <div class="chgt-info-row">
+                    <div class="chgt-info-cell"><div class="ci-label">Patient Name</div><div class="ci-value">${p.name}</div></div>
+                    <div class="chgt-info-cell"><div class="ci-label">Patient ID</div><div class="ci-value mono">${p.id}</div></div>
+                    <div class="chgt-info-cell"><div class="ci-label">Age / Gender</div><div class="ci-value">${p.age}</div></div>
+                    <div class="chgt-info-cell"><div class="ci-label">Blood Group</div><div class="ci-value">${p.bg}</div></div>
+                    <div class="chgt-info-cell"><div class="ci-label">Sample ID</div><div class="ci-value mono">${s.id}</div></div>
+                    <div class="chgt-info-cell"><div class="ci-label">Sample Type</div><div class="ci-value">${s.sampleType}</div></div>
+                    <div class="chgt-info-cell"><div class="ci-label">Collected</div><div class="ci-value" style="font-size:11px;">${s.collectedAt}</div></div>
+                    <div class="chgt-info-cell"><div class="ci-label">Referred By</div><div class="ci-value">${p.referred}</div></div>
+                </div>
+            </div>
+            <div class="chgt-section">
+                <div class="chgt-section-title"><i class="fas fa-vials"></i> ${s.panel} — Test Results ${critCount?'<span style="color:var(--critical);font-size:10px;margin-left:8px;">('+critCount+' CRITICAL)</span>':''}</div>
+                <table class="chgt-test-table">
+                    <thead><tr><th>Test</th><th>Result</th><th>Unit</th><th>Ref. Range</th><th>Flag</th></tr></thead>
+                    <tbody>${tests.map(t=>{
+                        const val=s.results[t.name];if(val===undefined)return '';
+                        const flag=flagResult(t,val);
+                        const fc=flag==='critical'?'flag-critical':flag==='high'?'flag-high':flag==='low'?'flag-low':'flag-normal';
+                        const fl=flagLabel(flag);
+                        return `<tr><td style="font-weight:600;"><span style="color:var(--text-muted);font-size:10px;margin-right:4px;">${t.short}</span>${t.name}</td><td>${val}</td><td style="color:var(--text-muted);font-size:11px;">${t.unit}</td><td style="color:var(--text-muted);font-size:11px;">${t.textVal?'—':(t.lowOnly?'< '+t.low:t.low+' – '+t.high)}</td><td class="${fc}" style="font-size:13px;">${fl}</td></tr>`;
+                    }).join('')}</tbody>
+                </table>
+                <div style="display:flex;gap:16px;margin-top:8px;font-size:10px;color:var(--text-muted);">
+                    <span><strong style="color:#059669;">N</strong> = Normal</span>
+                    <span><strong style="color:#ea580c;">H</strong> = High</span>
+                    <span><strong style="color:#0891b2;">L</strong> = Low</span>
+                    <span><strong style="color:#dc2626;">C</strong> = Critical</span>
+                </div>
+            </div>
+            <div class="chgt-section">
+                <div class="chgt-section-title"><i class="fas fa-notes-medical"></i> Remarks</div>
+                <div class="chgt-remarks">${critCount?'<strong style="color:#dc2626;">CRITICAL: '+critCount+' value(s) outside critical range — immediate physician notification advised.</strong><br>':'<strong>No critical values detected.</strong><br>'}Report generated electronically. Values should be interpreted in clinical context. — ${p.referred}</div>
+            </div>
+            <div class="chgt-stamp-area">
+                <div class="chgt-signature"><div class="sig-name">${p.referred}</div><div class="sig-line"></div><div class="sig-role">Referring Physician</div></div>
+                <div class="chgt-signature"><div class="sig-name">Bilal Raza</div><div class="sig-line"></div><div class="sig-role">Lab Technician</div><div class="sig-id">HOC-LAB-001</div></div>
+                <div class="chgt-signature"><div class="sig-name">Dr. Kamran Shahid</div><div class="sig-line"></div><div class="sig-role">Consultant Pathologist</div><div class="sig-id">PMDC-32847</div></div>
+                <div class="chgt-stamp-circle verified"><i class="fas fa-check-circle chgt-stamp-icon"></i><div class="chgt-stamp-text">CHUGHTAI<br>LAB<br>VERIFIED</div></div>
+            </div>
+            <div class="chgt-qr-row">
+                <div class="chgt-qr-box"><div class="chgt-qr-pattern"></div><i class="fas fa-qrcode chgt-qr-icon"></i></div>
+                <div class="chgt-qr-info"><div class="qr-label">Verification QR Code</div><div class="qr-code">${reportId}</div><div class="qr-hash">SHA-256:${Array.from({length:24},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('')}</div><div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Scan to verify with Chughtai Lab central system</div></div>
+            </div>
+        </div>
+        <div class="chgt-report-footer"><span>Chughtai Lab — HealthOnCall Central Lab, Faisalabad. Computer-generated report. Valid with digital verification.</span><span>${reportId}</span></div>
+    </div>`;
+}
+
+/* ===== IDC FORMAT BUILDER ===== */
+function buildIdcReport(s,p,tests,reportId,critCount){
+    const now=new Date().toLocaleString('en-PK');
+    return `<div class="idc-report">
+        <div class="idc-report-watermark">IDC VERIFIED</div>
+        <div class="idc-header">
+            <div class="idc-header-left">
+                <div class="idc-emblem"><div class="idc-emblem-inner"><i class="fas fa-fingerprint idc-emblem-icon"></i><div class="idc-emblem-text">IDC<br>CERTIFIED</div></div></div>
+                <div class="idc-title"><h2>Islamabad Diagnostic Centre</h2><p>National Health Authority — Pakistan</p></div>
+            </div>
+            <div class="idc-header-right">
+                <div class="idc-doc-no">${reportId}</div>
+                <div class="idc-class">Confidential — Medical Record</div>
+            </div>
+        </div>
+        <div class="idc-accent-bar"></div>
+        <div class="idc-sub-bar"><span><i class="fas fa-building" style="margin-right:4px;"></i>HealthOnCall Central Lab — HOC-LAB-FSD-2019-0042</span><span><i class="fas fa-calendar" style="margin-right:4px;"></i>${now}</span></div>
+        <div class="idc-body">
+            <div class="idc-section-title"><i class="fas fa-user"></i> Patient Information</div>
+            <div class="idc-info-grid">
+                <div class="idc-cell"><div class="ic-label">Patient Name</div><div class="ic-value">${p.name}</div></div>
+                <div class="idc-cell"><div class="ic-label">Patient ID</div><div class="ic-value mono">${p.id}</div></div>
+                <div class="idc-cell"><div class="ic-label">Age / Gender</div><div class="ic-value">${p.age}</div></div>
+                <div class="idc-cell"><div class="ic-label">Blood Group</div><div class="ic-value">${p.bg}</div></div>
+                <div class="idc-cell"><div class="ic-label">Sample ID</div><div class="ic-value mono">${s.id}</div></div>
+                <div class="idc-cell"><div class="ic-label">Sample Type</div><div class="ic-value">${s.sampleType}</div></div>
+                <div class="idc-cell"><div class="ic-label">Collected</div><div class="ic-value" style="font-size:11px;">${s.collectedAt}</div></div>
+                <div class="idc-cell"><div class="ic-label">Referred By</div><div class="ic-value">${p.referred}</div></div>
+            </div>
+            <div class="idc-section-title" style="margin-top:16px;"><i class="fas fa-vials"></i> ${s.panel} ${critCount?'<span style="color:#dc2626;font-size:10px;margin-left:8px;">('+critCount+' CRITICAL)</span>':''}</div>
+            <table class="idc-test-table">
+                <thead><tr><th>Test</th><th>Result</th><th>Unit</th><th>Ref. Range</th><th>Flag</th></tr></thead>
+                <tbody>${tests.map(t=>{
+                    const val=s.results[t.name];if(val===undefined)return '';
+                    const flag=flagResult(t,val);
+                    const fc=flag==='critical'?'flag-critical':flag==='high'?'flag-high':flag==='low'?'flag-low':'flag-normal';
+                    return `<tr><td style="font-weight:600;"><span style="color:var(--text-muted);font-size:10px;margin-right:4px;">${t.short}</span>${t.name}</td><td>${val}</td><td style="color:var(--text-muted);font-size:11px;">${t.unit}</td><td style="color:var(--text-muted);font-size:11px;">${t.textVal?'—':(t.lowOnly?'< '+t.low:t.low+' – '+t.high)}</td><td class="${fc}" style="font-size:13px;">${flagLabel(flag)}</td></tr>`;
+                }).join('')}</tbody>
+            </table>
+            <div style="display:flex;gap:16px;margin-top:8px;font-size:10px;color:var(--text-muted);">
+                <span><strong style="color:#059669;">N</strong> = Normal</span>
+                <span><strong style="color:#ea580c;">H</strong> = High</span>
+                <span><strong style="color:#0891b2;">L</strong> = Low</span>
+                <span><strong style="color:#dc2626;">C</strong> = Critical</span>
+            </div>
+            <div class="idc-section-title" style="margin-top:16px;"><i class="fas fa-notes-medical"></i> Remarks</div>
+            <div class="idc-remarks">${critCount?'<strong style="color:#dc2626;">CRITICAL: '+critCount+' value(s) outside critical range.</strong><br>':'<strong>No critical values.</strong><br>'}Report generated under IDC certification. Clinical interpretation by referring physician. — ${p.referred}</div>
+            <div class="idc-stamp-area">
+                <div class="idc-signature"><div class="sig-name">${p.referred}</div><div class="sig-line"></div><div class="sig-role">Referring Physician</div></div>
+                <div class="idc-signature"><div class="sig-name">Bilal Raza</div><div class="sig-line"></div><div class="sig-role">Lab Technician — IDC Certified</div><div class="sig-id">IDC-LAB-001</div></div>
+                <div class="idc-signature"><div class="sig-name">Dr. Kamran Shahid</div><div class="sig-line"></div><div class="sig-role">Consultant Pathologist</div><div class="sig-id">PMDC-32847</div></div>
+                <div class="idc-stamp-circle verified"><i class="fas fa-check-double idc-stamp-icon"></i><div class="idc-stamp-text">IDC<br>VERIFIED</div></div>
+            </div>
+            <div class="idc-qr-row">
+                <div class="idc-qr-box"><div class="idc-qr-pattern"></div><i class="fas fa-qrcode idc-qr-icon"></i></div>
+                <div class="idc-qr-info"><div class="qr-label">IDC Verification QR</div><div class="qr-code">${reportId}</div><div class="qr-hash">SHA-256:${Array.from({length:24},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('')}</div><div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Scan to verify with IDC National Health Authority database</div></div>
+            </div>
+        </div>
+        <div class="idc-footer"><span>IDC — Islamabad Diagnostic Centre. Computer-generated certified document. Valid with digital seal.</span><span>${reportId}</span></div>
+    </div>`;
+}
+
+/* ============================================================
+   REPORTS LIST
+   ============================================================ */
+
+function renderReports(){
+    document.getElementById('reportsBody').innerHTML = generatedReports.length?generatedReports.map(r=>{
+        const s=samples.find(x=>x.id===r.sampleId);
+        if(!s)return '';
+        const p=getPatient(s.patientIdx);
+        return `<tr>
+            <td class="mono" style="font-size:12px;font-weight:600;color:${r.format==='chgt'?'var(--chgt)':'var(--idc)'};">${r.reportId}</td>
+            <td><div class="patient-cell"><div class="patient-avatar" style="background:${r.format==='chgt'?'var(--chgt)':'var(--idc)'};">${p.name.charAt(0)}</div><div class="patient-name">${p.name}</div></div></td>
+            <td style="font-weight:600;">${s.panel}</td>
+            <td><span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;${r.format==='chgt'?'background:var(--chgt-light);color:var(--chgt-dark);':'background:var(--idc-light);color:var(--idc-dark);'}"><i class="fas ${r.format==='chgt'?'fa-flask':'fa-fingerprint'}" style="font-size:10px;"></i>${r.format==='chgt'?'Chughtai':'IDC'}</span></td>
+            <td class="mono" style="font-size:12px;color:var(--text-muted);">${r.generatedAt}</td>
+            <td><button class="btn btn-sm ${r.format==='chgt'?'btn-chgt':'btn-idc'}" onclick="viewReport('${r.sampleId}','${r.format}')"><i class="fas fa-eye"></i> View</button></td>
+        </tr>`;
+    }).join(''):'<tr><td colspan="6"><div class="empty-state"><i class="fas fa-file-medical"></i><p>No reports generated yet</p></div></td></tr>';
+}
+
+/* ============================================================
+   MODAL CLOSE
+   ============================================================ */
+document.getElementById('reportModal').addEventListener('click',function(e){if(e.target===this)closeReportModal();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeReportModal();});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+renderDashboard();
+</script>
+</body>
+</html>

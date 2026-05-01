@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback | HealthOnCall</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root{--sidebar-bg:#0b1120;--sidebar-hover:rgba(16,185,129,.08);--sidebar-active-bg:rgba(16,185,129,.15);--accent:#10b981;--accent-glow:rgba(16,185,129,.25);--accent-soft:#d1fae5;--accent-dark:#059669;--gold:#f59e0b;--gold-soft:#fef3c7;--gold-dark:#92400e;--rose:#f43f5e;--rose-soft:#ffe4e6;--rose-dark:#9f1239;--sky:#0ea5e9;--sky-soft:#e0f2fe;--indigo:#6366f1;--indigo-soft:#e0e7ff;--violet:#8b5cf6;--violet-soft:#ede9fe;--slate:#64748b;--slate-soft:#f1f5f9;--bg:#f0f4f8;--bg-gradient:linear-gradient(135deg,#f0f4f8 0%,#e8eef5 50%,#f0f4f8 100%);--card:#ffffff;--card-border:rgba(0,0,0,.04);--text:#0f172a;--text-secondary:#475569;--text-muted:#94a3b8;--border:#e2e8f0;--shadow-sm:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.02);--shadow-md:0 8px 30px rgba(0,0,0,.06);--shadow-lg:0 20px 60px rgba(0,0,0,.1);--radius:18px;--radius-lg:24px;--transition:all .35s cubic-bezier(.4,0,.2,1);}
+        body.dark-mode{--bg:#020617;--bg-gradient:linear-gradient(135deg,#020617 0%,#0a0f1e 50%,#020617 100%);--card:#0f172a;--card-border:rgba(255,255,255,.06);--text:#f1f5f9;--text-secondary:#cbd5e1;--text-muted:#64748b;--border:#1e293b;--slate-soft:#1e293b;--sky-soft:rgba(14,165,233,.1);--indigo-soft:rgba(99,102,241,.1);--violet-soft:rgba(139,92,246,.1);--accent-soft:rgba(16,185,129,.12);--gold-soft:rgba(245,158,11,.12);--rose-soft:rgba(244,63,94,.12);}
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'DM Sans',sans-serif;background:var(--bg-gradient);color:var(--text);min-height:100vh;display:flex;overflow-x:hidden;transition:background .5s,color .4s;}
+        h1,h2,h3,h4,h5,h6{font-family:'Sora',sans-serif;}
+        .bg-blobs{position:fixed;top:0;left:280px;right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;}
+        .bg-blobs .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.3;animation:blobFloat 20s ease-in-out infinite;transition:opacity .5s;}
+        body.dark-mode .bg-blobs .blob{opacity:.1;}
+        .blob-1{width:350px;height:350px;background:#10b981;top:-80px;right:5%;animation-delay:0s;}
+        .blob-2{width:280px;height:280px;background:#0ea5e9;bottom:15%;left:8%;animation-delay:-7s;}
+        .blob-3{width:220px;height:220px;background:#f59e0b;top:50%;right:25%;animation-delay:-14s;}
+        @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1);}25%{transform:translate(30px,-40px) scale(1.1);}50%{transform:translate(-20px,20px) scale(.95);}75%{transform:translate(15px,35px) scale(1.05);}}
+        .sidebar{width:280px;height:100vh;position:fixed;left:0;top:0;background:var(--sidebar-bg);z-index:1000;display:flex;flex-direction:column;overflow:hidden;}
+        .sidebar::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,185,129,.07) 0%,transparent 40%,transparent 60%,rgba(14,165,233,.05) 100%);pointer-events:none;}
+        .sidebar-brand{padding:32px 28px 28px;position:relative;}
+        .sidebar-brand .logo-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;color:white;margin-bottom:16px;box-shadow:0 8px 24px rgba(16,185,129,.3);}
+        .sidebar-brand h2{font-size:22px;font-weight:800;color:#f1f5f9;letter-spacing:-.5px;}
+        .sidebar-brand h2 span{color:var(--accent);}
+        .sidebar-brand p{font-size:11px;color:var(--text-muted);margin-top:4px;font-weight:500;letter-spacing:1px;text-transform:uppercase;}
+        .sidebar-nav{flex:1;padding:0 16px;display:flex;flex-direction:column;gap:4px;position:relative;}
+        .nav-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;padding:20px 16px 8px;}
+        .sidebar-nav a{display:flex;align-items:center;gap:14px;padding:13px 18px;border-radius:14px;text-decoration:none;color:#94a3b8;font-weight:500;font-size:14.5px;transition:var(--transition);position:relative;overflow:hidden;}
+        .sidebar-nav a i{width:20px;text-align:center;font-size:16px;transition:var(--transition);}
+        .sidebar-nav a:hover{color:#e2e8f0;background:var(--sidebar-hover);}
+        .sidebar-nav a:hover i{color:var(--accent);}
+        .sidebar-nav a.active{color:#f1f5f9;background:var(--sidebar-active-bg);font-weight:600;}
+        .sidebar-nav a.active i{color:var(--accent);}
+        .sidebar-nav a.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:24px;background:var(--accent);border-radius:0 4px 4px 0;}
+        .sidebar-footer{padding:20px 24px;border-top:1px solid rgba(255,255,255,.05);position:relative;}
+        .sidebar-footer .user-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.03);transition:var(--transition);}
+        .sidebar-footer .user-card:hover{background:rgba(255,255,255,.06);}
+        .user-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--sky),var(--indigo));display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;font-family:'Sora',sans-serif;overflow:hidden;}
+        .user-avatar img{width:100%;height:100%;object-fit:cover;}
+        .user-info .user-name{color:#e2e8f9;font-weight:600;font-size:14px;}
+        .user-info .user-role{color:var(--text-muted);font-size:11px;}
+        .main{margin-left:280px;flex:1;padding:32px 40px;position:relative;z-index:1;min-height:100vh;}
+        .top-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;gap:24px;flex-wrap:wrap;}
+        .greeting-section h1{font-size:28px;font-weight:800;letter-spacing:-.8px;color:var(--text);line-height:1.2;}
+        .greeting-section h1 span{color:var(--accent-dark);}
+        .greeting-section .date-line{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:13.5px;margin-top:6px;font-weight:500;}
+        .greeting-section .date-line i{color:var(--accent);font-size:13px;}
+
+        /* Stats */
+        .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:28px;}
+        .stat-card{background:var(--card);border-radius:var(--radius-lg);padding:24px;position:relative;overflow:hidden;border:1px solid var(--card-border);box-shadow:var(--shadow-sm);transition:var(--transition);cursor:default;}
+        .stat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);}
+        .stat-card::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,transparent 40%,rgba(255,255,255,.03) 50%,transparent 60%);transform:translateX(-100%);transition:transform .8s ease;pointer-events:none;}
+        .stat-card:hover::after{transform:translateX(100%);}
+        .sc-icon{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:14px;}
+        .sc-avg .sc-icon{background:var(--gold-soft);color:var(--gold);}
+        .sc-total .sc-icon{background:var(--sky-soft);color:var(--sky);}
+        .sc-sat .sc-icon{background:var(--accent-soft);color:var(--accent);}
+        .stat-card .sc-num{font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:var(--text);line-height:1;margin-bottom:4px;}
+        .stat-card .sc-label{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;}
+        .stat-card .sc-bar{position:absolute;bottom:0;left:0;right:0;height:3px;}
+        .sc-avg .sc-bar{background:linear-gradient(90deg,#f59e0b,#fbbf24);}
+        .sc-total .sc-bar{background:linear-gradient(90deg,#0ea5e9,#38bdf8);}
+        .sc-sat .sc-bar{background:linear-gradient(90deg,#10b981,#34d399);}
+
+        /* Content Grid */
+        .content-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:24px;}
+        .section-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--card-border);box-shadow:var(--shadow-sm);overflow:hidden;transition:var(--transition);}
+        .section-card:hover{box-shadow:var(--shadow-md);}
+        .section-header{display:flex;align-items:center;justify-content:space-between;padding:22px 26px;border-bottom:1px solid var(--border);}
+        .section-header-left{display:flex;align-items:center;gap:12px;}
+        .sh-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+        .sh-icon.sh-write{background:var(--gold-soft);color:var(--gold);}
+        .sh-icon.sh-list{background:var(--indigo-soft);color:var(--indigo);}
+        .section-header-left h3{font-size:15px;font-weight:700;color:var(--text);}
+        .section-header .sh-count{font-size:12px;font-weight:700;color:var(--text-muted);background:var(--slate-soft);padding:4px 12px;border-radius:20px;}
+        .section-body{padding:22px 26px 26px;}
+
+        /* Form */
+        .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+        .form-group{margin-bottom:0;}
+        .form-group label{display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;}
+        .form-group input,.form-group textarea,.form-group select{width:100%;padding:12px 16px;border:1.5px solid var(--border);border-radius:14px;background:var(--slate-soft);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;transition:var(--transition);resize:vertical;}
+        body.dark-mode .form-group input,body.dark-mode .form-group textarea,body.dark-mode .form-group select{background:#1e293b;}
+        .form-group input::placeholder,.form-group textarea::placeholder{color:var(--text-muted);}
+        .form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--accent);background:var(--card);box-shadow:0 0 0 4px var(--accent-glow);}
+        .form-group.error input,.form-group.error textarea,.form-group.error select{border-color:var(--rose);box-shadow:0 0 0 4px rgba(244,63,94,.15);}
+        .field-error{font-size:11px;color:var(--rose);margin-top:5px;font-weight:600;display:none;}
+        .form-group.error .field-error{display:block;}
+        .form-group.full{grid-column:1/-1;}
+        .form-group textarea{height:90px;}
+
+        /* Doctor Select */
+        .filter-select{position:relative;}
+        .filter-select select{width:100%;padding:12px 36px 12px 16px;border:1.5px solid var(--border);border-radius:14px;background:var(--slate-soft);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;transition:var(--transition);cursor:pointer;appearance:none;-webkit-appearance:none;}
+        body.dark-mode .filter-select select{background:#1e293b;}
+        .filter-select::after{content:'\f078';font-family:'Font Awesome 6 Free';font-weight:900;position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:11px;pointer-events:none;}
+
+        /* Stars */
+        .star-rating{display:flex;gap:6px;margin-bottom:20px;}
+        .star-rating .star{font-size:32px;color:var(--border);cursor:pointer;transition:var(--transition);line-height:1;}
+        .star-rating .star:hover{transform:scale(1.15);}
+        .star-rating .star.active{color:var(--gold);text-shadow:0 2px 8px rgba(245,158,11,.3);}
+        .star-label{font-size:13px;color:var(--text-muted);font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+        .star-label .current-rating{color:var(--gold-dark);font-family:'Sora',sans-serif;font-weight:800;font-size:15px;}
+
+        /* Submit */
+        .btn-submit{padding:14px 28px;border-radius:14px;border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:var(--transition);display:flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden;width:100%;background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:white;box-shadow:0 6px 20px rgba(16,185,129,.25);}
+        .btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(16,185,129,.35);}
+        .btn-submit:active{transform:translateY(0);}
+        .btn-submit.saving{pointer-events:none;opacity:.85;}
+        .btn-submit .spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;}
+        .btn-submit.saving .btn-label{display:none;}
+        .btn-submit.saving .spinner{display:inline-block;}
+        @keyframes spin{to{transform:rotate(360deg);}}
+
+        /* Feedback Items */
+        .fb-list{max-height:520px;overflow-y:auto;padding-right:6px;}
+        .fb-list::-webkit-scrollbar{width:5px;}.fb-list::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;}
+        .fb-item{display:flex;gap:16px;padding:18px;background:var(--slate-soft);border-radius:18px;margin-bottom:12px;transition:var(--transition);border:1.5px solid transparent;}
+        .fb-item:hover{background:var(--card);border-color:rgba(16,185,129,.12);transform:translateX(6px);box-shadow:var(--shadow-sm);}
+        .fb-avatar{width:50px;height:50px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:white;font-family:'Sora',sans-serif;flex-shrink:0;}
+        .fb-av-5{background:linear-gradient(135deg,#f59e0b,#fbbf24);}
+        .fb-av-4{background:linear-gradient(135deg,#0ea5e9,#38bdf8);}
+        .fb-av-3{background:linear-gradient(135deg,#10b981,#34d399);}
+        .fb-av-2{background:linear-gradient(135deg,#94a3b8,#cbd5e1);}
+        .fb-av-1{background:linear-gradient(135deg,#f43f5e,#fb7185);}
+        .fb-info{flex:1;min-width:0;}
+        .fb-info .fb-name{font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;}
+        .fb-info .fb-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+        .fb-info .fb-meta span{font-size:12px;color:var(--text-muted);font-weight:500;display:inline-flex;align-items:center;gap:4px;}
+        .fb-info .fb-meta i{font-size:10px;}
+        .fb-info .fb-text{font-size:13.5px;color:var(--text-secondary);line-height:1.6;margin-top:8px;}
+        .fb-stars{font-size:13px;color:var(--gold);letter-spacing:2px;margin-top:4px;}
+        .fb-actions{display:flex;gap:6px;flex-shrink:0;margin-top:8px;align-self:flex-end;}
+        .fi-btn{width:34px;height:34px;border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:var(--transition);}
+        .fi-del{background:var(--rose-soft);color:var(--rose-dark);}
+        body.dark-mode .fi-del{background:rgba(244,63,94,.12);color:var(--rose);}
+        .fi-del:hover{background:var(--rose);color:white;}
+
+        /* Empty state */
+        .empty-state{text-align:center;padding:60px 20px;color:var(--text-muted);}
+        .empty-state i{font-size:48px;margin-bottom:14px;opacity:.2;display:block;}
+        .empty-state p{font-size:15px;font-weight:500;}
+        .empty-state p.sub{font-size:13px;margin-top:6px;opacity:.7;}
+
+        /* Toast */
+        .toast-container{position:fixed;top:24px;right:24px;z-index:5000;display:flex;flex-direction:column;gap:10px;}
+        .toast{background:var(--card);border-radius:14px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.12);border-left:4px solid var(--accent);font-size:14px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);min-width:300px;}
+        body.dark-mode .toast{background:var(--card);}
+        .toast.show{transform:translateX(0);}
+        .toast i{font-size:18px;}
+        .toast .t-success{color:var(--accent);}
+        .toast .t-info{color:var(--sky);}
+        .toast .t-err{color:var(--rose);}
+
+        .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.3);transform:scale(0);animation:rippleAnim .6s ease-out;pointer-events:none;}
+        @keyframes rippleAnim{to{transform:scale(4);opacity:0;}}
+
+        @media(max-width:1200px){.content-grid{grid-template-columns:1fr;}}
+        @media(max-width:768px){.sidebar{transform:translateX(-100%);}.main{margin-left:0;padding:20px;}.form-row{grid-template-columns:1fr;}.top-header{flex-direction:column;align-items:flex-start;}}
+        html{scroll-behavior:smooth;}
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+    </style>
+</head>
+<body>
+
+<div class="bg-blobs"><div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div></div>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="logo-icon"><i class="fas fa-heartbeat"></i></div>
+        <h2>Health<span>OnCall</span></h2>
+        <p>Patient Portal</p>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-label">Menu</div>
+        <a href="Patient Dashboard Home Page p1.html"><i class="fas fa-th-large"></i> Home</a>
+        <a href="find doc 1.html"><i class="fas fa-search"></i> Find Specialist</a>
+        <a href="services 1.html"><i class="fas fa-concierge-bell"></i> Services</a>
+        <a href="assistant 1.html"><i class="fas fa-robot"></i> AI Assistant</a>
+        <a href="feedback 1.html" class="active"><i class="fas fa-star"></i> Feedback</a>
+        <div class="nav-label">Account</div>
+        <a href="setting 1.html"><i class="fas fa-cog"></i> Settings</a>
+        <a href="logout 1.html"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-card">
+            <div class="user-avatar"><img src="https://ui-avatars.com/api/?name=Esha+Maham&background=0ea5e9&color=fff&bold=true&size=80" alt=""></div>
+            <div class="user-info"><div class="user-name">Esha Maham</div><div class="user-role">Patient</div></div>
+        </div>
+    </div>
+</aside>
+
+<main class="main">
+    <header class="top-header">
+        <div class="greeting-section">
+            <h1>Patient <span>Feedback</span></h1>
+            <div class="date-line"><i class="fas fa-calendar-alt"></i><span id="todayDate"></span></div>
+        </div>
+    </header>
+
+    <!-- Stats -->
+    <section class="stats-grid">
+        <div class="stat-card sc-avg">
+            <div class="sc-icon"><i class="fas fa-star"></i></div>
+            <div class="sc-num" id="avgRating">0.0</div>
+            <div class="sc-label">Average Rating</div>
+            <div class="sc-bar"></div>
+        </div>
+        <div class="stat-card sc-total">
+            <div class="sc-icon"><i class="fas fa-comments"></i></div>
+            <div class="sc-num" id="totalReviews">00</div>
+            <div class="sc-label">Total Reviews</div>
+            <div class="sc-bar"></div>
+        </div>
+        <div class="stat-card sc-sat">
+            <div class="sc-icon"><i class="fas fa-smile"></i></div>
+            <div class="sc-num" id="satisfaction">0%</div>
+            <div class="sc-label">Satisfaction Rate</div>
+            <div class="sc-bar"></div>
+        </div>
+    </section>
+
+    <!-- Content -->
+    <div class="content-grid">
+        <!-- Write Review -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-header-left">
+                    <div class="sh-icon sh-write"><i class="fas fa-pen-fancy"></i></div>
+                    <h3>Write a Review</h3>
+                </div>
+                <span class="sh-count" id="formCount">0 reviews</span>
+            </div>
+            <div class="section-body">
+                <div class="form-row">
+                    <div class="form-group" id="nameGroup">
+                        <label>Your Name</label>
+                        <input type="text" id="nameInput" placeholder="Enter your full name">
+                        <div class="field-error">Name is required</div>
+                    </div>
+                    <div class="form-group" id="docGroup">
+                        <label>Doctor / Service</label>
+                        <div class="filter-select">
+                            <select id="docSelect">
+                                <option value="">Select doctor or service...</option>
+                                <option value="Dr. Asma Naz">Dr. Asma Naz — Home Nursing</option>
+                                <option value="Dr. Nadia Fatima">Dr. Nadia Fatima — Critical Care</option>
+                                <option value="Dr. Zain Ahmed">Dr. Zain Ahmed — Physiotherapy</option>
+                                <option value="Dr. Kamran Shahid">Dr. Kamran Shahid — Lab Tests</option>
+                                <option value="Dr. Fatima Noor">Dr. Fatima Noor — Speech Therapy</option>
+                                <option value="Dr. Ahmed Raza">Dr. Ahmed Raza — General Checkup</option>
+                                <option value="Dr. Bilal Hussain">Dr. Bilal Hussain — Dental Care</option>
+                                <option value="General">General Service Feedback</option>
+                            </select>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="field-error">Please select a doctor</div>
+                    </div>
+                </div>
+                <div class="form-group full">
+                    <label>Your Experience</label>
+                    <textarea id="msgInput" placeholder="Share your experience in detail..."></textarea>
+                    <div class="field-error">Please share your experience</div>
+                </div>
+                <label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Your Rating</label>
+                <div class="star-rating" id="starRating">
+                    <span class="star" data-v="1">★</span>
+                    <span class="star" data-v="2">★</span>
+                    <span class="star" data-v="3">★</span>
+                    <span class="star" data-v="4">★</span>
+                    <span class="star" data-v="5">★</span>
+                </div>
+                <div class="star-label">
+                    <span>Selected:</span>
+                    <span class="current-rating" id="currentRating">Tap to rate</span>
+                </div>
+                <button class="btn-submit" id="submitBtn" onclick="submitFeedback()">
+                    <span class="btn-label"><i class="fas fa-paper-plane"></i> Submit Feedback</span>
+                    <span class="spinner"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Reviews List -->
+        <div class="section-card">
+            <div class="section-header">
+                <div class="section-header-left">
+                    <div class="sh-icon sh-list"><i class="fas fa-comments"></i></div>
+                    <h3>Recent Reviews</h3>
+                </div>
+                <span class="sh-count" id="listCount">0 shown</span>
+            </div>
+            <div class="section-body">
+                <div class="fb-list" id="fbList"></div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+    document.getElementById('todayDate').innerText = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+    /* ===== DATA ===== */
+    let feedbacks = [
+        {id:1,name:'Ali Raza',doctor:'Dr. Asma Naz',service:'Home Nursing',message:'Excellent home nursing service! Dr. Asma was very professional and caring. She helped my mother recover after surgery with patience and dedication. Highly recommended for post-surgical care at home.',rating:5,date:'Apr 08, 2026'},
+        {id:2,name:'Sara Ahmed',doctor:'Dr. Zain Ahmed',service:'Physiotherapy',message:'Great physio session! My back pain has improved significantly after just 3 sessions. Dr. Zain explained everything clearly and gave me exercises to do at home.',rating:5,date:'Apr 05, 2026'},
+        {id:3,name:'Hassan Ali',doctor:'Dr. Kamran Shahid',service:'Lab Tests',message:'Quick and efficient lab work. Got my full body checkup report within 24 hours. Home sample collection was super convenient. Very professional staff.',rating:4,date:'Apr 03,2026'},
+        {id:4,name:'Fatima Noor',doctor:'Dr. Fatima Noor',service:'Speech Therapy',message:'My 5-year-old son has shown amazing progress in just 4 sessions. Dr. Fatima makes sessions fun with games and activities. Very patient with children.',rating:5,date:'Mar 30, 2026'},
+        {id:5,name:'Omar Farooq',doctor:'Dr. Ahmed Raza',service:'General Checkup',message:'Dr. Ahmed is very thorough and takes time to listen. Found my vitamin D deficiency and started treatment. Feeling much better now after 2 weeks.',rating:4,date:'Mar 25,2026'},
+        {id:6,name:'Ayesha Malik',doctor:'Dr. Bilal Hussain',service:'Dental Care',message:'Got my root canal done painlessly! Dr. Bilal was gentle and explained each step. Clean and modern clinic. Reasonable pricing.',rating:4,date:'Mar 22,2026'},
+        {id:7,name:'Zainab Tariq',doctor:'General Service',message:'Great overall experience with HealthOnCall. Easy booking process and good quality doctors. The WhatsApp reminders are very helpful!',rating:5,date:'Mar 18,2026'},
+        {id:8,name:'Bilal Hussain',doctor:'Dr. Asma Naz',service:'Home Nursing',message:'Good nursing care but the night shift was slightly delayed by 30 minutes. Otherwise, very professional service.',rating:3,date:'Mar 15,2026'},
+        {id:9,name:'Maryam Khan',doctor:'Dr. Nadia Fatima',service:'Home Nursing',message:'Dr. Nadia is an angel! She took wonderful care of my elderly father for 3 days. Very compassionate and skilled.',rating:5,date:'Mar 12,2026'},
+        {id:10,name:'Kamran Shahid',doctor:'Dr. Hassan Ali',service:'Physiotherapy',message:'Dr. Hassan is very knowledgeable about orthopedic rehab. My shoulder is almost back to normal. Worth every penny.',rating:5,date:'Mar 10,2026'},
+        {id:11,name:'Sana Tariq',doctor:'General Service',message:'Easy to use app and friendly staff. Would love to see more specialist categories added in the future.',rating:4,date:'Mar 08,2026'}
+    ];
+
+    let selectedRating = 0;
+
+    /* ===== STAR RATING ===== */
+    const stars = document.querySelectorAll('.star-rating .star');
+    stars.forEach(star => {
+        star.addEventListener('mouseenter', () => previewStars(star.dataset.v));
+        star.addEventListener('mouseleave', () => setStars(selectedRating));
+        star.addEventListener('click', () => {
+            selectedRating = parseInt(star.dataset.v);
+            setStars(selectedRating);
+        });
+    });
+
+    function previewStars(n){ stars.forEach(s => s.classList.toggle('active', parseInt(s.dataset.v) <= n)); }
+    function setStars(n){ selectedRating = n; stars.forEach(s => s.classList.toggle('active', parseInt(s.dataset.v) <= n)); }
+
+    /* ===== RENDER ===== */
+    function render(){
+        const total = feedbacks.length;
+        const sum = feedbacks.reduce((a,b) => a + b.rating, 0);
+        const avg = total > 0 ? (sum / total).toFixed(1) : '0.0';
+        const sat = total > 0 ? Math.round((sum / (total * 5)) * 100) : 0;
+
+        animateCounter('avgRating', avg);
+        animateCounter('totalReviews', total);
+        animateCounter('satisfaction', sat);
+        document.getElementById('formCount').textContent = total + ' reviews';
+        document.getElementById('listCount').textContent = total + ' shown';
+
+        renderList();
+    }
+
+    function renderList(){
+        const search = document.getElementById('docSelect').value.toLowerCase().trim();
+        let filtered = feedbacks;
+        if(search){
+            filtered = feedbacks.filter(f => (f.doctor + f.service + f.name).toLowerCase().includes(search));
+        }
+
+        const list = document.getElementById('fbList');
+        if(!filtered.length){
+            list.innerHTML = '<div class="empty-state"><i class="fas fa-comment-slash"></i><p>No reviews found</p><p class="sub">Submit the first review!</p></div>';
+            return;
+        }
+
+        list.innerHTML = filtered.map(f => {
+            const initials = f.name.split(' ').map(w => w[0]).join('');
+            const starHtml = '<span style="color:var(--gold);letter-spacing:1.5px;">★'.repeat(f.rating) + '<span style="color:var(--border);letter-spacing:1.5px;">☆'.repeat(5 - f.rating);
+            const avClass = f.rating >= 5 ? 'fb-av-5' : f.rating === 4 ? 'fb-av-4' : f.rating === 3 ? 'fb-av-3' : 'fb-av-2';
+            const svcColors = {'Home Nursing':'var(--rose)','Physiotherapy':'var(--violet)','Lab Tests':'var(--sky)','Speech Therapy':'var(--gold)','General Checkup':'var(--accent)','Dental Care':'var(--slate)'};
+            const svcColor = svcColors[f.service] || 'var(--accent)';
+
+            return `<div class="fb-item">
+                <div class="fb-avatar ${avClass}">${initials}</div>
+                <div class="fb-info">
+                    <div class="fb-name">${f.name}</div>
+                    <div class="fb-meta">
+                        <span><i class="fas fa-user-md"></i> ${f.doctor}</span>
+                        <span><i class="fas fa-tag"></i> ${f.service}</span>
+                        <span><i class="fas fa-calendar"></i> ${f.date}</span>
+                    </div>
+                    <div class="fb-text">${f.message}</div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div class="fb-stars">${starHtml}</div>
+                        <div class="fb-actions">
+                            <button class="fi-btn fi-del" onclick="deleteFb(${f.id})" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    /* ===== ANIMATED COUNTER ===== */
+    function animateCounter(elId, target){
+        const el = document.getElementById(elId);
+        if(elId === 'satisfaction'){
+            const num = parseInt(el.textContent) || 0;
+            const t = parseInt(target);
+            if(num === t){el.textContent = t + '%';return;}
+            const dur = 500;
+            const start = performance.now();
+            function tick(now){
+                const p = Math.min((now - start)/dur, 1);
+                el.textContent = Math.round(num + (t - num) * p) + '%';
+                if(p < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+        } else {
+            const elIdStr = elId;
+            const num = parseFloat(el.textContent) || 0;
+            const t = parseFloat(target);
+            if(Math.abs(num - t) < 0.05){el.textContent = elIdStr.includes('%') ? t + '%' : t;return;}
+            const dur = 400;
+            const start = performance.now();
+            function tick(now){
+                const p = Math.min((now - start)/dur, 1);
+                const eased = 1 - Math.pow(1 - p, 3);
+                el.textContent = elIdStr.includes('%') ? (num + (t - num) * eased).toFixed(1) + '%' : Math.round(num + (t - num) * eased);
+                if(p < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+        }
+    }
+
+    /* ===== SUBMIT ===== */
+    function submitFeedback(){
+        const name = document.getElementById('nameInput').value.trim();
+        const doc = document.getElementById('docSelect').value;
+        const msg = document.getElementById('msgInput').value.trim();
+
+        let valid = true;
+        if(!name){document.getElementById('nameGroup').classList.add('error');valid=false;}else{document.getElementById('nameGroup').classList.remove('error');}
+        if(!doc){document.getElementById('docGroup').classList.add('error');valid=false;}else{document.getElementById('docGroup').classList.remove('error');}
+        if(!msg){document.getElementById('msgInput').closest('.form-group').classList.add('error');valid=false;}else{document.getElementById('msgInput').closest('.form-group').classList.remove('error');}
+        if(!valid){showToast('Please fill all required fields','err');return;}
+        if(selectedRating === 0){showToast('Please select a rating','err');return;}
+
+        const btn = document.getElementById('submitBtn');
+        btn.classList.add('saving');
+
+        setTimeout(()=>{
+            btn.classList.remove('saving');
+            feedbacks.unshift({
+                id: Date.now(),
+                name, doctor: doc.split('—')[0].trim(),
+                service: doc.includes('—') ? doc.split('—')[1].trim() : doc,
+                message, rating: selectedRating,
+                date: new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'})
+            });
+
+            selectedRating = 0;
+            setStars(0);
+            document.getElementById('nameInput').value = '';
+            document.getElementById('docSelect').value = '';
+            document.getElementById('msgInput').value = '';
+            document.getElementById('currentRating').textContent = 'Tap to rate';
+            previewStars(0);
+
+            render();
+            showToast('Thank you for your feedback!','success');
+        },1200);
+    }
+
+    /* ===== DELETE ===== */
+    function deleteFb(id){
+        feedbacks = feedbacks.filter(f => f.id !== id);
+        render();
+        showToast('Review removed','info');
+    }
+
+    /* ===== CLEAR ERRORS ON INPUT ===== */
+    ['nameInput','msgInput'].forEach(id=>{
+        document.getElementById(id).addEventListener('input',function(){this.closest('.form-group').classList.remove('error');});
+    });
+
+    /* ===== TOAST ===== */
+    function showToast(message,type='success'){
+        const c = document.getElementById('toastContainer');
+        const t = document.createElement('div');t.className='toast';
+        const icons={success:'<i class="fas fa-check-circle t-success"></i>',info:'<i class="fas fa-info-circle t-info"></i>',err:'<i class="fas fa-times-circle t-err"></i>'};
+        const colors={success:'var(--accent)',info:'var(--sky)',err:'var(--rose)'};
+        t.style.borderLeftColor = colors[type]||colors.success;
+        t.innerHTML = (icons[type]||icons.success) + ' ' + message;
+        c.appendChild(t);
+        requestAnimationFrame(()=>{requestAnimationFrame(()=>t.classList.add('show'));});
+        setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),500);},3500);
+    }
+</script>
+</body>
+</html>

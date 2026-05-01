@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthOnCall | Patient Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --sidebar-bg: #0b1120;
+            --sidebar-hover: rgba(16,185,129,0.08);
+            --sidebar-active-bg: rgba(16,185,129,0.15);
+            --accent: #10b981;
+            --accent-glow: rgba(16,185,129,0.25);
+            --accent-soft: #d1fae5;
+            --accent-dark: #059669;
+            --gold: #f59e0b;
+            --gold-soft: #fef3c7;
+            --gold-dark: #92400e;
+            --rose: #f43f5e;
+            --rose-soft: #ffe4e6;
+            --rose-dark: #9f1239;
+            --sky: #0ea5e9;
+            --sky-soft: #e0f2fe;
+            --sky-dark: #075985;
+            --indigo: #6366f1;
+            --indigo-soft: #e0e7ff;
+            --indigo-dark: #3730a3;
+            --violet: #8b5cf6;
+            --violet-soft: #ede9fe;
+            --slate: #64748b;
+            --slate-soft: #f1f5f9;
+            --bg: #f0f4f8;
+            --bg-gradient: linear-gradient(135deg, #f0f4f8 0%, #e8eef5 50%, #f0f4f8 100%);
+            --card: #ffffff;
+            --card-border: rgba(0,0,0,0.04);
+            --text: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+            --shadow-md: 0 8px 30px rgba(0,0,0,0.06);
+            --shadow-lg: 0 20px 60px rgba(0,0,0,0.1);
+            --radius: 18px;
+            --radius-lg: 24px;
+            --transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+        }
+        body.dark-mode {
+            --bg: #020617;
+            --bg-gradient: linear-gradient(135deg, #020617 0%, #0a0f1e 50%, #020617 100%);
+            --card: #0f172a;
+            --card-border: rgba(255,255,255,0.06);
+            --text: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --border: #1e293b;
+            --slate-soft: #1e293b;
+            --sky-soft: rgba(14,165,233,.1);
+            --indigo-soft: rgba(99,102,241,.1);
+            --violet-soft: rgba(139,92,246,.1);
+        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'DM Sans',sans-serif;background:var(--bg-gradient);color:var(--text);min-height:100vh;display:flex;overflow-x:hidden;transition:background .5s,color .4s;}
+        h1,h2,h3,h4,h5,h6{font-family:'Sora',sans-serif;}
+
+        .bg-blobs{position:fixed;top:0;left:280px;right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;}
+        .bg-blobs .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.3;animation:blobFloat 20s ease-in-out infinite;transition:opacity .5s;}
+        body.dark-mode .bg-blobs .blob{opacity:.1;}
+        .blob-1{width:350px;height:350px;background:#10b981;top:-80px;right:5%;animation-delay:0s;}
+        .blob-2{width:280px;height:280px;background:#0ea5e9;bottom:15%;left:8%;animation-delay:-7s;}
+        .blob-3{width:220px;height:220px;background:#f59e0b;top:50%;right:25%;animation-delay:-14s;}
+        @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1);}25%{transform:translate(30px,-40px) scale(1.1);}50%{transform:translate(-20px,20px) scale(.95);}75%{transform:translate(15px,35px) scale(1.05);}}
+
+        /* ===== SIDEBAR ===== */
+        .sidebar{width:280px;height:100vh;position:fixed;left:0;top:0;background:var(--sidebar-bg);z-index:1000;display:flex;flex-direction:column;overflow:hidden;transition:background .5s;}
+        .sidebar::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,185,129,.07) 0%,transparent 40%,transparent 60%,rgba(14,165,233,.05) 100%);pointer-events:none;}
+        .sidebar-brand{padding:32px 28px 28px;position:relative;}
+        .sidebar-brand .logo-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;color:white;margin-bottom:16px;box-shadow:0 8px 24px rgba(16,185,129,.3);}
+        .sidebar-brand h2{font-size:22px;font-weight:800;color:#f1f5f9;letter-spacing:-.5px;}
+        .sidebar-brand h2 span{color:var(--accent);}
+        .sidebar-brand p{font-size:11px;color:var(--text-muted);margin-top:4px;font-weight:500;letter-spacing:1px;text-transform:uppercase;}
+        .sidebar-nav{flex:1;padding:0 16px;display:flex;flex-direction:column;gap:4px;position:relative;}
+        .nav-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;padding:20px 16px 8px;}
+        .sidebar-nav a{display:flex;align-items:center;gap:14px;padding:13px 18px;border-radius:14px;text-decoration:none;color:#94a3b8;font-weight:500;font-size:14.5px;transition:var(--transition);position:relative;overflow:hidden;}
+        .sidebar-nav a i{width:20px;text-align:center;font-size:16px;transition:var(--transition);}
+        .sidebar-nav a:hover{color:#e2e8f0;background:var(--sidebar-hover);}
+        .sidebar-nav a:hover i{color:var(--accent);}
+        .sidebar-nav a.active{color:#f1f5f9;background:var(--sidebar-active-bg);font-weight:600;}
+        .sidebar-nav a.active i{color:var(--accent);}
+        .sidebar-nav a.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:24px;background:var(--accent);border-radius:0 4px 4px 0;}
+        .sidebar-nav .nav-badge{margin-left:auto;background:var(--rose);color:white;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;min-width:20px;text-align:center;}
+        .sidebar-footer{padding:20px 24px;border-top:1px solid rgba(255,255,255,.05);position:relative;}
+        .sidebar-footer .user-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.03);transition:var(--transition);}
+        .sidebar-footer .user-card:hover{background:rgba(255,255,255,.06);}
+        .user-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--sky),var(--indigo));display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;font-family:'Sora',sans-serif;overflow:hidden;}
+        .user-avatar img{width:100%;height:100%;object-fit:cover;}
+        .user-info .user-name{color:#e2e8f9;font-weight:600;font-size:14px;}
+        .user-info .user-role{color:var(--text-muted);font-size:11px;}
+
+        /* ===== MAIN ===== */
+        .main{margin-left:280px;flex:1;padding:32px 40px;position:relative;z-index:1;min-height:100vh;}
+
+        /* ===== TOP HEADER ===== */
+        .top-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;gap:24px;flex-wrap:wrap;}
+        .greeting-section h1{font-size:28px;font-weight:800;letter-spacing:-.8px;color:var(--text);line-height:1.2;}
+        .greeting-section h1 span{color:var(--accent-dark);}
+        .greeting-section .date-line{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:13.5px;margin-top:6px;font-weight:500;}
+        .greeting-section .date-line i{color:var(--accent);font-size:13px;}
+        .header-actions{display:flex;align-items:center;gap:14px;}
+        .search-box{position:relative;width:300px;}
+        .search-box i{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;transition:var(--transition);}
+        .search-box input{width:100%;padding:13px 18px 13px 44px;border:1.5px solid var(--border);border-radius:14px;background:var(--card);font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;transition:var(--transition);box-shadow:var(--shadow-sm);}
+        .search-box input::placeholder{color:var(--text-muted);}
+        .search-box input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-glow),var(--shadow-md);}
+        .search-box input:focus+i{color:var(--accent);}
+        .notif-btn{width:48px;height:48px;border-radius:14px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:var(--transition);box-shadow:var(--shadow-sm);color:var(--text-secondary);font-size:17px;}
+        .notif-btn:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 4px var(--accent-glow);}
+        .notif-btn .dot{position:absolute;top:10px;right:10px;width:8px;height:8px;background:var(--rose);border-radius:50%;border:2px solid var(--card);}
+
+        /* ===== STATS GRID ===== */
+        .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:30px;}
+        .stat-card{background:var(--card);border-radius:var(--radius-lg);padding:24px;position:relative;overflow:hidden;border:1px solid var(--card-border);transition:var(--transition);box-shadow:var(--shadow-sm);cursor:default;}
+        .stat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);}
+        .stat-card .stat-icon{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:16px;}
+        .stat-card.s1 .stat-icon{background:var(--sky-soft);color:var(--sky);}
+        .stat-card.s2 .stat-icon{background:var(--gold-soft);color:var(--gold);}
+        .stat-card.s3 .stat-icon{background:var(--accent-soft);color:var(--accent);}
+        .stat-card.s4 .stat-icon{background:var(--violet-soft);color:var(--violet);}
+        .stat-card .stat-number{font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:var(--text);line-height:1;margin-bottom:4px;}
+        .stat-card .stat-label{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;}
+        .stat-card .stat-bar{position:absolute;bottom:0;left:0;right:0;height:3px;}
+        .stat-card.s1 .stat-bar{background:linear-gradient(90deg,#0ea5e9,#38bdf8);}
+        .stat-card.s2 .stat-bar{background:linear-gradient(90deg,#f59e0b,#fbbf24);}
+        .stat-card.s3 .stat-bar{background:linear-gradient(90deg,#10b981,#34d399);}
+        .stat-card.s4 .stat-bar{background:linear-gradient(90deg,#8b5cf6,#a78bfa);}
+        .stat-card::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,transparent 40%,rgba(255,255,255,.03) 50%,transparent 60%);transform:translateX(-100%);transition:transform .8s ease;}
+        .stat-card:hover::after{transform:translateX(100%);}
+
+        /* ===== CONTENT GRID ===== */
+        .content-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:24px;}
+
+        .section-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--card-border);box-shadow:var(--shadow-sm);overflow:hidden;transition:var(--transition);margin-bottom:24px;}
+        .section-card:hover{box-shadow:var(--shadow-md);}
+        .section-header{display:flex;align-items:center;justify-content:space-between;padding:22px 26px;border-bottom:1px solid var(--border);}
+        .section-header-left{display:flex;align-items:center;gap:12px;}
+        .section-header-left .sh-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+        .sh-icon.sh-apt{background:var(--sky-soft);color:var(--sky);}
+        .sh-icon.sh-report{background:var(--accent-soft);color:var(--accent);}
+        .sh-icon.sh-service{background:var(--indigo-soft);color:var(--indigo);}
+        .sh-icon.sh-notif{background:var(--gold-soft);color:var(--gold);}
+        .sh-icon.sh-presc{background:var(--violet-soft);color:var(--violet);}
+        body.dark-mode .sh-icon.sh-apt{background:rgba(14,165,233,.12);}
+        body.dark-mode .sh-icon.sh-report{background:rgba(16,185,129,.12);}
+        body.dark-mode .sh-icon.sh-service{background:rgba(99,102,241,.12);}
+        body.dark-mode .sh-icon.sh-notif{background:rgba(245,158,11,.12);}
+        body.dark-mode .sh-icon.sh-presc{background:rgba(139,92,246,.12);}
+        .section-header-left h3{font-size:15px;font-weight:700;color:var(--text);}
+        .section-header .see-all{font-size:12px;font-weight:700;color:var(--accent-dark);text-decoration:none;cursor:pointer;transition:var(--transition);display:flex;align-items:center;gap:4px;}
+        .section-header .see-all:hover{color:var(--accent);gap:6px;}
+        .section-body{padding:14px 20px 18px;}
+
+        /* Appointment rows */
+        .apt-row{display:flex;align-items:center;gap:16px;padding:14px 16px;border-radius:16px;transition:var(--transition);margin-bottom:6px;}
+        .apt-row:hover{background:var(--slate-soft);}
+        .apt-doc-avatar{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:white;font-family:'Sora',sans-serif;flex-shrink:0;}
+        .apt-doc-avatar.av-nurse{background:linear-gradient(135deg,#10b981,#059669);}
+        .apt-doc-avatar.av-physio{background:linear-gradient(135deg,#0ea5e9,#2563eb);}
+        .apt-doc-avatar.av-lab{background:linear-gradient(135deg,#8b5cf6,#6d28d9);}
+        .apt-doc-avatar.av-general{background:linear-gradient(135deg,#f59e0b,#d97706);}
+        .apt-doc-avatar.av-speech{background:linear-gradient(135deg,#f43f5e,#be123c);}
+        .apt-info{flex:1;min-width:0;}
+        .apt-info .apt-name{font-weight:700;font-size:14.5px;color:var(--text);margin-bottom:2px;}
+        .apt-info .apt-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+        .apt-info .apt-meta span{font-size:12px;color:var(--text-muted);font-weight:500;display:inline-flex;align-items:center;gap:4px;}
+        .apt-info .apt-meta span i{font-size:10px;}
+
+        .badge{display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;font-size:11.5px;font-weight:700;letter-spacing:.3px;white-space:nowrap;}
+        .badge::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+        .badge-confirmed{background:var(--accent-soft);color:#065f46;}
+        .badge-confirmed::before{background:var(--accent);}
+        .badge-pending{background:var(--gold-soft);color:var(--gold-dark);}
+        .badge-pending::before{background:var(--gold);}
+        .badge-completed{background:var(--slate-soft);color:var(--slate);}
+        .badge-completed::before{background:#94a3b8;}
+        .badge-cancelled{background:var(--rose-soft);color:var(--rose-dark);}
+        .badge-cancelled::before{background:var(--rose);}
+
+        /* Report rows */
+        .report-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:16px;transition:var(--transition);margin-bottom:6px;}
+        .report-row:hover{background:var(--slate-soft);}
+        .report-info{display:flex;align-items:center;gap:14px;flex:1;min-width:0;}
+        .report-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+        .ri-blood{background:var(--rose-soft);color:var(--rose);}
+        .ri-xray{background:var(--sky-soft);color:var(--sky);}
+        .ri-ecg{background:var(--accent-soft);color:var(--accent);}
+        .ri-urine{background:var(--gold-soft);color:var(--gold);}
+        .ri-scan{background:var(--violet-soft);color:var(--violet);}
+        .report-text .rt-name{font-weight:700;font-size:14px;color:var(--text);}
+        .report-text .rt-date{font-size:12px;color:var(--text-muted);margin-top:2px;}
+
+        .btn{padding:9px 16px;border:none;border-radius:11px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:var(--transition);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;position:relative;overflow:hidden;}
+        .btn-view{background:var(--indigo-soft);color:var(--indigo-dark);}
+        body.dark-mode .btn-view{color:var(--indigo);}
+        .btn-view:hover{background:var(--indigo);color:white;transform:translateY(-1px);box-shadow:0 4px 12px rgba(99,102,241,.25);}
+        .btn-download{background:var(--accent-soft);color:var(--accent-dark);}
+        body.dark-mode .btn-download{color:var(--accent);}
+        .btn-download:hover{background:var(--accent);color:white;transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,185,129,.25);}
+        .btn-chat{background:linear-gradient(135deg,#128c7e,#25d366);color:white;box-shadow:0 4px 12px rgba(37,211,102,.2);}
+        .btn-chat:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,211,102,.3);}
+
+        .report-actions{display:flex;gap:6px;flex-shrink:0;}
+
+        /* Services grid */
+        .services-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+        .service-chip{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px;background:var(--slate-soft);transition:var(--transition);cursor:default;}
+        .service-chip:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm);}
+        .service-chip i{font-size:16px;width:20px;text-align:center;}
+        .service-chip span{font-size:13px;font-weight:600;color:var(--text-secondary);}
+
+        /* Notification rows */
+        .notif-row{display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border-radius:16px;transition:var(--transition);margin-bottom:6px;}
+        .notif-row:hover{background:var(--slate-soft);}
+        .notif-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+        .notif-dot.unread{background:var(--accent);box-shadow:0 0 8px var(--accent-glow);}
+        .notif-dot.read{background:var(--border);}
+        .notif-content .nc-title{font-weight:700;font-size:14px;color:var(--text);margin-bottom:2px;}
+        .notif-content .nc-desc{font-size:12.5px;color:var(--text-muted);line-height:1.5;}
+        .notif-content .nc-time{font-size:11px;color:var(--text-muted);margin-top:4px;font-weight:500;}
+
+        /* Prescriptions */
+        .presc-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:16px;transition:var(--transition);margin-bottom:6px;}
+        .presc-row:hover{background:var(--slate-soft);}
+        .presc-info{display:flex;align-items:center;gap:14px;flex:1;}
+        .presc-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--violet-soft);color:var(--violet);}
+        body.dark-mode .presc-icon{background:rgba(139,92,246,.12);}
+        .presc-text .pt-name{font-weight:700;font-size:14px;color:var(--text);}
+        .presc-text .pt-doc{font-size:12px;color:var(--text-muted);margin-top:2px;}
+
+        /* ===== MODAL ===== */
+        .modal-overlay{position:fixed;inset:0;background:rgba(11,17,32,.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;justify-content:center;align-items:center;z-index:2000;padding:20px;}
+        .modal-overlay.show{display:flex;}
+        .modal-box{background:var(--card);width:100%;max-width:620px;border-radius:28px;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.2);transform:scale(.92) translateY(20px);opacity:0;transition:all .4s cubic-bezier(.34,1.56,.64,1);}
+        .modal-overlay.show .modal-box{transform:scale(1) translateY(0);opacity:1;}
+        .modal-header{padding:26px 30px 0;display:flex;align-items:flex-start;justify-content:space-between;}
+        .modal-header-left h3{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.3px;}
+        .modal-header-left p{font-size:13px;color:var(--text-muted);margin-top:4px;}
+        .modal-close{width:40px;height:40px;border:none;border-radius:12px;background:#f1f5f9;color:var(--text-muted);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:var(--transition);flex-shrink:0;}
+        body.dark-mode .modal-close{background:rgba(255,255,255,.06);}
+        .modal-close:hover{background:var(--rose-soft);color:var(--rose);}
+        .modal-body{padding:22px 30px 30px;max-height:65vh;overflow-y:auto;}
+        .modal-body::-webkit-scrollbar{width:6px;}
+        .modal-body::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;}
+        .report-detail-box{background:var(--slate-soft);border-radius:18px;padding:22px;margin-bottom:20px;border-left:4px solid var(--accent);}
+        body.dark-mode .report-detail-box{background:rgba(255,255,255,.03);}
+        .rd-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+        .rd-row:last-child{border:none;}
+        .rd-label{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;}
+        .rd-value{font-size:14px;font-weight:600;color:var(--text);}
+        .rd-value.abnormal{color:var(--rose);}
+        .rd-value.normal{color:var(--accent-dark);}
+        .modal-footer{display:flex;justify-content:flex-end;gap:12px;padding:0 30px 26px;}
+        .btn-modal-close{background:var(--slate-soft);color:var(--text-secondary);}
+        body.dark-mode .btn-modal-close{background:rgba(255,255,255,.06);color:var(--text-muted);}
+        .btn-modal-close:hover{background:var(--border);color:var(--text);}
+        .btn-modal-dl{background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:white;box-shadow:0 4px 14px rgba(16,185,129,.25);}
+        .btn-modal-dl:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(16,185,129,.35);}
+
+        /* Empty state */
+        .empty-state{text-align:center;padding:40px 20px;color:var(--text-muted);}
+        .empty-state i{font-size:36px;margin-bottom:12px;opacity:.25;display:block;}
+        .empty-state p{font-size:14px;font-weight:500;}
+
+        /* ===== TOAST ===== */
+        .toast-container{position:fixed;top:24px;right:24px;z-index:5000;display:flex;flex-direction:column;gap:10px;}
+        .toast{background:var(--card);border-radius:14px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.12);border-left:4px solid var(--accent);font-size:14px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);min-width:300px;}
+        body.dark-mode .toast{background:var(--card);}
+        .toast.show{transform:translateX(0);}
+        .toast i{font-size:18px;}
+        .toast .t-success{color:var(--accent);}
+        .toast .t-info{color:var(--sky);}
+
+        /* Ripple */
+        .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.3);transform:scale(0);animation:rippleAnim .6s ease-out;pointer-events:none;}
+        @keyframes rippleAnim{to{transform:scale(4);opacity:0;}}
+
+        /* ===== RESPONSIVE ===== */
+        @media(max-width:1200px){.stats-grid{grid-template-columns:repeat(2,1fr);}.content-grid{grid-template-columns:1fr;}.services-grid{grid-template-columns:1fr 1fr;}}
+        @media(max-width:768px){.sidebar{transform:translateX(-100%);}.main{margin-left:0;padding:20px;}.top-header{flex-direction:column;align-items:flex-start;}.search-box{width:100%;}.stats-grid{grid-template-columns:1fr 1fr;gap:12px;}.report-actions{flex-direction:column;gap:4px;}.services-grid{grid-template-columns:1fr;}}
+        @media(max-width:480px){.stats-grid{grid-template-columns:1fr;}}
+        html{scroll-behavior:smooth;}
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+    </style>
+</head>
+<body>
+
+<div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+</div>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="logo-icon"><i class="fas fa-heartbeat"></i></div>
+        <h2>Health<span>OnCall</span></h2>
+        <p>Patient Portal</p>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-label">Menu</div>
+        <a href="Patient Dashboard Home Page p1.html" class="active"><i class="fas fa-th-large"></i> Home</a>
+        <a href="find doc 1.html"><i class="fas fa-search"></i> Find Specialist</a>
+        <a href="services 1.html"><i class="fas fa-calendar-plus"></i> services</a>
+        <a href="assistant 1.html"><i class="fas fa-robot"></i> AI Assistant</a>
+        <a href="feedback 1.html"><i class="fas fa-star"></i> Feedback</a>
+        <div class="nav-label">Account</div>
+        <a href="setting 1.html"><i class="fas fa-cog"></i> Settings</a>
+        <a href="logout 1.html"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-card">
+            <div class="user-avatar" id="sidebarAvatar"><img src="https://ui-avatars.com/api/?name=Esha+Maham&background=0ea5e9&color=fff&bold=true&size=80" alt=""></div>
+            <div class="user-info">
+                <div class="user-name" id="sidebarName">Esha Maham</div>
+                <div class="user-role">Patient</div>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+
+    <!-- Header -->
+    <header class="top-header">
+        <div class="greeting-section">
+            <h1>Welcome back, <span>Esha</span></h1>
+            <div class="date-line">
+                <i class="fas fa-calendar-alt"></i>
+                <span id="todayDate"></span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="search-box">
+                <input type="text" id="globalSearch" placeholder="Search appointments, reports...">
+                <i class="fas fa-search"></i>
+            </div>
+            <button class="notif-btn" onclick="markNotifRead()" aria-label="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="dot" id="notifDot"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Stats -->
+    <section class="stats-grid">
+        <div class="stat-card s1">
+            <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+            <div class="stat-number" id="statTotal">00</div>
+            <div class="stat-label">Total Appointments</div>
+            <div class="stat-bar"></div>
+        </div>
+        <div class="stat-card s2">
+            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+            <div class="stat-number" id="statUpcoming">00</div>
+            <div class="stat-label">Upcoming</div>
+            <div class="stat-bar"></div>
+        </div>
+        <div class="stat-card s3">
+            <div class="stat-icon"><i class="fas fa-file-medical-alt"></i></div>
+            <div class="stat-number" id="statReports">00</div>
+            <div class="stat-label">Medical Reports</div>
+            <div class="stat-bar"></div>
+        </div>
+        <div class="stat-card s4">
+            <div class="stat-icon"><i class="fas fa-bell"></i></div>
+            <div class="stat-number" id="statNotifs">00</div>
+            <div class="stat-label">Notifications</div>
+            <div class="stat-bar"></div>
+        </div>
+    </section>
+
+    <!-- Content Grid -->
+    <div class="content-grid">
+
+        <!-- Left Column -->
+        <div class="left-col">
+
+            <!-- Recent Appointments -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-header-left">
+                        <div class="sh-icon sh-apt"><i class="fas fa-calendar-alt"></i></div>
+                        <h3>Recent Appointments</h3>
+                    </div>
+                    <a class="see-all" onclick="showToast('Viewing all appointments','info')">View All <i class="fas fa-arrow-right"></i></a>
+                </div>
+                <div class="section-body" id="appointmentsList"></div>
+            </div>
+
+            <!-- Medical Reports -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-header-left">
+                        <div class="sh-icon sh-report"><i class="fas fa-file-medical"></i></div>
+                        <h3>Medical Reports</h3>
+                    </div>
+                    <a class="see-all" onclick="showToast('Viewing all reports','info')">View All <i class="fas fa-arrow-right"></i></a>
+                </div>
+                <div class="section-body" id="reportsList"></div>
+            </div>
+
+            <!-- Prescriptions -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-header-left">
+                        <div class="sh-icon sh-presc"><i class="fas fa-prescription-bottle-alt"></i></div>
+                        <h3>Prescriptions</h3>
+                    </div>
+                </div>
+                <div class="section-body" id="prescriptionsList"></div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="right-col">
+
+            <!-- Services Used -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-header-left">
+                        <div class="sh-icon sh-service"><i class="fas fa-concierge-bell"></i></div>
+                        <h3>Services Used</h3>
+                    </div>
+                </div>
+                <div class="section-body">
+                    <div class="services-grid" id="servicesGrid"></div>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-header-left">
+                        <div class="sh-icon sh-notif"><i class="fas fa-bell"></i></div>
+                        <h3>Notifications</h3>
+                    </div>
+                    <a class="see-all" onclick="markAllRead()">Mark all read</a>
+                </div>
+                <div class="section-body" id="notificationsList"></div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-header-left">
+                        <div class="sh-icon" style="background:var(--accent-soft);color:var(--accent);"><i class="fas fa-bolt"></i></div>
+                        <h3>Quick Actions</h3>
+                    </div>
+                </div>
+                <div class="section-body" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <button class="btn btn-view" style="padding:14px;justify-content:center;border-radius:14px;" onclick="showToast('Opening booking page...','info')">
+                        <i class="fas fa-calendar-plus"></i> Book Now
+                    </button>
+                    <button class="btn btn-chat" style="padding:14px;justify-content:center;border-radius:14px;" onclick="openWhatsApp()">
+                        <i class="fab fa-whatsapp"></i> Chat with Us
+                    </button>
+                    <button class="btn btn-download" style="padding:14px;justify-content:center;border-radius:14px;" onclick="showToast('Downloading health summary...','success')">
+                        <i class="fas fa-download"></i> Health Summary
+                    </button>
+                    <button class="btn" style="padding:14px;justify-content:center;border-radius:14px;background:var(--rose-soft);color:var(--rose-dark);" onclick="showToast('Opening emergency line...','info')">
+                        <i class="fas fa-phone-alt"></i> Emergency
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<!-- Report Modal -->
+<div class="modal-overlay" id="reportModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-header-left">
+                <h3 id="modalReportTitle">Report</h3>
+                <p id="modalReportDate"></p>
+            </div>
+            <button class="modal-close" onclick="closeModal()" aria-label="Close"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body" id="modalReportBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-modal-close" onclick="closeModal()">Close</button>
+            <button class="btn btn-modal-dl" onclick="downloadReport()"><i class="fas fa-download"></i> Download PDF</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+    /* ===== DATE ===== */
+    document.getElementById('todayDate').innerText = new Date().toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    /* ===== DATA ===== */
+    const appointments = [
+        { id: 1, doc: 'Dr. Sarah Johnson', type: 'Home Nursing', date: 'Oct 12, 2026', time: '10:00 AM', status: 'confirmed', avatar: 'nurse', color: '#10b981' },
+        { id: 2, doc: 'Dr. Michael Chen', type: 'Physiotherapy', date: 'Oct 15, 2026', time: '2:30 PM', status: 'pending', avatar: 'physio', color: '#0ea5e9' },
+        { id: 3, doc: 'Dr. Alice Brown', type: 'Lab Tests', date: 'Oct 18, 2026', time: '9:00 AM', 
+        // Dashboard file mein ye daalo
+const FILES = { doctor: 'doctor-dashboard.html', patient: 'patient-dashboard.html', staff: 'staff-dashboard.html' };
+const thisFile = location.pathname.split('/').pop();
+let myRole = 'patient';
+for (const [r, f] of Object.entries(FILES)) { if (thisFile === f) { myRole = r; break; } }
+
+function hocLogout() { localStorage.removeItem('hoc_current_role'); location.href = 'register.html'; }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const sb = document.querySelector('aside') || document.querySelector('.sidebar');
+    if (!sb) return;
+    const html = `<div style="margin:6px 10px;padding:8px;border-radius:10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05)">
+      <div style="font-size:8.5px;font-weight:700;color:rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px"><i class="fa-solid fa-arrow-right-arrow-left" style="font-size:8px"></i> Switch Portal</div>
+      ${['doctor','patient','staff'].map(r => {
+        const isCur = r === myRole;
+        const icons = { doctor: 'fa-user-doctor', patient: 'fa-hospital-user', staff: 'fa-user-gear' };
+        const colors = { doctor: '#60a5fa', patient: '#34d399', staff: '#fbbf24' };
+        const labels = { doctor: 'Doctor', patient: 'Patient', staff: 'Staff' };
+        return `<a href="${isCur ? '#' : FILES[r]}" style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-size:11.5px;color:${isCur ? colors[r] : 'rgba(255,255,255,.3)'};text-decoration:none;margin-bottom:3px;cursor:${isCur?'default':'pointer'};${isCur?'background:rgba(255,255,255,.03)':''}" ${isCur?'':`onclick="location.href='${FILES[r]}'"`}>
+          <div style="width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;background:rgba(${r==='doctor'?'59,130,246':r==='patient'?'16,185,129':'245,158,11'},${isCur?.2:.08});color:${colors[r]}"><i class="fa-solid ${icons[r]}"></i></div>
+          <div style="flex:1;line-height:1.2">${labels[r]}<span style="display:block;font-size:9px;color:rgba(255,255,255,${isCur?'.2':'.15'})">${isCur?'You are here':'Switch to '+labels[r].toLowerCase()+' view'}</span></div>
+          ${isCur?'<span style="font-size:9px;color:#34d399">&#10003;</span>':''}
+        </a>`;
+      }).join('')}
+    </div>`;
+    const logo = sb.querySelector('[class*="logo"]') || sb.firstElementChild;
+    if (logo && logo.nextElementSibling) logo.nextElementSibling.insertAdjacentHTML('afterend', html);
+    else sb.insertAdjacentHTML('afterbegin', html);
+
+    document.querySelectorAll('a, button').forEach(el => {
+        if (/(logout|sign\s*out)/i.test(el.textContent) && !el.onclick) {
+            el.setAttribute('onclick', 'hocLogout()');
+            if (el.tagName === 'A') el.removeAttribute('href');
+        }
+    });
+});

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>healthoncall — Healthcare Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{--pri:#0d9488;--pri-s:#ccfbf1;--pri-d:#0f766e;--sp:#7c3aed;--sp-s:#ede9fe;--pt:#059669;--pt-s:#d1fae5;--lb:#0284c7;--lb-s:#e0f2fe;--hn:#e11d48;--hn-s:#ffe4e6;--gd:#d97706;--gd-s:#fef3c7;--sb:#0f172a;--sb-h:rgba(13,148,136,.07);--sb-a:rgba(13,148,136,.14);--bg:#f1f5f9;--card:#fff;--cb:rgba(0,0,0,.05);--tx:#0f172a;--tx2:#475569;--mt:#94a3b8;--bd:#e2e8f0;--inp:#f8fafc;--ss:0 1px 3px rgba(0,0,0,.04);--sm:0 8px 30px rgba(0,0,0,.07);--tr:all .3s cubic-bezier(.4,0,.2,1)}
+body.dk{--bg:#020617;--card:#0f172a;--cb:rgba(255,255,255,.06);--tx:#f1f5f9;--tx2:#cbd5e1;--mt:#64748b;--bd:#1e293b;--inp:#1a2332;--pri-s:rgba(13,148,136,.12);--sp-s:rgba(124,58,237,.12);--pt-s:rgba(5,150,105,.12);--lb-s:rgba(2,132,199,.12);--hn-s:rgba(225,29,72,.12);--gd-s:rgba(217,119,6,.12)}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;overflow-x:hidden;transition:background .4s,color .3s}h1,h2,h3,h4,h5{font-family:'Sora',sans-serif}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--mt);border-radius:9px}
+#shell{display:flex;min-height:100vh}
+.bgd{position:fixed;top:0;left:260px;right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden}.bgd .b{position:absolute;border-radius:50%;filter:blur(90px);opacity:.09;animation:bf 22s ease-in-out infinite}body.dk .bgd .b{opacity:.025}
+.b1{width:280px;height:280px;background:#0d9488;top:-50px;right:5%}.b2{width:220px;height:220px;background:#7c3aed;bottom:8%;left:3%;animation-delay:-8s}.b3{width:160px;height:160px;background:#e11d48;top:45%;right:25%;animation-delay:-15s}
+@keyframes bf{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(22px,-28px) scale(1.06)}}
+.sb{width:260px;height:100vh;position:fixed;left:0;top:0;background:var(--sb);z-index:800;display:flex;flex-direction:column;transition:background .4s}.sb::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(13,148,136,.05) 0%,transparent 35%);pointer-events:none}
+.sbb{padding:18px 14px 12px;border-bottom:1px solid rgba(255,255,255,.04)}.sbb .sl{width:40px;height:40px;background:linear-gradient(135deg,#0d9488,#0284c7);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#fff;margin-bottom:8px;box-shadow:0 5px 16px rgba(13,148,136,.3)}.sbb h3{color:#f1f5f9;font-size:15px;font-weight:800;letter-spacing:-.3px}.sbb h3 span{color:#0d9488}.sbb .s-sub{color:#475569;font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-top:1px}
+.sbn{flex:1;padding:0 8px;overflow-y:auto;display:flex;flex-direction:column;gap:1px}.sbn::-webkit-scrollbar{width:0}
+.nl{font-size:8px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.5px;padding:14px 10px 3px}
+.sbn a{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;text-decoration:none;color:#94a3b8;font-weight:500;font-size:12px;transition:var(--tr);position:relative;white-space:nowrap}.sbn a i{width:15px;text-align:center;font-size:12px;transition:var(--tr);flex-shrink:0}.sbn a:hover{color:#e2e8f0;background:var(--sb-h)}.sbn a:hover i{color:#0d9488}.sbn a.on{color:#f1f5f9;background:var(--sb-a);font-weight:600}.sbn a.on i{color:#0d9488}.sbn a.on::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:#0d9488;border-radius:0 3px 3px 0}
+.sbadge{margin-left:auto;background:#e11d48;color:#fff;font-size:8.5px;font-weight:700;padding:1px 5px;border-radius:6px;min-width:14px;text-align:center;line-height:1.4}
+.sbf{padding:12px;border-top:1px solid rgba(255,255,255,.04)}.sbu{display:flex;align-items:center;gap:9px;padding:8px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.04)}.sba{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:10px;font-family:'Sora';flex-shrink:0}
+.mn{margin-left:260px;flex:1;padding:20px 22px;position:relative;z-index:1;min-height:100vh}
+.sc{display:none;animation:si .28s ease}.sc.on{display:block}@keyframes si{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.pt{margin-bottom:18px}.pt h1{font-size:19px;font-weight:800;letter-spacing:-.3px;margin-bottom:1px}.pt p{color:var(--mt);font-size:12px}
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.stc{background:var(--card);border-radius:12px;padding:14px;border:1px solid var(--cb);box-shadow:var(--ss);transition:var(--tr);position:relative;overflow:hidden}.stc:hover{box-shadow:var(--sm);transform:translateY(-1px)}.stc .sti{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;margin-bottom:8px}.stc .stv{font-family:'Sora';font-size:20px;font-weight:800;letter-spacing:-.3px;margin-bottom:1px}.stc .stl{font-size:11px;color:var(--mt);font-weight:500}
+.cd{background:var(--card);border-radius:14px;border:1px solid var(--cb);box-shadow:var(--ss);transition:var(--tr);overflow:hidden}.cd:hover{box-shadow:var(--sm)}.ch{padding:14px 18px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:5px}.ch h3{font-size:13px;font-weight:700;display:flex;align-items:center;gap:5px}.ch h3 i{font-size:11px}.cb{padding:10px 18px 14px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.fgl{display:flex;flex-direction:column;gap:3px;margin-bottom:9px}.fgl label{font-size:10.5px;font-weight:600;color:var(--tx2);letter-spacing:.2px}.fgl.fl{grid-column:1/-1}.fgl input,.fgl select,.fgl textarea{padding:7px 11px;border-radius:7px;border:1.5px solid var(--bd);background:var(--inp);color:var(--tx);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;transition:var(--tr);outline:none;width:100%}.fgl input:focus,.fgl select:focus,.fgl textarea:focus{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.1)}.fgl input::placeholder{color:var(--mt);font-weight:400}.fgl textarea{resize:vertical;min-height:46px}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:9px}.fgl .fh{font-size:9.5px;color:var(--mt);margin-top:1px}.fgl .fh i{margin-right:2px}
+.btn{padding:7px 14px;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer;transition:var(--tr);border:none;display:inline-flex;align-items:center;gap:4px;position:relative;overflow:hidden;white-space:nowrap}
+.bp{background:linear-gradient(135deg,#0f766e,#0d9488);color:#fff;box-shadow:0 3px 10px rgba(13,148,136,.2)}.bp:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(13,148,136,.3)}
+.bo{background:transparent;border:1.5px solid var(--bd);color:var(--tx2)}.bo:hover{border-color:#0d9488;color:#0d9488}
+.bdd{background:var(--hn-s);color:var(--hn)}.bdd:hover{background:var(--hn);color:#fff}
+.bw{background:var(--gd-s);color:#92400e}body.dk .bw{color:var(--gd)}.bw:hover{background:var(--gd);color:#fff}
+.bss{background:var(--lb-s);color:#075985}body.dk .bss{color:var(--lb)}.bss:hover{background:var(--lb);color:#fff}
+.bv{background:var(--sp-s);color:#5b21b6}body.dk .bv{color:var(--sp)}.bv:hover{background:var(--sp);color:#fff}
+.be{background:var(--pt-s);color:#065f46}body.dk .be{color:var(--pt)}.be:hover{background:var(--pt);color:#fff}
+.bsm{padding:5px 10px;font-size:10.5px;border-radius:6px}.bxs{padding:3px 8px;font-size:9.5px;border-radius:5px}.bgrp{display:flex;gap:5px;flex-wrap:wrap}
+.rip{position:absolute;border-radius:50%;background:rgba(255,255,255,.3);transform:scale(0);animation:ra .5s ease-out;pointer-events:none}@keyframes ra{to{transform:scale(4);opacity:0}}
+.bdg{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700;letter-spacing:.2px}
+.bdg-p{background:var(--pri-s);color:var(--pri-d)}body.dk .bdg-p{color:var(--pri)}.bdg-sp{background:var(--sp-s);color:#5b21b6}body.dk .bdg-sp{color:var(--sp)}.bdg-pt{background:var(--pt-s);color:#065f46}body.dk .bdg-pt{color:var(--pt)}.bdg-lb{background:var(--lb-s);color:#075985}body.dk .bdg-lb{color:var(--lb)}.bdg-hn{background:var(--hn-s);color:var(--hn)}.bdg-gd{background:var(--gd-s);color:#92400e}body.dk .bdg-gd{color:var(--gd)}.bdg-dk{background:var(--bd);color:var(--tx2)}.bdg-ok{background:var(--pt-s);color:#065f46}body.dk .bdg-ok{color:var(--pt)}
+.idc{display:inline-flex;align-items:center;gap:2px;background:linear-gradient(135deg,#0f766e,#0d9488);color:#fff;padding:1px 6px;border-radius:4px;font-family:'Sora';font-size:8.5px;font-weight:700;letter-spacing:.2px}
+.rc{padding:12px;border-radius:10px;background:var(--inp);border:1.5px solid var(--cb);margin-bottom:7px;transition:var(--tr)}.rc:hover{border-color:#0d9488}.rc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:6px}.rc-top h4{font-size:12.5px;font-weight:700}.rc-meta{display:flex;flex-wrap:wrap;gap:7px;font-size:10.5px;color:var(--mt)}.rc-meta span{display:flex;align-items:center;gap:2px}.rc-meta i{font-size:8px;color:#0d9488}.rc-act{display:flex;gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid var(--cb);flex-wrap:wrap;align-items:center}
+.sea{position:relative}.sea input{width:100%;padding:8px 11px 8px 32px;border-radius:8px;border:1.5px solid var(--bd);background:var(--inp);color:var(--tx);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;outline:none;transition:var(--tr)}.sea input:focus{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.1)}.sea i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--mt);font-size:11px}
+.pr{padding:10px;border-radius:9px;background:var(--inp);border:1px solid var(--cb);margin-bottom:5px;transition:var(--tr);cursor:pointer}.pr:hover{border-color:#0d9488;box-shadow:var(--ss)}
+.dc{display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;background:var(--inp);border:1px solid var(--cb);transition:var(--tr);margin-bottom:5px;cursor:pointer}.dc:hover{border-color:#0d9488}.dc .da{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;flex-shrink:0;font-family:'Sora'}.dc .di{flex:1}.dc .di h4{font-size:12px;font-weight:700;margin-bottom:1px}.dc .di p{font-size:10px;color:var(--mt)}
+.dsd{width:8px;height:8px;border-radius:50%;flex-shrink:0}.dsd.av{background:#059669;box-shadow:0 0 5px rgba(5,150,105,.4)}.dsd.bs{background:#d97706;box-shadow:0 0 5px rgba(217,119,6,.4)}.dsd.of{background:#94a3b8}
+.emp{text-align:center;padding:26px 14px}.emp i{font-size:28px;color:var(--mt);opacity:.3;margin-bottom:6px;display:block}.emp h4{font-size:12.5px;font-weight:700;color:var(--tx2);margin-bottom:2px}.emp p{font-size:11px;color:var(--mt)}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(5px);z-index:6000;display:none;align-items:center;justify-content:center}.mo.sh{display:flex}.md{background:var(--card);border-radius:14px;padding:22px;max-width:580px;width:94%;box-shadow:0 20px 50px rgba(0,0,0,.12);border:1px solid var(--cb);animation:mp .3s cubic-bezier(.34,1.56,.64,1);max-height:88vh;overflow-y:auto}@keyframes mp{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}.md h3{font-size:14px;font-weight:800;margin-bottom:2px;display:flex;align-items:center;gap:5px}.md h3 i{font-size:12px}.md>p{font-size:11.5px;color:var(--mt);margin-bottom:14px;line-height:1.5}
+.tc{position:fixed;top:14px;right:14px;z-index:7000;display:flex;flex-direction:column;gap:5px}.tst{background:var(--card);border-radius:9px;padding:9px 14px;display:flex;align-items:center;gap:7px;box-shadow:0 10px 28px rgba(0,0,0,.12);border-left:4px solid #0d9488;font-size:11.5px;font-weight:600;color:var(--tx);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);min-width:220px}.tst.sh{transform:translateX(0)}.tst .ts{color:#059669}.tst .te{color:#e11d48}.tst .ti{color:#0284c7}
+.dkt{position:fixed;top:12px;right:12px;z-index:500;width:34px;height:34px;border-radius:8px;border:1.5px solid var(--bd);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:var(--tr);font-size:12px;color:var(--tx2);box-shadow:var(--ss)}.dkt:hover{border-color:#0d9488;color:#0d9488}
+.shf{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700}.shf-m{background:var(--gd-s);color:#92400e}body.dk .shf-m{color:var(--gd)}.shf-e{background:var(--lb-s);color:#075985}body.dk .shf-e{color:var(--lb)}.shf-n{background:var(--sp-s);color:#5b21b6}body.dk .shf-n{color:var(--sp)}.shf-24{background:var(--hn-s);color:var(--hn)}
+.sel-f{padding:4px 7px;border-radius:5px;border:1px solid var(--bd);background:var(--inp);color:var(--tx);font-size:10.5px;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:11.5px}thead th{text-align:left;padding:7px 9px;font-size:9.5px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:.4px;border-bottom:1.5px solid var(--bd);white-space:nowrap}tbody td{padding:8px 9px;border-bottom:1px solid var(--cb);vertical-align:middle}tbody tr{transition:var(--tr)}tbody tr:hover{background:var(--bd)}tbody tr:last-child td{border-bottom:none}
+.pdet{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11.5px}.pdet>div{padding:6px 8px;background:var(--inp);border-radius:6px;border:1px solid var(--cb)}.pdet>div span{display:block;font-size:9px;color:var(--mt);margin-bottom:1px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.mob-tog{display:none;position:fixed;top:12px;left:12px;z-index:900;width:34px;height:34px;border-radius:8px;border:1.5px solid var(--bd);background:var(--card);align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:var(--tx2);box-shadow:var(--ss)}.mob-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:799}.mob-ov.sh{display:block}
+.sec-title{display:flex;align-items:center;gap:8px;margin:18px 0 10px;font-size:13px;font-weight:800;color:var(--tx);font-family:'Sora'}.sec-title i{font-size:11px;color:var(--pri)}.sec-title::after{content:'';flex:1;height:1px;background:var(--bd)}
+@media(max-width:1200px){.sg{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
+@media(max-width:768px){.sb{transform:translateX(-100%)}.sb.mob-open{transform:translateX(0)}.mn{margin-left:0;padding:14px}.sg{grid-template-columns:1fr 1fr}.fg2{grid-template-columns:1fr}.pt h1{font-size:16px}.mob-tog{display:flex!important}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+html{scroll-behavior:smooth}
+</style>
+</head>
+<body>
+<button class="mob-tog" onclick="toggleMob()" aria-label="Menu"><i class="fas fa-bars"></i></button>
+<div class="mob-ov" id="mobOv" onclick="toggleMob()"></div>
+<button class="dkt" onclick="document.body.classList.toggle('dk')" aria-label="Dark mode"><i class="fas fa-moon"></i></button>
+<div id="shell">
+<div class="bgd"><div class="b b1"></div><div class="b b2"></div><div class="b b3"></div></div>
+<aside class="sb" id="sideNav">
+<div class="sbb"><div class="sl"><i class="fas fa-heartbeat"></i></div><h3>Care<span>Connect</span></h3><div class="s-sub">Admin Portal</div></div>
+<nav class="sbn" id="nav">
+<div class="nl">Overview</div><a href="#" class="on" data-s="dash"><i class="fas fa-th-large"></i> Dashboard</a>
+<div class="nl">Manage</div><a href="#" data-s="appt"><i class="fas fa-calendar-plus"></i> Appointments</a><a href="#" data-s="queue"><i class="fas fa-list-ol"></i> Queue <span class="sbadge" id="navPend">0</span></a>
+<div class="nl">Records</div><a href="#" data-s="pay"><i class="fas fa-money-check-alt"></i> Payments</a><a href="#" data-s="staff"><i class="fas fa-id-badge"></i> Staff</a>
+</nav>
+<div class="sbf"><div class="sbu"><div class="sba" style="background:linear-gradient(135deg,#0d9488,#0284c7)">AD</div><div><div style="color:#e2e8f0;font-weight:600;font-size:11.5px">Admin</div><div style="color:#475569;font-size:9px">Full Access</div></div></div></div>
+</aside>
+<main class="mn">
+
+<!-- DASHBOARD -->
+<div class="sc on" id="s-dash"><div class="pt"><h1>Dashboard</h1><p id="dashDt"></p></div><div class="sg" id="dSt"></div><div class="g2"><div class="cd"><div class="ch"><h3><i class="fas fa-inbox" style="color:var(--gd)"></i> Pending Assignments</h3><button class="btn bxs bo" onclick="nav('queue')">View All</button></div><div class="cb" id="dPend" style="max-height:320px;overflow-y:auto"></div></div><div class="cd"><div class="ch"><h3><i class="fas fa-clock" style="color:var(--lb)"></i> Today's Activity</h3></div><div class="cb" id="dAct" style="max-height:320px;overflow-y:auto"></div></div></div></div>
+
+<!-- APPOINTMENTS (combined Patient + New Appointment) -->
+<div class="sc" id="s-appt">
+<div class="pt"><h1>Appointments</h1><p>Search patients, register new ones, and book appointments</p></div>
+
+<div class="sec-title"><i class="fas fa-search"></i> Search Patient</div>
+<div class="cd" style="margin-bottom:14px"><div class="cb"><div class="sea"><i class="fas fa-search"></i><input id="pSea" placeholder="Search by ID, Name, Phone, CNIC..." oninput="searchPat(this.value)"></div><div id="pRes"></div></div></div>
+
+<div class="sec-title"><i class="fas fa-user-plus"></i> Register New Patient</div>
+<div class="cd" style="margin-bottom:14px"><div class="cb"><div class="fg2"><div class="fgl"><label>First Name *</label><input id="rFn" placeholder="First name"></div><div class="fgl"><label>Last Name *</label><input id="rLn" placeholder="Last name"></div><div class="fgl"><label>Father/Husband *</label><input id="rFa" placeholder="Name"></div><div class="fgl"><label>Gender *</label><select id="rGe"><option value="">Select</option><option>Male</option><option>Female</option></select></div><div class="fgl"><label>Date of Birth *</label><input type="date" id="rDob"></div><div class="fgl"><label>CNIC *</label><input id="rCnic" placeholder="XXXXX-XXXXXXX-X" maxlength="15"></div><div class="fgl"><label>Phone *</label><input id="rPh" placeholder="03XX-XXXXXXX"></div><div class="fgl"><label>Alt Phone</label><input id="rPh2" placeholder="Optional"></div><div class="fgl fl"><label>Address *</label><textarea id="rAd" placeholder="Full address"></textarea></div><div class="fgl"><label>City *</label><input id="rCi" placeholder="City"></div><div class="fgl"><label>Blood Group</label><select id="rBl"><option value="">Select</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div><div class="fgl"><label>Allergies</label><input id="rAl" placeholder="e.g. Penicillin or 'None'"></div><div class="fgl"><label>Insurance</label><select id="rIn" onchange="document.getElementById('rPo').disabled=!this.value"><option value="">None</option><option>Jubilee Life</option><option>EFU Life</option><option>State Life</option></select></div><div class="fgl"><label>Policy #</label><input id="rPo" placeholder="Policy number" disabled></div></div><div class="bgrp" style="margin-top:10px"><button class="btn bp" onclick="regPat()"><i class="fas fa-save"></i> Register Patient</button><button class="btn bo" onclick="clrReg()"><i class="fas fa-eraser"></i> Clear</button></div></div></div>
+
+<div class="sec-title"><i class="fas fa-calendar-plus"></i> Book Appointment</div>
+<div class="cd"><div class="cb"><div class="fg2"><div class="fgl fl"><label>Step 1: Select Patient *</label><div class="sea"><i class="fas fa-search"></i><input id="aPS" placeholder="Search by ID, Name, Phone, CNIC..." oninput="searchPatA(this.value)"></div><div id="aPR"></div><div class="fh" id="aPSel" style="display:none"></div></div><div class="fgl"><label>Step 2: Service *</label><select id="aSvc" onchange="loadStaff()"><option value="">Select service</option><option value="speech">Speech Therapy</option><option value="physio">Physiotherapy</option><option value="lab">Lab Technician</option><option value="nursing">Home Nursing</option><option value="general">General Doctor</option></select></div><div class="fgl"><label>Step 3: Assign Doctor/Staff *</label><div id="aSStaff" style="max-height:180px;overflow-y:auto"></div></div></div><div id="aFields" style="display:none;border-top:1px solid var(--cb);margin-top:10px;padding-top:10px"><div class="fg2" id="aFD"></div></div><div class="fg2" style="margin-top:10px"><div class="fgl"><label>Date *</label><input type="date" id="aDt"></div><div class="fgl"><label>Time *</label><select id="aTm"><option value="">Select</option><option>09:00 AM</option><option>09:30 AM</option><option>10:00 AM</option><option>10:30 AM</option><option>11:00 AM</option><option>11:30 AM</option><option>12:00 PM</option><option>02:00 PM</option><option>02:30 PM</option><option>03:00 PM</option><option>03:30 PM</option><option>04:00 PM</option><option>04:30 PM</option><option>05:00 PM</option></select></div><div class="fgl"><label>Payment Method</label><select id="aPy"><option>Cash</option><option>Insurance</option><option>Card</option></select></div><div class="fgl"><label>Priority</label><select id="aPri"><option>Normal</option><option>Urgent</option><option>Emergency</option></select></div><div class="fgl fl"><label>Notes / Symptoms *</label><textarea id="aNt" placeholder="Describe concern, symptoms, or reason for visit..."></textarea></div></div><div class="bgrp" style="margin-top:10px"><button class="btn bp" onclick="bookAppt()"><i class="fas fa-paper-plane"></i> Create Appointment</button><button class="btn bo" onclick="clrAppt()"><i class="fas fa-eraser"></i> Clear</button></div></div></div>
+</div>
+
+<!-- QUEUE -->
+<div class="sc" id="s-queue"><div class="pt"><h1>Appointment Queue</h1><p>Manage appointments — assign, track status, start sessions</p></div><div class="cd" style="margin-bottom:14px"><div class="ch"><h3><i class="fas fa-filter" style="color:var(--pri)"></i> Filter</h3><div class="bgrp"><select id="qSvc" onchange="rQueue()" class="sel-f"><option value="all">All Services</option><option value="speech">Speech Therapy</option><option value="physio">Physiotherapy</option><option value="lab">Lab</option><option value="nursing">Nursing</option><option value="general">General</option></select><select id="qSt" onchange="rQueue()" class="sel-f"><option value="all">All Status</option><option value="Pending">Pending</option><option value="Assigned">Assigned</option><option value="Confirmed">Confirmed</option><option value="In-Progress">In-Progress</option><option value="Completed">Completed</option><option value="Cancelled">Cancelled</option></select></div></div></div><div class="cd"><div class="cb" id="qList"></div></div></div>
+
+<!-- PAYMENTS (paid only) -->
+<div class="sc" id="s-pay"><div class="pt"><h1>Payments</h1><p>All collected payments — cash and insurance</p></div><div class="sg" id="paySt"></div><div class="cd"><div class="ch"><h3><i class="fas fa-receipt" style="color:var(--gd)"></i> Payment Ledger</h3><select id="payFl" onchange="rPay()" class="sel-f"><option value="all">All</option><option value="Cash">Cash/Card</option><option value="Insurance">Insurance</option></select></div><div class="cb"><div style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Patient</th><th>Service</th><th>Staff</th><th>Date</th><th>Fee</th><th>Method</th><th>Status</th></tr></thead><tbody id="payBd"></tbody></table></div><div id="payEm" class="emp"><i class="fas fa-receipt"></i><h4>No payment records yet</h4></div></div></div></div>
+
+<!-- STAFF -->
+<div class="sc" id="s-staff"><div class="pt"><h1>Staff Directory</h1><p>View and manage all doctors, therapists, nurses, and technicians</p></div><div class="sg" id="stSt"></div><div id="stLs"></div></div>
+
+</main>
+</div>
+<div class="mo" id="moOv" onclick="clMo(event)"><div class="md" id="moBx" onclick="event.stopPropagation()"></div></div>
+<div class="tc" id="tBx"></div>
+
+<script>
+const DB={g(k,d=[]){try{return JSON.parse(localStorage.getItem('cc5-'+k))||d}catch(e){return d}},s(k,v){localStorage.setItem('cc5-'+k,JSON.stringify(v))}};
+const SV={speech:{n:'Speech Therapy',ic:'fa-child',c:'#7c3aed',bs:'var(--sp-s)',bd:'bdg-sp'},physio:{n:'Physiotherapy',ic:'fa-walking',c:'#059669',bs:'var(--pt-s)',bd:'bdg-pt'},lab:{n:'Lab Technician',ic:'fa-flask',c:'#0284c7',bs:'var(--lb-s)',bd:'bdg-lb'},nursing:{n:'Home Nursing',ic:'fa-home',c:'#e11d48',bs:'var(--hn-s)',bd:'bdg-hn'},general:{n:'General Doctor',ic:'fa-user-md',c:'#d97706',bs:'var(--gd-s)',bd:'bdg-gd'}};
+const DEFS=[
+{id:'STF-001',name:'Dr. Aisha Bibi',role:'Speech Therapist',svc:'speech',cnic:'35201-1111111-1',phone:'0300-1111111',fee:3000,status:'available',gender:'Female'},
+{id:'STF-002',name:'Sana Rafiq',role:'SLP Assistant',svc:'speech',cnic:'35201-2222222-2',phone:'0300-2222222',fee:2000,status:'available',gender:'Female'},
+{id:'STF-003',name:'Dr. Kamran',role:'Physiotherapist',svc:'physio',cnic:'35202-3333333-3',phone:'0300-3333333',fee:2500,status:'available',gender:'Male'},
+{id:'STF-004',name:'Bilal Siddiqui',role:'PT Assistant',svc:'physio',cnic:'35202-4444444-4',phone:'0300-4444444',fee:1800,status:'busy',gender:'Male'},
+{id:'STF-005',name:'Farhan Ahmed',role:'Lab Technologist',svc:'lab',cnic:'35202-5555555-5',phone:'0300-5555555',fee:1500,status:'available',gender:'Male'},
+{id:'STF-006',name:'Zara Khan',role:'Lab Technician',svc:'lab',cnic:'35401-6666666-6',phone:'0300-6666666',fee:1200,status:'available',gender:'Female'},
+{id:'STF-007',name:'Nurse Fatima',role:'Staff Nurse',svc:'nursing',cnic:'35201-7777777-7',phone:'0300-7777777',fee:3500,status:'available',gender:'Female'},
+{id:'STF-008',name:'Nurse Saima',role:'Staff Nurse',svc:'nursing',cnic:'35201-8888888-8',phone:'0300-8888888',fee:3500,status:'busy',gender:'Female'},
+{id:'STF-009',name:'Nurse Ali Raza',role:'Male Nurse',svc:'nursing',cnic:'35202-9999999-9',phone:'0300-9999999',fee:3500,status:'available',gender:'Male'},
+{id:'STF-010',name:'Dr. Ali Khan',role:'General Physician',svc:'general',cnic:'35202-1010101-0',phone:'0301-1010101',fee:1500,status:'available',gender:'Male'},
+{id:'STF-011',name:'Dr. Nadia Shafi',role:'General Physician',svc:'general',cnic:'35201-1212121-2',phone:'0301-1212121',fee:1500,status:'available',gender:'Female'}
+];
+
+function seed(){
+if(DB.g('p').length)return;
+const td=new Date().toISOString().split('T')[0];
+const yd=new Date(Date.now()-864e5).toISOString().split('T')[0];
+DB.s('p',[
+{id:'CC-2025-0001',fn:'Ahmed',ln:'Khan',fa:'Rashid Khan',g:'Male',dob:'1985-06-12',cnic:'35202-1234567-1',ph:'0300-1234567',ph2:'',ad:'H-5, F-10 Islamabad',ci:'Islamabad',bl:'B+',al:'Penicillin',ins:'Jubilee Life',po:'JL-78901',v:3,rd:'2025-01-05'},
+{id:'CC-2025-0002',fn:'Sana',ln:'Begum',fa:'Muhammad Ali',g:'Female',dob:'1990-03-22',cnic:'35201-9876543-2',ph:'0321-9876543',ph2:'',ad:'Gulberg Lahore',ci:'Lahore',bl:'A+',al:'None',ins:'EFU Life',po:'EFU-45678',v:1,rd:'2025-01-10'},
+{id:'CC-2025-0003',fn:'Muhammad',ln:'Ali',fa:'Fazal Hussain',g:'Male',dob:'1978-11-05',cnic:'61101-4561234-3',ph:'0333-4561234',ph2:'0345-6789012',ad:'Chak 45 Sialkot',ci:'Sialkot',bl:'O+',al:'Aspirin',ins:'',po:'',v:7,rd:'2025-01-02'},
+{id:'CC-2025-0004',fn:'Zainab',ln:'Hussain',fa:'Akhtar',g:'Female',dob:'1995-08-18',cnic:'35401-7890123-4',ph:'0312-7890123',ph2:'',ad:'PECHS Karachi',ci:'Karachi',bl:'AB+',al:'Latex',ins:'State Life',po:'SL-12345',v:2,rd:'2025-01-08'},
+{id:'CC-2025-0005',fn:'Babar',ln:'Malik',fa:'Tariq',g:'Male',dob:'2001-01-30',cnic:'35202-3456789-5',ph:'0305-3456789',ph2:'',ad:'Model Town Lahore',ci:'Lahore',bl:'A-',al:'None',ins:'',po:'',v:1,rd:'2025-01-12'}
+]);
+DB.s('npn',6);DB.s('st',JSON.parse(JSON.stringify(DEFS)));
+/* All orders are paid — no unpaid system */
+DB.s('o',[
+{id:'ORD-001',pi:'CC-2025-0001',pn:'Ahmed Khan',sv:'speech',si:'STF-001',sn:'Dr. Aisha Bibi',dt:td,tm:'10:00 AM',st:'Assigned',pm:'Cash',ps:'Paid',fee:3000,d:{age:'5 years',type:'Language Development',pkg:'5 Sessions',notes:'Not speaking in full sentences yet',ref:''},pri:'Normal'},
+{id:'ORD-002',pi:'CC-2025-0003',pn:'Muhammad Ali',sv:'physio',si:'STF-003',sn:'Dr. Kamran',dt:td,tm:'09:00 AM',st:'Confirmed',pm:'Cash',ps:'Paid',fee:2500,d:{cond:'Back Pain / Spine',sType:'Follow-up',loc:'In-Clinic',sess:'1 Session',notes:'Chronic lower back pain 6 months',ref:''},pri:'Normal'},
+{id:'ORD-003',pi:'CC-2025-0004',pn:'Zainab Hussain',sv:'lab',si:'STF-005',sn:'Farhan Ahmed',dt:td,tm:'09:30 AM',st:'In-Progress',pm:'Card',ps:'Paid',fee:2200,d:{test:'Lipid Profile',urg:'Routine (24-48 hrs)',col:'At Lab',notes:'Fasting sample needed',ref:'Dr. Ali Khan'},pri:'Normal'},
+{id:'ORD-004',pi:'CC-2025-0002',pn:'Sana Begum',sv:'nursing',si:'STF-007',sn:'Nurse Fatima',dt:td,tm:'',st:'Assigned',pm:'Insurance',ps:'Insurance',fee:24500,d:{svcType:'Post-Surgical Care',gender:'Female',shift:'morning',days:'7',addr:'Gulberg Lahore',notes:'C-section recovery, wound dressing required',ref:''},pri:'Normal'},
+{id:'ORD-005',pi:'CC-2025-0005',pn:'Babar Malik',sv:'general',si:'STF-010',sn:'Dr. Ali Khan',dt:td,tm:'11:00 AM',st:'Completed',pm:'Cash',ps:'Paid',fee:1500,d:{sym:'Throat Infection',dur:'2-3 days',med:'',notes:'Sore throat, mild fever, difficulty swallowing',ref:''},pri:'Normal'},
+{id:'ORD-006',pi:'CC-2025-0001',pn:'Ahmed Khan',sv:'speech',si:'STF-001',sn:'Dr. Aisha Bibi',dt:yd,tm:'02:00 PM',st:'Completed',pm:'Cash',ps:'Paid',fee:3000,d:{age:'5 years',type:'Language Development',pkg:'5 Sessions',notes:'Session 1 of 5 — baseline assessment done',ref:''},pri:'Normal'},
+{id:'ORD-007',pi:'CC-2025-0003',pn:'Muhammad Ali',sv:'physio',si:'STF-003',sn:'Dr. Kamran',dt:yd,tm:'11:00 AM',st:'Completed',pm:'Cash',ps:'Paid',fee:2500,d:{cond:'Back Pain / Spine',sType:'Initial Assessment',loc:'In-Clinic',sess:'6 Sessions',notes:'X-ray done, started treatment plan',ref:''},pri:'Normal'}
+]);
+DB.s('non',8);
+DB.s('log',[
+{t:'08:30',i:'fa-calendar-plus',c:'#7c3aed',x:'Speech therapy booked for Ahmed Khan'},
+{t:'08:45',i:'fa-user-md',c:'#059669',x:'Dr. Kamran assigned (Physio)'},
+{t:'09:00',i:'fa-home',c:'#e11d48',x:'Nurse Fatima assigned 7 days nursing'},
+{t:'09:15',i:'fa-check-circle',c:'#059669',x:'Dr. Ali Khan confirmed Babar Malik'},
+{t:'09:20',i:'fa-money-bill',c:'#059669',x:'Payment collected: PKR 1,500 from Babar'},
+{t:'10:00',i:'fa-check-circle',c:'#059669',x:'Ahmed Khan speech session completed'},
+{t:'10:30',i:'fa-flask',c:'#0284c7',x:'Lipid profile processing for Zainab'}
+]);
+}
+seed();
+
+let selP=null,selS=null;
+document.querySelectorAll('#nav a[data-s]').forEach(a=>{a.addEventListener('click',function(e){e.preventDefault();nav(this.dataset.s)})});
+function nav(s){document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.s===s));document.querySelectorAll('.sc').forEach(sc=>sc.classList.remove('on'));const el=document.getElementById('s-'+s);if(el)el.classList.add('on');ref(s);toggleMob(true);}
+function ref(s){if(s==='dash')rDash();if(s==='queue')rQueue();if(s==='pay')rPay();if(s==='staff')rStaff();uNavBdg();}
+
+/* PATIENT SEARCH */
+function searchPat(q){const c=document.getElementById('pRes');if(!q||q.length<1){c.innerHTML='';return}const ql=q.toLowerCase();const r=DB.g('p').filter(p=>p.id.toLowerCase().includes(ql)||(p.fn+' '+p.ln).toLowerCase().includes(ql)||p.ph.includes(ql)||p.cnic.replace(/-/g,'').includes(ql.replace(/-/g,'')));if(!r.length){c.innerHTML='<div style="padding:8px;font-size:11px;color:var(--mt);text-align:center">No patient found — register below</div>';return}c.innerHTML=r.map(p=>`<div class="pr" onclick="showPat('${p.id}')"><div style="display:flex;align-items:center;justify-content:space-between"><h4 style="font-size:12px;font-weight:700">${p.fn} ${p.ln}</h4><div style="display:flex;gap:4px"><div class="idc">${p.id}</div><span class="bdg ${p.v>0?'bdg-lb':'bdg-ok'}">${p.v>0?p.v+' visits':'New'}</span></div></div><div style="display:flex;flex-wrap:wrap;gap:6px;font-size:10px;color:var(--mt);margin-top:3px"><span><i class="fas fa-phone" style="color:var(--pri);font-size:8px"></i> ${p.ph}</span><span><i class="fas fa-id-card" style="color:var(--pri);font-size:8px"></i> ${p.cnic}</span><span><i class="fas fa-map-marker-alt" style="color:var(--pri);font-size:8px"></i> ${p.ci}</span>${p.al&&p.al!=='None'?`<span style="color:var(--hn);font-weight:600"><i class="fas fa-exclamation-triangle" style="font-size:8px"></i> ${p.al}</span>`:''}${p.ins?`<span style="color:var(--lb)"><i class="fas fa-shield-alt" style="font-size:8px"></i> ${p.ins}</span>`:''}</div></div>`).join('');}
+
+function searchPatA(q){const c=document.getElementById('aPR');if(!q||q.length<1){c.innerHTML='';return}const ql=q.toLowerCase();const r=DB.g('p').filter(p=>p.id.toLowerCase().includes(ql)||(p.fn+' '+p.ln).toLowerCase().includes(ql)||p.ph.includes(ql)||p.cnic.replace(/-/g,'').includes(ql.replace(/-/g,'')));if(!r.length){c.innerHTML='<div style="padding:6px;font-size:11px;color:var(--mt);text-align:center">Not found — register above first</div>';return}c.innerHTML=r.map(p=>`<div class="pr" onclick="pickPatA('${p.id}')"><div style="display:flex;align-items:center;justify-content:space-between"><h4 style="font-size:12px;font-weight:700">${p.fn} ${p.ln}</h4><div style="display:flex;gap:4px"><div class="idc">${p.id}</div><span class="bdg ${p.v>0?'bdg-lb':'bdg-ok'}">${p.v>0?p.v+' visits':'New'}</span></div></div><div style="display:flex;flex-wrap:wrap;gap:6px;font-size:10px;color:var(--mt);margin-top:3px"><span><i class="fas fa-phone" style="color:var(--pri);font-size:8px"></i> ${p.ph}</span><span><i class="fas fa-venus-mars" style="color:var(--pri);font-size:8px"></i> ${p.g} · ${p.bl||'N/A'}</span>${p.al&&p.al!=='None'?`<span style="color:var(--hn);font-weight:600"><i class="fas fa-exclamation-triangle" style="font-size:8px"></i> ${p.al}</span>`:''}${p.ins?`<span style="color:var(--lb)"><i class="fas fa-shield-alt" style="font-size:8px"></i> ${p.ins}</span>`:''}</div></div>`).join('');}
+
+function pickPatA(id){selP=DB.g('p').find(x=>x.id===id);if(!selP)return;document.getElementById('aPR').innerHTML='';const d=document.getElementById('aPSel');d.style.display='block';d.innerHTML=`<div style="padding:8px 10px;background:var(--pt-s);border-radius:7px;font-size:11.5px;font-weight:600;color:#065f46;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><i class="fas fa-check-circle"></i><strong>${selP.fn} ${selP.ln}</strong> <span class="idc">${selP.id}</span> <span class="bdg ${selP.v>0?'bdg-lb':'bdg-ok'}">${selP.v>0?'Returning ('+selP.v+' visits)':'First Visit'}</span>${selP.ins?` <span class="bdg bdg-lb">${selP.ins}</span>`:''}${selP.al&&selP.al!=='None'?` <span class="bdg bdg-hn">Allergy: ${selP.al}</span>`:''}</div>`;document.getElementById('aPS').value=selP.fn+' '+selP.ln;document.getElementById('aPy').value=selP.ins?'Insurance':'Cash';}
+
+function showPat(id){
+const p=DB.g('p').find(x=>x.id===id);if(!p)return;
+const ords=DB.g('o').filter(o=>o.pi===id);
+openM(`<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:14px;background:var(--inp);border-radius:12px;border:1px solid var(--cb)"><div style="width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#0d9488,#0284c7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:17px;font-family:'Sora'">${p.fn[0]}${p.ln[0]}</div><div style="flex:1"><h3 style="margin-bottom:2px">${p.fn} ${p.ln}</h3><div class="idc" style="font-size:9px;padding:2px 8px">${p.id}</div></div><span class="bdg ${p.v>0?'bdg-lb':'bdg-ok'}" style="font-size:10px;padding:3px 8px">${p.v>0?p.v+' visits':'New'}</span></div>
+<div class="pdet" style="margin-bottom:14px"><div><span>Father/Husband</span>${p.fa}</div><div><span>Gender / DOB</span>${p.g} · ${p.dob}</div><div><span>Phone</span>${p.ph}${p.ph2?' / '+p.ph2:''}</div><div><span>CNIC</span>${p.cnic}</div><div><span>Blood Group</span>${p.bl||'N/A'}</div><div><span>City</span>${p.ci}</div><div style="grid-column:1/-1"><span>Address</span>${p.ad}</div><div><span>Allergies</span><strong style="color:${p.al&&p.al!=='None'?'var(--hn)':'#059669'}">${p.al||'None'}</strong></div><div><span>Insurance</span>${p.ins||'None'}${p.po?' ('+p.po+')':''}</div></div>
+ ${ords.length?`<h4 style="font-size:12px;font-weight:700;margin-bottom:6px"><i class="fas fa-history" style="color:var(--pri);margin-right:4px"></i>Visit History (${ords.length})</h4><div style="max-height:180px;overflow-y:auto">${ords.slice().reverse().map(o=>`<div style="display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--cb);font-size:10.5px"><span class="bdg ${SV[o.sv].bd}" style="min-width:75px;justify-content:center">${SV[o.sv].n}</span><span style="flex:1">${o.sn||'Unassigned'}</span><span style="color:var(--mt)">${o.dt} ${o.tm||''}</span><span class="bdg ${sBdg(o.st)}">${o.st}</span><span class="bdg ${o.ps==='Insurance'?'bdg-lb':'bdg-ok'}">${o.ps}</span></div>`).join('')}</div>`:''}
+<div style="margin-top:12px;display:flex;gap:6px"><button class="btn bsm bp" onclick="clMo();setTimeout(()=>{document.getElementById('aPS').value='${p.id}';searchPatA('${p.id}')},100)"><i class="fas fa-calendar-plus"></i> New Appointment</button><button class="btn bsm bo" onclick="clMo()"><i class="fas fa-times"></i> Close</button></div>`);
+}
+
+/* REGISTER PATIENT */
+function regPat(){
+const reqs={rFn:'First Name',rLn:'Last Name',rFa:'Father',rGe:'Gender',rDob:'DOB',rCnic:'CNIC',rPh:'Phone',rAd:'Address',rCi:'City'};
+for(const[id,l]of Object.entries(reqs)){if(!document.getElementById(id).value.trim()){toast('Fill: '+l,'error');return}}
+const cnic=document.getElementById('rCnic').value.trim();
+if(DB.g('p').find(p=>p.cnic===cnic)){toast('CNIC already registered — search above','error');return}
+const num=DB.g('npn',6);const id='CC-2025-'+String(num).padStart(4,'0');
+const p={id,fn:document.getElementById('rFn').value.trim(),ln:document.getElementById('rLn').value.trim(),fa:document.getElementById('rFa').value.trim(),g:document.getElementById('rGe').value,dob:document.getElementById('rDob').value,cnic,ph:document.getElementById('rPh').value.trim(),ph2:document.getElementById('rPh2').value.trim(),ad:document.getElementById('rAd').value.trim(),ci:document.getElementById('rCi').value.trim(),bl:document.getElementById('rBl').value,al:document.getElementById('rAl').value.trim()||'None',ins:document.getElementById('rIn').value,po:document.getElementById('rPo').value.trim(),v:0,rd:new Date().toISOString().split('T')[0]};
+const ps=DB.g('p');ps.push(p);DB.s('p',ps);DB.s('npn',num+1);
+addLog('fa-user-plus','#0d9488',`Registered: ${p.fn} ${p.ln} (${id})`);
+openM(`<div style="text-align:center;padding:10px 0"><div style="width:56px;height:56px;border-radius:50%;background:var(--pt-s);display:flex;align-items:center;justify-content:center;margin:0 auto 12px"><i class="fas fa-check" style="font-size:22px;color:#059669"></i></div><h3 style="justify-content:center">Patient Registered</h3><p style="margin-bottom:8px">${p.fn} ${p.ln} — ${p.g}</p><div class="idc" style="font-size:16px;padding:8px 24px;margin:10px 0;display:inline-block">${id}</div><p style="margin-bottom:14px;color:var(--tx2);font-size:11px">Note this ID for future visits</p><div class="bgrp" style="justify-content:center"><button class="btn bp" onclick="clMo();setTimeout(()=>{document.getElementById('aPS').value='${id}';searchPatA('${id}')},100)"><i class="fas fa-calendar-plus"></i> Book Appointment</button><button class="btn bo" onclick="clMo();clrReg()"><i class="fas fa-check"></i> Done</button></div></div>`);
+clrReg();
+}
+function clrReg(){['rFn','rLn','rFa','rCnic','rPh','rPh2','rAd','rCi','rAl','rPo'].forEach(id=>document.getElementById(id).value='');['rGe','rBl','rIn'].forEach(id=>document.getElementById(id).selectedIndex=0);document.getElementById('rPo').disabled=true;}
+
+/* BOOK APPOINTMENT */
+function loadStaff(){
+const svc=document.getElementById('aSvc').value;selS=null;
+const c=document.getElementById('aSStaff');const f=document.getElementById('aFields');
+if(!svc){c.innerHTML='<div style="padding:8px;font-size:11px;color:var(--mt);text-align:center">Select service first</div>';f.style.display='none';return}
+const staff=DB.g('st').filter(s=>s.svc===svc);
+const c2=document.getElementById('aFD');
+let flds='';
+if(svc==='speech')flds=`<div class="fgl"><label>Child Age *</label><input id="af_age" placeholder="e.g. 4 years"></div><div class="fgl"><label>Therapy Type *</label><select id="af_type"><option value="">Select</option><option>Articulation Therapy</option><option>Language Development</option><option>Fluency / Stuttering</option><option>Voice Therapy</option><option>Social Communication</option><option>Assessment Only</option></select></div><div class="fgl"><label>Package *</label><select id="af_pkg"><option value="1|3000">Single — PKR 3,000</option><option value="5|13500">5 Sessions — PKR 13,500</option><option value="10|24000">10 Sessions — PKR 24,000</option></select></div><div class="fgl"><label>Referred By</label><input id="af_ref" placeholder="Doctor name"></div>`;
+else if(svc==='physio')flds=`<div class="fgl"><label>Condition *</label><select id="af_cond"><option value="">Select</option><option>Back Pain / Spine</option><option>Neck / Cervical</option><option>Knee / Joint</option><option>Shoulder</option><option>Post-Surgical</option><option>Sports Injury</option><option>Stroke Rehab</option><option>Sciatica</option><option>Muscle Strain</option></select></div><div class="fgl"><label>Session Type</label><select id="af_stype"><option>Initial Assessment</option><option>Follow-up</option><option>Rehabilitation</option></select></div><div class="fgl"><label>Location *</label><select id="af_loc"><option value="In-Clinic">In-Clinic (PKR 2,500)</option><option value="Home Visit">Home Visit (PKR 3,000)</option></select></div><div class="fgl"><label>Sessions *</label><select id="af_sess"><option value="1|2500">1 — PKR 2,500</option><option value="6|12000">6 — PKR 12,000</option><option value="12|21000">12 — PKR 21,000</option></select></div>`;
+else if(svc==='lab')flds=`<div class="fgl"><label>Test *</label><select id="af_test"><option value="">Select</option><option value="CBC|1500">CBC — PKR 1,500</option><option value="Urine RE|800">Urine Routine — PKR 800</option><option value="Blood Sugar|600">Blood Sugar — PKR 600</option><option value="Lipid Profile|2200">Lipid Profile — PKR 2,200</option><option value="Thyroid Panel|1800">Thyroid Panel — PKR 1,800</option><option value="LFT|2500">LFT — PKR 2,500</option><option value="KFT|2000">KFT — PKR 2,000</option><option value="Vitamin D|1500">Vitamin D — PKR 1,500</option><option value="HbA1c|1200">HbA1c — PKR 1,200</option><option value="X-Ray|2000">X-Ray — PKR 2,000</option><option value="Ultrasound|3000">Ultrasound — PKR 3,000</option></select></div><div class="fgl"><label>Urgency</label><select id="af_urg"><option>Routine (24-48 hrs)</option><option>Urgent (Same day) +PKR 500</option><option>Emergency +PKR 500</option></select></div><div class="fgl"><label>Collection</label><select id="af_col"><option value="At Lab">At Lab</option><option value="Home Collection">Home Collection +PKR 400</option></select></div><div class="fgl"><label>Referred By</label><input id="af_ref" placeholder="Doctor name"></div>`;
+else if(svc==='nursing')flds=`<div class="fgl"><label>Service *</label><select id="af_nsvc"><option value="">Select</option><option>Elderly Care</option><option>Post-Surgical Care</option><option>Wound Care / Dressing</option><option>Injection / IV Drip</option><option>General Nursing</option><option>Mother & Newborn</option><option>Critical Care</option></select></div><div class="fgl"><label>Nurse Gender *</label><select id="af_ngen"><option>Female</option><option>Male</option><option>Any</option></select></div><div class="fgl"><label>Shift *</label><select id="af_sh"><option value="morning|3500">Morning (8AM-2PM) — PKR 3,500/day</option><option value="evening|3500">Evening (2PM-8PM) — PKR 3,500/day</option><option value="night|4500">Night (8PM-8AM) — PKR 4,500/day</option><option value="24hr|7000">24-Hour — PKR 7,000/day</option></select></div><div class="fgl"><label>Days *</label><input type="number" id="af_days" min="1" max="90" value="1"></div><div class="fgl fl"><label>Address *</label><textarea id="af_addr" placeholder="Complete address for home visit..."></textarea></div>`;
+else if(svc==='general')flds=`<div class="fgl"><label>Symptoms *</label><select id="af_sym"><option value="">Select</option><option>Fever</option><option>Cold / Flu / Cough</option><option>Stomach Pain</option><option>Headache / Migraine</option><option>Skin Rash</option><option>Body Aches</option><option>Throat Infection</option><option>Ear Pain</option><option>Allergy</option><option>General Checkup</option></select></div><div class="fgl"><label>Duration</label><select id="af_dur"><option>Today (New)</option><option>2-3 days</option><option>1 week</option><option>More than a week</option><option>Recurring</option></select></div><div class="fgl"><label>Current Medication</label><input id="af_med" placeholder="Any medicine..."></div>`;
+c2.innerHTML=flds;f.style.display=flds?'block':'none';
+
+const td=new Date().toISOString().split('T')[0];
+const busyIds=DB.g('o').filter(o=>o.si&&o.dt===td&&o.st!=='Cancelled'&&o.st!=='Completed').map(o=>o.si);
+c.innerHTML=staff.map(s=>{const busy=busyIds.includes(s.id);const cnt=DB.g('o').filter(o=>o.si===s.id&&o.dt===td&&o.st!=='Cancelled'&&o.st!=='Completed').length;return`<div class="dc" style="${busy?'opacity:.4':''}" onclick="${busy?'':'selStaff(\''+s.id+'\')'}"><div class="da" style="background:${busy?'#64748b':SV[svc].c}">${s.name.replace('Dr. ','').replace('Nurse ','').split(' ').map(w=>w[0]).join('')}</div><div class="di"><h4>${s.name}</h4><p>${s.role} · ${s.gender} · PKR ${s.fee||'Per test'} · ${cnt} today</p></div><div style="text-align:right;flex-shrink:0"><div class="dsd ${s.status==='available'?'av':s.status==='busy'?'bs':'of'}"></div>${busy?'<div style="font-size:9px;color:var(--hn);margin-top:2px">Busy</div>':''}</div></div>`}).join('');
+if(!staff.length)c.innerHTML='<div style="padding:8px;font-size:11px;color:var(--hn);text-align:center"><i class="fas fa-exclamation-triangle"></i> No staff for this service</div>';
+}
+
+function selStaff(id){selS=DB.g('st').find(s=>s.id===id);if(!selS)return;const c=document.getElementById('aSStaff');c.querySelectorAll('.dc').forEach(d=>{d.style.borderColor='var(--cb)';d.style.background='var(--inp)'});event.currentTarget.style.borderColor='#0d9488';event.currentTarget.style.background='var(--pri-s)';}
+
+function bookAppt(){
+if(!selP){toast('Select a patient first','error');return}
+const svc=document.getElementById('aSvc').value;if(!svc){toast('Select service','error');return}
+if(!selS){toast('Assign a doctor/staff','error');return}
+if(!document.getElementById('aDt').value){toast('Select date','error');return}
+if(!document.getElementById('aTm').value&&svc!=='nursing'){toast('Select time','error');return}
+if(!document.getElementById('aNt').value.trim()){toast('Add notes/symptoms','error');return}
+let fee=selS.fee,det={};
+if(svc==='speech'){const t=document.getElementById('af_type').value;if(!t){toast('Select therapy type','error');return}const pv=document.getElementById('af_pkg').value.split('|');fee=parseInt(pv[1]);det={age:document.getElementById('af_age').value,type:t,pkg:pv[0]+' Sessions',ref:document.getElementById('af_ref').value}}
+else if(svc==='physio'){const c=document.getElementById('af_cond').value;if(!c){toast('Select condition','error');return}const sv=document.getElementById('af_sess').value.split('|');let base=parseInt(sv[1]);if(document.getElementById('af_loc').value==='Home Visit')base=Math.round(parseInt(sv[1])*(3000/2500));fee=base;det={cond:c,sType:document.getElementById('af_stype').value,loc:document.getElementById('af_loc').value,sess:sv[0]+' Sessions'}}
+else if(svc==='lab'){const tv=document.getElementById('af_test').value;if(!tv){toast('Select test','error');return}const[tn,tf]=tv.split('|');fee=parseInt(tf);if(document.getElementById('af_urg').value.includes('Urgent')||document.getElementById('af_urg').value.includes('Emergency'))fee+=500;if(document.getElementById('af_col').value==='Home Collection')fee+=400;det={test:tn,urg:document.getElementById('af_urg').value,col:document.getElementById('af_col').value,ref:document.getElementById('af_ref').value}}
+else if(svc==='nursing'){const ns=document.getElementById('af_nsvc').value;if(!ns){toast('Select nursing service','error');return}if(!document.getElementById('af_addr').value.trim()){toast('Enter address','error');return}const sh=document.getElementById('af_sh').value.split('|');const dys=parseInt(document.getElementById('af_days').value)||1;fee=parseInt(sh[1])*dys;det={svcType:ns,gender:document.getElementById('af_ngen').value,shift:sh[0],days:String(dys),addr:document.getElementById('af_addr').value}}
+else if(svc==='general'){const sy=document.getElementById('af_sym').value;if(!sy){toast('Select symptoms','error');return}fee=1500;det={sym:sy,dur:document.getElementById('af_dur').value,med:document.getElementById('af_med').value}}
+det.notes=document.getElementById('aNt').value;
+const pm=document.getElementById('aPy').value;
+/* No unpaid — always paid */
+const ps=pm==='Insurance'?'Insurance':'Paid';
+const ords=DB.g('o');const num=DB.g('non',ords.length+1);
+const o={id:'ORD-'+String(num).padStart(3,'0'),pi:selP.id,pn:selP.fn+' '+selP.ln,sv,si:selS.id,sn:selS.name,dt:document.getElementById('aDt').value,tm:document.getElementById('aTm').value,st:'Assigned',pm,ps,fee,det,pri:document.getElementById('aPri').value};
+ords.push(o);DB.s('o',ords);DB.s('non',num+1);
+addLog('fa-calendar-plus',SV[svc].c,`${SV[svc].n}: ${o.pn} → ${selS.name} — PKR ${fee.toLocaleString()} collected`);
+toast('Appointment created: '+o.id+' — Payment collected','success');clrAppt();
+}
+
+function clrAppt(){selP=null;selS=null;document.getElementById('aPS').value='';document.getElementById('aPR').innerHTML='';document.getElementById('aPSel').style.display='none';document.getElementById('aSvc').selectedIndex=0;document.getElementById('aSStaff').innerHTML='';document.getElementById('aFields').style.display='none';document.getElementById('aFD').innerHTML='';document.getElementById('aTm').selectedIndex=0;document.getElementById('aNt').value='';document.getElementById('aPri').selectedIndex=0;document.getElementById('aPy').selectedIndex=0;document.getElementById('aDt').value=new Date().toISOString().split('T')[0];}
+
+/* QUEUE */
+function rQueue(){
+const sf=document.getElementById('qSvc').value;const stf=document.getElementById('qSt').value;
+let ords=DB.g('o');
+if(sf!=='all')ords=ords.filter(o=>o.sv===sf);
+if(stf!=='all')ords=ords.filter(o=>o.st===stf);
+ords.sort((a,b)=>{const so={Pending:0,Assigned:1,Confirmed:2,'In-Progress':3,'Sample Collected':3,Processing:4,'Report Ready':5,Completed:6,Cancelled:7};return(so[a.st]||9)-(so[b.st]||9)||(a.dt+b.tm||'').localeCompare(b.dt+(b.tm||''))});
+const c=document.getElementById('qList');
+if(!ords.length){c.innerHTML='<div class="emp"><i class="fas fa-inbox"></i><h4>No appointments</h4><p>Adjust filters or create a new appointment</p></div>';return}
+c.innerHTML=ords.map(o=>{
+const d=o.d;let meta='';
+if(o.sv==='speech')meta=`<span><i class="fas fa-child"></i>${d.age||''} ${d.type||''}</span><span><i class="fas fa-box"></i>${d.pkg||''}</span>${d.ref?`<span><i class="fas fa-user-md"></i>${d.ref}</span>`:''}`;
+else if(o.sv==='physio')meta=`<span><i class="fas fa-bone"></i>${d.cond||''}</span><span><i class="fas fa-map-marker-alt"></i>${d.loc||''}</span><span><i class="fas fa-redo"></i>${d.sess||''}</span>`;
+else if(o.sv==='lab')meta=`<span><i class="fas fa-vial"></i>${d.test||''}</span><span><i class="fas fa-exclamation-circle"></i>${d.urg||''}</span><span><i class="fas fa-truck"></i>${d.col||''}</span>${d.ref?`<span><i class="fas fa-user-md"></i>${d.ref}</span>`:''}`;
+else if(o.sv==='nursing')meta=`<span><i class="fas fa-concierge-bell"></i>${d.svcType||''}</span><span><i class="fas fa-venus-mars"></i>${d.gender||''}</span><span class="shf shf-${d.shift==='24hr'?'24':(d.shift||'m').charAt(0)}">${(d.shift||'').replace('morning','Morning').replace('evening','Evening').replace('night','Night').replace('24hr','24-Hr')}</span><span><i class="fas fa-calendar-day"></i>${d.days||'1'} day(s)</span>${d.addr?`<span><i class="fas fa-home"></i>${d.addr.substring(0,25)}</span>`:''}`;
+else if(o.sv==='general')meta=`<span><i class="fas fa-stethoscope"></i>${d.sym||''}</span><span><i class="fas fa-clock"></i>${d.dur||''}</span>${d.med?`<span><i class="fas fa-pills"></i>${d.med}</span>`:''}`;
+let acts='';
+if(o.st==='Pending')acts=`<button class="btn bsm bss" onclick="openAsn('${o.id}')"><i class="fas fa-user-md"></i> Assign</button><button class="btn bsm bdd" onclick="cancelO('${o.id}')"><i class="fas fa-times"></i></button>`;
+else if(o.st==='Assigned')acts=`<button class="btn bsm bss" onclick="chgSt('${o.id}','Confirmed')"><i class="fas fa-check"></i> Confirm</button><button class="btn bsm bw" onclick="openAsn('${o.id}')"><i class="fas fa-exchange-alt"></i> Reassign</button><button class="btn bsm bdd" onclick="cancelO('${o.id}')"><i class="fas fa-times"></i></button>`;
+else if(o.st==='Confirmed')acts=`<button class="btn bsm bp" onclick="chgSt('${o.id}','In-Progress')"><i class="fas fa-play"></i> Start Session</button>`;
+else if(o.st==='In-Progress')acts=`<button class="btn bsm bp" onclick="compO('${o.id}')"><i class="fas fa-check"></i> Complete</button>`;
+else if(o.st==='Sample Collected')acts=`<button class="btn bsm bv" onclick="chgSt('${o.id}','Processing')"><i class="fas fa-flask"></i> Process</button>`;
+else if(o.st==='Processing')acts=`<button class="btn bsm be" onclick="chgSt('${o.id}','Report Ready')"><i class="fas fa-file-medical"></i> Report Ready</button>`;
+else if(o.st==='Report Ready')acts=`<button class="btn bsm bp" onclick="compO('${o.id}')"><i class="fas fa-check"></i> Deliver</button>`;
+else if(o.st==='Completed')acts=`<span class="bdg bdg-ok"><i class="fas fa-check-circle"></i> Done</span>`;
+else if(o.st==='Cancelled')acts=`<span class="bdg bdg-dk"><i class="fas fa-ban"></i> Cancelled</span>`;
+const priBadge=o.pri==='Emergency'?'<span class="bdg bdg-hn"><i class="fas fa-bolt"></i> Emergency</span>':o.pri==='Urgent'?'<span class="bdg bdg-gd"><i class="fas fa-exclamation"></i> Urgent</span>':'';
+return`<div class="rc"><div class="rc-top"><div><h4>${o.pn} <span class="idc" style="font-size:8px;padding:1px 5px">${o.pi}</span> ${priBadge}</h4><div class="rc-meta"><span class="bdg ${SV[o.sv].bd}">${SV[o.sv].n}</span><span><i class="fas fa-user-md"></i>${o.sn||'Unassigned'}</span>${o.tm?`<span><i class="fas fa-clock"></i>${o.dt} ${o.tm}</span>`:`<span><i class="fas fa-calendar"></i>${o.dt}</span>`}<span><i class="fas fa-money-bill"></i>PKR ${o.fee.toLocaleString()}</span><span class="bdg ${o.ps==='Insurance'?'bdg-lb':'bdg-ok'}">${o.ps}</span></div><div class="rc-meta" style="margin-top:3px">${meta}</div>${d.notes?`<div style="font-size:10.5px;color:var(--mt);margin-top:3px;font-style:italic">"${d.notes}"</div>`:''}</div><div style="text-align:right;flex-shrink:0"><span class="bdg ${sBdg(o.st)}" style="font-size:10px;padding:3px 8px">${o.st}</span><div style="font-size:9px;color:var(--mt);margin-top:2px">${o.id}</div></div></div><div class="rc-act">${acts}<button class="btn bxs bo" onclick="showPat('${o.pi}')"><i class="fas fa-user"></i></button><button class="btn bxs bo" onclick="showOrdDet('${o.id}')"><i class="fas fa-expand"></i></button></div></div>`}).join('');
+}
+
+function openAsn(oid){
+const o=DB.g('o').find(x=>x.id===oid);if(!o)return;
+const staff=DB.g('st').filter(s=>s.svc===o.sv&&s.status!=='offline');
+const td=new Date().toISOString().split('T')[0];
+const busyIds=DB.g('o').filter(x=>x.id!==oid&&x.si&&x.dt===td&&x.tm===o.tm&&x.st!=='Cancelled'&&x.st!=='Completed').map(x=>x.si);
+let h=`<h3><i class="fas fa-user-md" style="color:${SV[o.sv].c}"></i> Assign ${SV[o.sv].n}</h3><p><strong>${o.pn}</strong> — ${o.dt} ${o.tm||''}</p>`;
+staff.forEach(s=>{const busy=busyIds.includes(s.id);const cnt=DB.g('o').filter(x=>x.si===s.id&&x.dt===td&&x.st!=='Cancelled'&&x.st!=='Completed').length;
+h+=`<div class="dc" style="${busy?'opacity:.4;pointer-events:none':''}" onclick="doAsn('${oid}','${s.id}')"><div class="da" style="background:${busy?'#64748b':SV[o.sv].c}">${s.name.replace('Dr. ','').replace('Nurse ','').split(' ').map(w=>w[0]).join('')}</div><div class="di"><h4>${s.name}</h4><p>${s.role} · ${s.gender} · PKR ${s.fee||'Per test'} · ${cnt} today</p></div><div style="text-align:right;flex-shrink:0"><div class="dsd ${s.status==='available'?'av':s.status==='busy'?'bs':'of'}"></div>${busy?'<div style="font-size:9px;color:var(--hn)">Busy at this time</div>':''}</div></div>`});
+if(!staff.length)h+=`<div style="padding:10px;border-radius:8px;background:var(--hn-s);font-size:11px;color:var(--hn)"><i class="fas fa-exclamation-triangle"></i> No staff available</div>`;
+openM(h);
+}
+function doAsn(oid,sid){const ords=DB.g('o');const s=DB.g('st').find(x=>x.id===sid);const i=ords.findIndex(o=>o.id===oid);if(i<0)return;ords[i].si=sid;ords[i].sn=s.name;ords[i].st='Assigned';ords[i].fee=s.fee||ords[i].fee;DB.s('o',ords);addLog('fa-user-md',SV[ords[i].sv].c,`${s.name} assigned → ${ords[i].pn}`);toast(s.name+' assigned','success');clMo();rQueue();}
+function chgSt(id,st){const ords=DB.g('o');const i=ords.findIndex(o=>o.id===id);if(i<0)return;ords[i].st=st;DB.s('o',ords);addLog('fa-arrow-right',SV[ords[i].sv].c,`${ords[i].pn} → ${st}`);toast('Status: '+st,'success');rQueue();}
+function cancelO(id){const ords=DB.g('o');const i=ords.findIndex(o=>o.id===id);if(i<0)return;ords[i].st='Cancelled';DB.s('o',ords);addLog('fa-ban','#e11d48',`Cancelled ${id}`);toast('Cancelled','info');rQueue();}
+function compO(id){const ords=DB.g('o');const i=ords.findIndex(o=>o.id===id);if(i<0)return;ords[i].st='Completed';DB.s('o',ords);const ps=DB.g('p');const pi=ps.findIndex(p=>p.id===ords[i].pi);if(pi>=0){ps[pi].v++;DB.s('p',ps)}addLog('fa-check-circle','#059669',`Completed: ${ords[i].pn} — PKR ${ords[i].fee.toLocaleString()}`);toast('Session completed','success');rQueue();}
+
+function showOrdDet(id){
+const o=DB.g('o').find(x=>x.id===id);if(!o)return;const pat=DB.g('p').find(p=>p.id===o.pi);const d=o.d;
+let rows='';
+if(o.sv==='speech')rows=`<div><span>Age</span>${d.age||'-'}</div><div><span>Therapy</span>${d.type||'-'}</div><div><span>Package</span>${d.pkg||'-'}</div>${d.ref?`<div><span>Referred</span>${d.ref}</div>`:''}`;
+else if(o.sv==='physio')rows=`<div><span>Condition</span>${d.cond||'-'}</div><div><span>Type</span>${d.sType||'-'}</div><div><span>Location</span>${d.loc||'-'}</div><div><span>Sessions</span>${d.sess||'-'}</div>`;
+else if(o.sv==='lab')rows=`<div><span>Test</span>${d.test||'-'}</div><div><span>Urgency</span>${d.urg||'-'}</div><div><span>Collection</span>${d.col||'-'}</div>${d.ref?`<div><span>Referred</span>${d.ref}</div>`:''}`;
+else if(o.sv==='nursing')rows=`<div><span>Service</span>${d.svcType||'-'}</div><div><span>Gender</span>${d.gender||'-'}</div><div><span>Shift</span>${d.shift||'-'}</div><div><span>Days</span>${d.days||'-'}</div>${d.addr?`<div style="grid-column:1/-1"><span>Address</span>${d.addr}</div>`:''}`;
+else if(o.sv==='general')rows=`<div><span>Symptoms</span>${d.sym||'-'}</div><div><span>Duration</span>${d.dur||'-'}</div>${d.med?`<div style="grid-column:1/-1"><span>Medication</span>${d.med}</div>`:''}`;
+openM(`<h3><i class="fas ${SV[o.sv].ic}" style="color:${SV[o.sv].c}"></i> ${o.id}</h3><p>${SV[o.sv].n} · ${o.dt} ${o.tm||''} · ${o.pri||'Normal'}</p>
+<div style="display:flex;gap:8px;align-items:center;padding:10px;background:var(--inp);border-radius:10px;margin-bottom:14px;border:1px solid var(--cb)"><div style="width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#0d9488,#0284c7);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;font-family:'Sora'">${o.pn.split(' ').map(w=>w[0]).join('')}</div><div style="flex:1"><div style="font-size:13px;font-weight:700">${o.pn}</div><div style="font-size:10px;color:var(--mt)">${o.pi}${pat?' · '+pat.g+' · '+pat.bl:''}</div></div><div style="text-align:right"><span class="bdg ${sBdg(o.st)}" style="font-size:10px;padding:3px 8px">${o.st}</span><br><span class="bdg ${o.ps==='Insurance'?'bdg-lb':'bdg-ok'}" style="margin-top:2px">${o.ps}</span></div></div>
+<div class="pdet" style="margin-bottom:14px">${rows}</div>
+<div style="margin-bottom:12px"><span style="font-size:9px;color:var(--mt);display:block;margin-bottom:3px;font-weight:600;text-transform:uppercase;letter-spacing:.3px">Notes</span><div style="padding:10px;background:var(--inp);border-radius:8px;font-size:11.5px;border:1px solid var(--cb)">${d.notes||'<span style="color:var(--mt)">None</span>'}</div></div>
+<div style="padding:10px;background:var(--pt-s);border-radius:8px;font-size:11.5px;font-weight:700;color:#065f46;display:flex;align-items:center;gap:6px"><i class="fas fa-check-circle"></i> PKR ${o.fee.toLocaleString()} — ${o.pm} · Staff: ${o.sn||'N/A'}</div>`);
+}
+
+function sBdg(s){return{Pending:'bdg-gd',Assigned:'bdg-lb',Confirmed:'bdg-p','Sample Collected':'bdg-lb',Processing:'bdg-sp','Report Ready':'bdg-pt','In-Progress':'bdg-sp',Completed:'bdg-ok',Cancelled:'bdg-dk'}[s]||'bdg-dk'}
+
+/* DASHBOARD */
+function rDash(){
+document.getElementById('dashDt').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+const ords=DB.g('o');const td=new Date().toISOString().split('T')[0];
+const today=ords.filter(o=>o.dt===td);const pend=ords.filter(o=>o.st==='Pending'||o.st==='Assigned').length;
+const rev=ords.filter(o=>o.st==='Completed'||o.ps==='Paid'||o.ps==='Insurance').reduce((s,o)=>s+o.fee,0);
+const sessions=ords.filter(o=>o.st==='Completed').length;
+document.getElementById('dSt').innerHTML=`
+<div class="stc"><div class="sti" style="background:var(--gd-s);color:var(--gd)"><i class="fas fa-hourglass-half"></i></div><div class="stv">${pend}</div><div class="stl">Pending</div></div>
+<div class="stc"><div class="sti" style="background:var(--lb-s);color:var(--lb)"><i class="fas fa-calendar-check"></i></div><div class="stv">${today.length}</div><div class="stl">Today</div></div>
+<div class="stc"><div class="sti" style="background:var(--sp-s);color:var(--sp)"><i class="fas fa-play-circle"></i></div><div class="stv">${sessions}</div><div class="stl">Sessions Done</div></div>
+<div class="stc"><div class="sti" style="background:var(--pt-s);color:#059669"><i class="fas fa-coins"></i></div><div class="stv">PKR ${rev.toLocaleString()}</div><div class="stl">Revenue</div></div>`;
+const pends=ords.filter(o=>o.st==='Pending'||o.st==='Assigned');
+document.getElementById('dPend').innerHTML=pends.length?pends.map(o=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--cb)"><div style="width:28px;height:28px;border-radius:7px;background:${SV[o.sv].c}15;color:${SV[o.sv].c};display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0"><i class="fas ${SV[o.sv].ic}"></i></div><div style="flex:1"><div style="font-size:11.5px;font-weight:600">${o.pn}</div><div style="font-size:10px;color:var(--mt)">${SV[o.sv].n} · ${o.tm||'--'} ${o.pri==='Emergency'?'<span style="color:var(--hn)">EMERGENCY</span>':''}</div></div><button class="btn bxs ${o.st==='Pending'?'bss':'bp'}" onclick="${o.st==='Pending'?`openAsn('${o.id}')`:`chgSt('${o.id}','Confirmed')`}"><i class="fas ${o.st==='Pending'?'fa-user-md':'fa-check'}"></i></button></div>`).join(''):'<div class="emp" style="padding:14px"><p style="font-size:11px">All caught up</p></div>';
+const log=DB.g('log');document.getElementById('dAct').innerHTML=log.length?log.slice(-8).reverse().map(l=>`<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--cb)"><div style="width:24px;height:24px;border-radius:6px;background:${l.c}15;color:${l.c};display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;margin-top:1px"><i class="fas ${l.i}"></i></div><div style="flex:1"><div style="font-size:11px;font-weight:500">${l.x}</div><div style="font-size:9.5px;color:var(--mt)">${l.t}</div></div></div>`).join(''):'';
+uNavBdg();
+}
+
+/* PAYMENTS — paid only */
+function rPay(){
+const all=DB.g('o').filter(o=>o.ps==='Paid'||o.ps==='Insurance');
+const f=document.getElementById('payFl').value;
+let ords=all;if(f!=='all')ords=all.filter(o=>o.pm===f);
+const cashTotal=all.filter(o=>o.ps==='Paid').reduce((s,o)=>s+o.fee,0);
+const insTotal=all.filter(o=>o.ps==='Insurance').reduce((s,o)=>s+o.fee,0);
+document.getElementById('paySt').innerHTML=`
+<div class="stc"><div class="sti" style="background:var(--pt-s);color:#059669"><i class="fas fa-coins"></i></div><div class="stv">PKR ${(cashTotal+insTotal).toLocaleString()}</div><div class="stl">Total Collected</div></div>
+<div class="stc"><div class="sti" style="background:var(--lb-s);color:var(--lb)"><i class="fas fa-hand-holding-usd"></i></div><div class="stv">PKR ${cashTotal.toLocaleString()}</div><div class="stl">Cash / Card</div></div>
+<div class="stc"><div class="sti" style="background:var(--sp-s);color:var(--sp)"><i class="fas fa-shield-alt"></i></div><div class="stv">PKR ${insTotal.toLocaleString()}</div><div class="stl">Insurance</div></div>
+<div class="stc"><div class="sti" style="background:var(--gd-s);color:var(--gd)"><i class="fas fa-receipt"></i></div><div class="stv">${all.length}</div><div class="stl">Transactions</div></div>`;
+const bd=document.getElementById('payBd');const em=document.getElementById('payEm');
+if(!ords.length){bd.innerHTML='';em.style.display='block';return}em.style.display='none';
+bd.innerHTML=ords.sort((a,b)=>b.dt.localeCompare(a.dt)).map(o=>`<tr><td><span class="idc" style="font-size:8.5px;padding:1px 5px">${o.id}</span></td><td><strong>${o.pn}</strong></td><td><span class="bdg ${SV[o.sv].bd}">${SV[o.sv].n}</span></td><td>${o.sn||'N/A'}</td><td>${o.dt}</td><td style="font-weight:700;font-family:'Sora'">PKR ${o.fee.toLocaleString()}</td><td>${o.pm}</td><td><span class="bdg ${o.ps==='Insurance'?'bdg-lb':'bdg-ok'}"><i class="fas fa-check-circle"></i> ${o.ps}</span></td></tr>`).join('');
+}
+
+/* STAFF — with Add New */
+function rStaff(){
+const staff=DB.g('st');
+document.getElementById('stSt').innerHTML=`
+<div class="stc"><div class="sti" style="background:var(--pt-s);color:#059669"><i class="fas fa-check-circle"></i></div><div class="stv">${staff.filter(s=>s.status==='available').length}</div><div class="stl">Available</div></div>
+<div class="stc"><div class="sti" style="background:var(--gd-s);color:var(--gd)"><i class="fas fa-clock"></i></div><div class="stv">${staff.filter(s=>s.status==='busy').length}</div><div class="stl">Busy</div></div>
+<div class="stc"><div class="sti" style="background:var(--lb-s);color:var(--lb)"><i class="fas fa-id-badge"></i></div><div class="stv">${staff.length}</div><div class="stl">Total</div></div>
+<div class="stc"><div class="sti" style="background:var(--pri-s);color:var(--pri)"><i class="fas fa-plus-circle"></i></div><div class="stv" style="cursor:pointer" onclick="openAddStaff()">Add</div><div class="stl">New Staff</div></div>`;
+const td=new Date().toISOString().split('T')[0];
+document.getElementById('stLs').innerHTML=Object.entries(SV).map(([k,v])=>{const ds=staff.filter(s=>s.svc===k);if(!ds.length)return'';return`<div class="cd" style="margin-bottom:12px"><div class="ch"><h3><i class="fas ${v.ic}" style="color:${v.c}"></i>${v.n}</h3><span class="bdg ${v.bd}">${ds.length}</span></div><div class="cb">${ds.map(s=>{const cnt=DB.g('o').filter(o=>o.si===s.id&&o.dt===td&&o.st!=='Cancelled'&&o.st!=='Completed').length;const comp=DB.g('o').filter(o=>o.si===s.id&&o.st==='Completed').length;return`<div class="dc" onclick="showStaffDet('${s.id}')"><div class="da" style="background:${v.c}">${s.name.replace('Dr. ','').replace('Nurse ','').split(' ').map(w=>w[0]).join('')}</div><div class="di"><h4>${s.name} <span style="font-size:9px;color:var(--mt);font-weight:400">${s.id}</span></h4><p>${s.role} · ${s.gender} · ${s.phone} · PKR ${s.fee||'Per test'} · ${cnt} today · ${comp} total done</p></div><div style="text-align:right;flex-shrink:0"><div class="dsd ${s.status==='available'?'av':s.status==='busy'?'bs':'of'}"></div><div style="font-size:9px;color:var(--mt);margin-top:2px">${s.status}</div></div></div>`}).join('')}</div></div>`}).join('');
+}
+
+function showStaffDet(id){
+const s=DB.g('st').find(x=>x.id===id);if(!s)return;
+const comp=DB.g('o').filter(o=>o.si===id&&o.st==='Completed').length;
+const today=DB.g('o').filter(o=>o.si===id&&o.dt===new Date().toISOString().split('T')[0]&&o.st!=='Cancelled').length;
+openM(`<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:14px;background:var(--inp);border-radius:12px;border:1px solid var(--cb)"><div class="da" style="width:46px;height:46px;border-radius:12px;background:${SV[s.svc].c};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;font-family:'Sora';color:#fff">${s.name.replace('Dr. ','').replace('Nurse ','').split(' ').map(w=>w[0]).join('')}</div><div style="flex:1"><h3 style="margin-bottom:2px">${s.name}</h3><div style="display:flex;gap:4px;flex-wrap:wrap"><span class="bdg ${SV[s.svc].bd}">${SV[s.svc].n}</span><span class="bdg bdg-dk">${s.role}</span><div class="dsd ${s.status==='available'?'av':s.status==='busy'?'bs':'of'}" style="position:relative;top:0;display:inline-block"></div></div></div></div>
+<div class="pdet" style="margin-bottom:14px"><div><span>Staff ID</span>${s.id}</div><div><span>Gender</span>${s.gender}</div><div><span>CNIC</span>${s.cnic}</div><div><span>Phone</span>${s.ph}</div><div><span>Consultation Fee</span><strong style="color:var(--pri)">PKR ${s.fee.toLocaleString()}</strong></div><div><span>Appointments Today</span>${today}</div><div><span>Total Completed</span><strong style="color:#059669">${comp}</strong></div><div><span>Status</span><span class="bdg ${s.status==='available'?'bdg-ok':'bdg-gd'}">${s.status}</span></div></div>
+<div class="bgrp"><button class="btn bsm ${s.status==='available'?'bw':'be'}" onclick="togStaffSt('${s.id}')"><i class="fas fa-${s.status==='available'?'pause':'play'}"></i> ${s.status==='available'?'Set Busy':'Set Available'}</button><button class="btn bsm bo" onclick="clMo()">Close</button></div>`);
+}
+
+function togStaffSt(id){const st=DB.g('st');const i=st.findIndex(s=>s.id===id);if(i<0)return;st[i].status=st[i].status==='available'?'busy':'available';DB.s('st',st);toast(st[i].name+' → '+st[i].status,'success');clMo();rStaff();}
+
+function openAddStaff(){
+openM(`<h3><i class="fas fa-user-plus" style="color:var(--pri)"></i> Add New Staff</h3><p>Enter details for the new doctor, therapist, nurse, or technician</p>
+<div class="fg2">
+<div class="fgl"><label>Full Name *</label><input id="ns_name" placeholder="Dr. Name or Nurse Name"></div>
+<div class="fgl"><label>Role / Title *</label><input id="ns_role" placeholder="e.g. Speech Therapist"></div>
+<div class="fgl"><label>Service *</label><select id="ns_svc"><option value="">Select</option><option value="speech">Speech Therapy</option><option value="physio">Physiotherapy</option><option value="lab">Lab Technician</option><option value="nursing">Home Nursing</option><option value="general">General Doctor</option></select></div>
+<div class="fgl"><label>Gender *</label><select id="ns_gen"><option value="">Select</option><option>Male</option><option>Female</option></select></div>
+<div class="fgl"><label>CNIC *</label><input id="ns_cnic" placeholder="XXXXX-XXXXXXX-X" maxlength="15"></div>
+<div class="fgl"><label>Phone *</label><input id="ns_ph" placeholder="03XX-XXXXXXX"></div>
+<div class="fgl"><label>Consultation Fee (PKR) *</label><input type="number" id="ns_fee" placeholder="e.g. 2500" min="0"></div>
+<div class="fgl"><label>Initial Status</label><select id="ns_st"><option>available</option><option>busy</option></select></div>
+</div>
+<div class="bgrp" style="margin-top:12px"><button class="btn bp" onclick="addStaff()"><i class="fas fa-save"></i> Add Staff Member</button><button class="btn bo" onclick="clMo()"><i class="fas fa-times"></i> Cancel</button></div>`);
+}
+
+function addStaff(){
+const name=document.getElementById('ns_name').value.trim();
+const role=document.getElementById('ns_role').value.trim();
+const svc=document.getElementById('ns_svc').value;
+const gen=document.getElementById('ns_gen').value;
+const cnic=document.getElementById('ns_cnic').value.trim();
+const ph=document.getElementById('ns_ph').value.trim();
+const fee=parseInt(document.getElementById('ns_fee').value)||0;
+const st=document.getElementById('ns_st').value;
+if(!name){toast('Enter full name','error');return}
+if(!role){toast('Enter role/title','error');return}
+if(!svc){toast('Select service','error');return}
+if(!gen){toast('Select gender','error');return}
+if(!cnic||cnic.length<13){toast('Enter valid CNIC','error');return}
+if(!ph||ph.length<10){toast('Enter valid phone','error');return}
+/* Check duplicate CNIC */
+if(DB.g('st').find(s=>s.cnic===cnic)){toast('CNIC already registered','error');return}
+const staff=DB.g('st');
+const num=staff.length+1;
+const id='STF-'+String(num).padStart(3,'0');
+staff.push({id,name,role,svc,cnic,phone:ph,fee,status:st,gender:gen});
+DB.s('st',staff);
+addLog('fa-user-plus','#0d9488',`New staff: ${name} (${id}) — ${role}`);
+toast(`${name} added as ${role}`,'success');clMo();rStaff();
+}
+
+function uNavBdg(){const ords=DB.g('o');const p=ords.filter(o=>o.st==='Pending'||o.st==='Assigned').length;const pb=document.getElementById('navPend');pb.textContent=p;pb.style.display=p?'inline':'none';}
+function addLog(i,c,x){const log=DB.g('log');const n=new Date();const t=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');log.push({t,i,c,x});if(log.length>60)log.splice(0,log.length-60);DB.s('log',log);}
+function openM(h){document.getElementById('moBx').innerHTML=h;document.getElementById('moOv').classList.add('sh');}
+function clMo(e){if(e&&e.target!==e.currentTarget)return;document.getElementById('moOv').classList.remove('sh');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')clMo();});
+function toast(msg,type='success'){const c=document.getElementById('tBx');const t=document.createElement('div');t.className='tst';const ic={success:'<i class="fas fa-check-circle ts"></i>',error:'<i class="fas fa-times-circle te"></i>',info:'<i class="fas fa-info-circle ti"></i>'};const cl={success:'#0d9488',error:'#e11d48',info:'#0284c7'};t.style.borderLeftColor=cl[type]||cl.success;t.innerHTML=(ic[type]||ic.success)+' '+msg;c.appendChild(t);requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('sh')));setTimeout(()=>{t.classList.remove('sh');setTimeout(()=>t.remove(),500)},3500);}
+document.addEventListener('click',e=>{const btn=e.target.closest('.btn');if(!btn)return;const r=btn.getBoundingClientRect();const rip=document.createElement('span');rip.className='rip';const s=Math.max(r.width,r.height);rip.style.width=rip.style.height=s+'px';rip.style.left=(e.clientX-r.left-s/2)+'px';rip.style.top=(e.clientY-r.top-s/2)+'px';btn.appendChild(rip);setTimeout(()=>rip.remove(),600);});
+function toggleMob(forceClose){const sb=document.getElementById('sideNav');const ov=document.getElementById('mobOv');if(forceClose===true){sb.classList.remove('mob-open');ov.classList.remove('sh');return}sb.classList.toggle('mob-open');ov.classList.toggle('sh');}
+document.getElementById('aDt').value=new Date().toISOString().split('T')[0];
+rDash();uNavBdg();
+</script>
+</body>
+</html>
