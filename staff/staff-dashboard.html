@@ -417,6 +417,7 @@ tbody tr{transition:background .2s}tbody tr:hover{background:rgba(16,185,129,.05
 <div class="ld-ov" id="apptDetailModal"><div class="pd-card"><h3 id="apptDetailTitle"><i class="fas fa-calendar-check" style="color:var(--accent);font-size:14px;margin-right:6px"></i> Details</h3><div class="pd-info" id="apptDetailInfo"></div><div class="pd-actions"><button class="btn bo" onclick="closeApptDetail()"><i class="fas fa-arrow-left"></i> Back</button></div></div></div>
 <div class="ld-ov" id="patDetailModal"><div class="pd-card"><h3 id="pdModalTitle"><i class="fas fa-user-circle" style="color:var(--accent);font-size:14px;margin-right:6px"></i> Profile</h3><div class="pd-info" id="pdInfo"></div><div id="pdVisits"></div><div class="pd-actions"><button class="btn bp" onclick="closePatDetail()"><i class="fas fa-arrow-left"></i> Back</button></div></div></div>
 <div class="ld-ov" id="rejectModal" style="background:rgba(0,0,0,.5);backdrop-filter:blur(8px)"><div style="background:var(--card);border-radius:16px;width:100%;max-width:440px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:modalIn .3s ease" id="rejectBox"></div></div>
+<div class="ld-ov" id="labAssignModal" style="background:rgba(0,0,0,.5);backdrop-filter:blur(8px)"><div style="background:var(--card);border-radius:16px;width:100%;max-width:440px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:modalIn .3s ease" id="labAssignBox"></div></div>
 <div class="ld-ov" id="fbDetailModal"><div class="pd-card" style="max-width:560px"><h3><i class="fas fa-comment-dots" style="color:#f43f5e;font-size:14px;margin-right:6px"></i> Feedback Detail</h3><div id="fbDetailContent"></div><div class="pd-actions" id="fbDetailActions"></div></div></div>
 <div class="logout-overlay" id="logoutOverlay"><div class="logout-box"><div class="lo-icon"><i class="fas fa-sign-out-alt"></i></div><h3>Sign Out?</h3><p>You'll be returned to the login page.</p><div class="lo-btns" id="logoutBtns"><button class="btn bo" onclick="closeLogout()"><i class="fas fa-arrow-left"></i> Cancel</button><button class="btn btn-logout" onclick="performLogout()"><i class="fas fa-sign-out-alt"></i> Sign Out</button></div><div class="lo-spinning" id="logoutSpinning"><div class="ld-sp"></div><span>Signing out...</span></div></div></div>
 <div class="ld-ov" id="loadingOverlay"><div class="ld-sp"></div><div style="color:var(--tx);font-family:'Sora';font-size:15px;font-weight:600">Loading...</div></div>
@@ -429,7 +430,7 @@ tbody tr{transition:background .2s}tbody tr:hover{background:rgba(16,185,129,.05
 /* ===== STORAGE ===== */
 var SS={_b:false,_m:{},get:function(k){if(this._b)return this._m[k]||null;try{return localStorage.getItem(k)}catch(e){this._b=true;return this._m[k]||null}},set:function(k,v){if(this._b){this._m[k]=v;return}try{localStorage.setItem(k,v)}catch(e){this._b=true;this._m[k]=v}},del:function(k){if(this._b){delete this._m[k];return}try{localStorage.removeItem(k)}catch(e){this._b=true;delete this._m[k]}}};
 
-document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeApptDetail();closePatDetail();closeReject();closeFbDetail();closeLogout();if(typeof hocCloseSidebar==='function')hocCloseSidebar()}});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeApptDetail();closePatDetail();closeReject();closeLabAssign();closeFbDetail();closeLogout();if(typeof hocCloseSidebar==='function')hocCloseSidebar()}});
 
 /* ===== THEME (synced with hoc-settings + hoc-theme-init.js) ===== */
 function hocSyncThemeIcons(){var d=document.body.classList.contains('dark-mode');var i=d?'fa-sun':'fa-moon';var a=document.getElementById('themeToggle'),b=document.getElementById('hocMobTheme');if(a)a.innerHTML='<i class="fas '+i+'"></i>';if(b)b.innerHTML='<i class="fas '+i+'"></i>'}
@@ -519,6 +520,7 @@ function hocOpenPatDetailModal(){var m=document.getElementById('patDetailModal')
 function hocBindProfileDetailClicks(root){if(!root||root._hocPatDetailBound)return;root._hocPatDetailBound=true;root.addEventListener('click',function(e){var btn=e.target.closest('.hoc-pat-detail-btn');if(!btn)return;e.preventDefault();e.stopPropagation();showPatDetail(btn.getAttribute('data-id')||'',btn.getAttribute('data-role')||'Patient')})}
 async function hocStaffFetchProfileDoc(_db,col,id){var sn=await _db.collection(col).doc(id).get();if(sn.exists)return sn;var fld=col==='LabTechnicians'?'labTechId':(col==='Doctors'?'doctorId':'patientId');var q=await _db.collection(col).where(fld,'==',id).limit(1).get();if(!q.empty)return q.docs[0];return null}
 function closeReject(){document.getElementById('rejectModal').classList.remove('vis')}
+function closeLabAssign(){var m=document.getElementById('labAssignModal');if(m)m.classList.remove('vis');window._labAssignApptId=null}
 function closeFbDetail(){document.getElementById('fbDetailModal').classList.remove('vis')}
 function openLogout(){document.getElementById('logoutOverlay').classList.add('vis');document.getElementById('logoutBtns').style.display='flex';document.getElementById('logoutSpinning').style.display='none'}
 function closeLogout(){document.getElementById('logoutOverlay').classList.remove('vis')}
@@ -640,7 +642,62 @@ rb.appendChild(r)})}
 }catch(e){if(gen===_reqGen)hocFsErr(e,'Rejected requests')}
 }
 
-async function confirmReq(id){if(busy)return;busy=true;var _db=hocStaffRefreshDb()||db;try{var sn=await _db.collection('Appointments').doc(id).get();if(!sn.exists){toast('Not found!','error');busy=false;return}var d=sn.data();if(d.status!=='requested'&&d.status!=='Pending'&&d.status!=='pending'){toast('Already processed','warning');busy=false;return}var isLab=typeof hocIsLabAppointment==='function'&&hocIsLabAppointment(d);var patch={status:'staff-approved',staffApprovedAt:new Date().toISOString()};if(isLab){patch.labWorkflowStatus='staff_approved';patch.routedTo='lab';var labPick=typeof hocStaffPickLabTechnician==='function'?await hocStaffPickLabTechnician(_db):null;if(labPick){patch.assignedLabTechId=labPick.labTechId;patch.assignedLabTechUid=labPick.uid||'';patch.assignedLabTechName=labPick.name;patch.doctorName=labPick.name;patch.doctorId='';}}if(!d.patientUid&&typeof hocResolveProfileUid==='function'){try{var pu=await hocResolveProfileUid(_db,'patient',d.patientId);if(pu)patch.patientUid=pu}catch(ePu){}}if(!isLab&&typeof hocResolveProfileUid==='function'){try{var du=await hocResolveProfileUid(_db,'doctor',d.doctorId);if(du)patch.doctorUid=du}catch(eDu){}}await _db.collection('Appointments').doc(id).update(patch);if(typeof hocResolveProfileUid==='function'&&typeof hocNotifyPush==='function'){var puN=patch.patientUid||'';var notifyChain=puN?Promise.resolve(puN):hocResolveProfileUid(_db,'patient',d.patientId);notifyChain.then(function(pUid){if(isLab){hocNotifyPush(_db,{targetRole:'patient',targetUid:pUid||'',targetId:d.patientId||'',type:'appointment',title:'Lab booking confirmed',body:'Staff approved your lab test. '+sT(patch.assignedLabTechName||'Our lab technician')+' will contact you for '+(d.visitType==='clinic'?'clinic visit':'home collection')+'.'});if(patch.assignedLabTechUid){hocNotifyPush(_db,{targetRole:'lab',targetUid:patch.assignedLabTechUid,targetId:patch.assignedLabTechId||'',type:'appointment',title:'New lab booking assigned',body:sT(d.patientName)+' — '+sT(d.symptoms||'Lab test')+' ('+(d.visitType==='clinic'?'clinic':'home')+')'});}else{hocNotifyPush(_db,{targetRole:'lab',targetUid:'_broadcast',targetId:'',type:'appointment',title:'New lab booking',body:sT(d.patientName)+' — '+sT(d.symptoms||'Lab test')});}hocNotifyPush(_db,{targetRole:'staff',targetUid:'_broadcast',type:'appointment',title:'Lab booking confirmed',body:sT(d.patientName)+' → '+sT(patch.assignedLabTechName||'Lab Team')});}else{var duChain=patch.doctorUid?Promise.resolve(patch.doctorUid):hocResolveProfileUid(_db,'doctor',d.doctorId);duChain.then(function(dUid){hocNotifyPush(_db,{targetRole:'patient',targetUid:pUid||'',targetId:d.patientId||'',type:'appointment',title:'Appointment confirmed',body:'Staff approved your booking with '+sT(d.doctorName)});hocNotifyPush(_db,{targetRole:'doctor',targetUid:dUid||'',targetId:d.doctorId||'',type:'appointment',title:'New appointment',body:sT(d.patientName)+' — staff approved, check your queue.'});hocNotifyPush(_db,{targetRole:'staff',targetUid:'_broadcast',type:'appointment',title:'You confirmed a booking',body:sT(d.patientName)+' → '+sT(d.doctorName)});});}});}toast(isLab?'Confirmed! Assigned to '+sT(patch.assignedLabTechName||'Lab Team'):'Confirmed! Sent to '+sT(d.doctorName),'success');playSound();renderRequests();loadDashboard();busy=false}catch(e){toast('Error: '+e.message,'error');busy=false}}
+async function hocStaffLoadActiveLabTechOptions(_db){
+var snap=await _db.collection('LabTechnicians').where('status','==','active').get();
+var list=[];
+snap.forEach(function(doc){
+var d=doc.data()||{};
+if(d.verified===false||d.status==='pending')return;
+list.push({labTechId:d.labTechId||doc.id,docId:doc.id,name:d.name||'Lab Technician',uid:d.uid||'',dept:d.labDepartment||''});
+});
+list.sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
+return list;
+}
+
+async function openLabAssign(id){
+if(busy)return;
+try{
+var _db=hocStaffRefreshDb()||db;
+var sn=await _db.collection('Appointments').doc(id).get();
+if(!sn.exists){toast('Not found','error');return}
+var d=sn.data();
+if(d.status!=='requested'&&d.status!=='Pending'&&d.status!=='pending'){toast('Already processed','warning');return}
+var list=await hocStaffLoadActiveLabTechOptions(_db);
+if(!list.length){toast('No active lab technicians — approve one in Lab tab first.','error');return}
+window._labAssignApptId=id;
+var opts=list.map(function(l){
+return '<option value="'+String(l.labTechId).replace(/"/g,'&quot;')+'" data-uid="'+String(l.uid||'').replace(/"/g,'&quot;')+'" data-name="'+sT(l.name)+'">'+sT(l.name)+(l.dept?' — '+sT(l.dept):'')+'</option>';
+}).join('');
+var visit=d.visitType==='clinic'?'Visit lab':'Home collection';
+document.getElementById('labAssignBox').innerHTML='<div style="text-align:center"><div style="width:56px;height:56px;border-radius:50%;background:var(--lb-s);display:flex;align-items:center;justify-content:center;margin:0 auto 12px"><i class="fas fa-flask-vial" style="font-size:22px;color:var(--sky-dark)"></i></div><h3 style="font-size:17px;font-weight:800;color:var(--tx);margin-bottom:4px">Assign Lab Technician</h3><p style="font-size:12px;color:var(--mt);margin-bottom:16px"><b>Patient:</b> '+sT(d.patientName||'')+' · <b>Test:</b> '+sT(d.symptoms||'Lab')+' · <b>'+visit+'</b></p><div style="margin-bottom:16px;text-align:left"><label style="font-size:11px;font-weight:600;color:var(--tx2);display:block;margin-bottom:6px">Lab technician *</label><select id="labAssignSelect" style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid var(--bd);background:var(--inp);color:var(--tx);font-family:DM Sans,sans-serif;font-size:13px"><option value="">Select lab technician…</option>'+opts+'</select><p style="font-size:11px;color:var(--mt);margin-top:8px;line-height:1.45">Only the assigned technician will see this patient in their lab portal.</p></div><div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn bo" onclick="closeLabAssign()" style="flex:1;justify-content:center">Cancel</button><button class="btn btn-check" onclick="doConfirmLabAssign()" style="flex:1;justify-content:center"><i class="fas fa-check"></i> Confirm &amp; assign</button></div></div>';
+document.getElementById('labAssignModal').classList.add('vis');
+}catch(e){toast('Error: '+e.message,'error')}
+}
+
+async function doConfirmLabAssign(){
+var id=window._labAssignApptId;
+if(!id)return;
+var sel=document.getElementById('labAssignSelect');
+if(!sel||!sel.value){toast('Select a lab technician','error');return}
+var opt=sel.options[sel.selectedIndex];
+var labPick={labTechId:sel.value,uid:opt.getAttribute('data-uid')||'',name:opt.getAttribute('data-name')||opt.textContent||'Lab Technician'};
+closeLabAssign();
+await confirmReqWithLabPick(id,labPick);
+}
+
+async function confirmReq(id){
+if(busy)return;
+try{
+var _db=hocStaffRefreshDb()||db;
+var sn=await _db.collection('Appointments').doc(id).get();
+if(!sn.exists){toast('Not found!','error');return}
+var d=sn.data();
+if(typeof hocIsLabAppointment==='function'&&hocIsLabAppointment(d)){openLabAssign(id);return}
+}catch(e){toast('Error: '+e.message,'error');return}
+await confirmReqWithLabPick(id,null);
+}
+
+async function confirmReqWithLabPick(id,labPick){if(busy)return;busy=true;var _db=hocStaffRefreshDb()||db;try{var sn=await _db.collection('Appointments').doc(id).get();if(!sn.exists){toast('Not found!','error');busy=false;return}var d=sn.data();if(d.status!=='requested'&&d.status!=='Pending'&&d.status!=='pending'){toast('Already processed','warning');busy=false;return}var isLab=typeof hocIsLabAppointment==='function'&&hocIsLabAppointment(d);var patch={status:'staff-approved',staffApprovedAt:new Date().toISOString()};if(isLab){if(!labPick||!labPick.labTechId){toast('Lab booking requires a lab technician assignment','error');busy=false;return}patch.labWorkflowStatus='staff_approved';patch.routedTo='lab';patch.assignedLabTechId=labPick.labTechId;patch.assignedLabTechUid=labPick.uid||'';patch.assignedLabTechName=labPick.name;patch.doctorName=labPick.name;patch.doctorId='';}if(!d.patientUid&&typeof hocResolveProfileUid==='function'){try{var pu=await hocResolveProfileUid(_db,'patient',d.patientId);if(pu)patch.patientUid=pu}catch(ePu){}}if(!isLab&&typeof hocResolveProfileUid==='function'){try{var du=await hocResolveProfileUid(_db,'doctor',d.doctorId);if(du)patch.doctorUid=du}catch(eDu){}}await _db.collection('Appointments').doc(id).update(patch);if(typeof hocResolveProfileUid==='function'&&typeof hocNotifyPush==='function'){var puN=patch.patientUid||'';var notifyChain=puN?Promise.resolve(puN):hocResolveProfileUid(_db,'patient',d.patientId);notifyChain.then(function(pUid){if(isLab){hocNotifyPush(_db,{targetRole:'patient',targetUid:pUid||'',targetId:d.patientId||'',type:'appointment',title:'Lab booking confirmed',body:'Staff approved your lab test. '+sT(patch.assignedLabTechName)+' will contact you for '+(d.visitType==='clinic'?'clinic visit':'home collection')+'.'});if(patch.assignedLabTechUid){hocNotifyPush(_db,{targetRole:'lab',targetUid:patch.assignedLabTechUid,targetId:patch.assignedLabTechId||'',type:'appointment',title:'New lab booking assigned',body:sT(d.patientName)+' — '+sT(d.symptoms||'Lab test')+' ('+(d.visitType==='clinic'?'clinic':'home')+')'});}hocNotifyPush(_db,{targetRole:'staff',targetUid:'_broadcast',type:'appointment',title:'Lab booking confirmed',body:sT(d.patientName)+' → '+sT(patch.assignedLabTechName)});}else{var duChain=patch.doctorUid?Promise.resolve(patch.doctorUid):hocResolveProfileUid(_db,'doctor',d.doctorId);duChain.then(function(dUid){hocNotifyPush(_db,{targetRole:'patient',targetUid:pUid||'',targetId:d.patientId||'',type:'appointment',title:'Appointment confirmed',body:'Staff approved your booking with '+sT(d.doctorName)});hocNotifyPush(_db,{targetRole:'doctor',targetUid:dUid||'',targetId:d.doctorId||'',type:'appointment',title:'New appointment',body:sT(d.patientName)+' — staff approved, check your queue.'});hocNotifyPush(_db,{targetRole:'staff',targetUid:'_broadcast',type:'appointment',title:'You confirmed a booking',body:sT(d.patientName)+' → '+sT(d.doctorName)});});}});}toast(isLab?'Confirmed! Assigned to '+sT(patch.assignedLabTechName):'Confirmed! Sent to '+sT(d.doctorName),'success');playSound();renderRequests();loadDashboard();busy=false}catch(e){toast('Error: '+e.message,'error');busy=false}}
 
 async function openReject(id){try{var sn=await db.collection('Appointments').doc(id).get();if(!sn.exists)return;var d=sn.data();document.getElementById('rejectBox').innerHTML='<div style="text-align:center"><div style="width:56px;height:56px;border-radius:50%;background:var(--hn-s);display:flex;align-items:center;justify-content:center;margin:0 auto 12px"><i class="fas fa-exclamation-triangle" style="font-size:22px;color:#f43f5e"></i></div><h3 style="font-size:17px;font-weight:800;color:var(--tx);margin-bottom:4px">Reject Appointment?</h3><p style="font-size:12px;color:var(--mt);margin-bottom:16px"><b>Patient:</b> '+(d.patientName||'')+' · <b>Doctor:</b> '+(d.doctorName||'N/A')+'</p><div style="margin-bottom:16px;text-align:left"><label style="font-size:11px;font-weight:600;color:var(--tx2);display:block;margin-bottom:4px">Reason *</label><textarea id="rejReason" placeholder="Doctor not available..." style="width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid var(--bd);background:var(--inp);color:var(--tx);font-family:DM Sans,sans-serif;font-size:13px;outline:none;resize:none;min-height:70px"></textarea></div><div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn bo" onclick="closeReject()" style="flex:1;justify-content:center">Cancel</button><button class="btn btn-reject" onclick="doReject(\''+id+'\')" style="flex:1;justify-content:center"><i class="fas fa-ban"></i> Reject</button></div></div>';document.getElementById('rejectModal').classList.add('vis')}catch(e){toast('Error','error')}}
 
