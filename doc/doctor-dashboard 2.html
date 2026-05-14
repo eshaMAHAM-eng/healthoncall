@@ -291,11 +291,19 @@
             box-shadow: 0 0 0 4px var(--accent-glow);
         }
         .notif-btn .dot {
-            position: absolute; top: 10px; right: 10px;
-            width: 8px; height: 8px;
-            background: var(--rose); border-radius: 50%;
-            border: 2px solid var(--card);
+            position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+            background: var(--rose); border-radius: 50%; display: none;
         }
+        .notif-btn .dot.active { display: block; }
+        .hoc-doc-chat-btn { position: relative; }
+        .hoc-chat-fab-badge {
+            position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px;
+            padding: 0 5px; border-radius: 999px; background: #ef4444; color: #fff;
+            font-size: 10px; font-weight: 700; display: none; align-items: center;
+            justify-content: center; border: 2px solid var(--card, #fff);
+            box-shadow: 0 2px 8px rgba(0,0,0,.2); line-height: 18px;
+        }
+        .hoc-chat-fab-badge.show { display: inline-flex; }
 
         /* ===== STATS GRID ===== */
         .stats-grid {
@@ -940,6 +948,7 @@
                 <input type="text" id="patientSearch" placeholder="Search patients by name..." oninput="renderTable()">
                 <i class="fas fa-search"></i>
             </div>
+            <button type="button" class="notif-btn hoc-doc-chat-btn" onclick="docOpenChatFromBadge()" aria-label="Messages" title="Chat messages"><i class="fas fa-comments"></i><span class="hoc-chat-fab-badge" id="docChatFabBadge">0</span></button>
             <button class="notif-btn" aria-label="Notifications"><i class="fas fa-bell"></i><span class="dot"></span></button>
         </div>
     </header>
@@ -1633,6 +1642,12 @@
         try {
             return new Date(ts.seconds * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         } catch (e) { return ''; }
+    }
+
+    function docOpenChatFromBadge() {
+        var section = document.querySelector('.table-section');
+        if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        showToast('Tap Chat on app on a patient row to read messages.', 'info');
     }
 
     function openChatModal(idx) {

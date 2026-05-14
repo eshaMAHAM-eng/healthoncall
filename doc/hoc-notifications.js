@@ -1,6 +1,6 @@
 /**
  * HealthOnCall — shared bell notifications (all dashboards).
- * Badge count = unread Notifications + unread chat messages.
+ * Bell = appointments / prescriptions / system only. Chat unread = chat icon badge only.
  */
 (function (global) {
   'use strict';
@@ -149,32 +149,7 @@
     bump.lastMessage = String(text || '').slice(0, 200);
     bump.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
     var merge = Object.assign({}, meta || {}, bump);
-    return db.collection('Chats').doc(roomId).set(merge, { merge: true }).then(function () {
-      var title = 'New chat message';
-      var body = (meta && meta.senderName ? meta.senderName + ': ' : '') + String(text || '').slice(0, 120);
-      var p = Promise.resolve();
-      if (recipientRole === 'patient' && meta && meta.patientId) {
-        p = global.hocResolveProfileUid(db, 'patient', meta.patientId).then(function (uid) {
-          return global.hocNotifyPush(db, {
-            targetRole: 'patient', targetUid: uid || '', targetId: meta.patientId,
-            type: 'chat', title: title, body: body, meta: { roomId: roomId }
-          });
-        });
-      } else if (recipientRole === 'doctor' && meta && meta.doctorId) {
-        p = global.hocResolveProfileUid(db, 'doctor', meta.doctorId).then(function (uid) {
-          return global.hocNotifyPush(db, {
-            targetRole: 'doctor', targetUid: uid || '', targetId: meta.doctorId,
-            type: 'chat', title: title, body: body, meta: { roomId: roomId }
-          });
-        });
-      } else if (recipientRole === 'lab') {
-        p = global.hocNotifyPush(db, {
-          targetRole: 'lab', targetUid: '', targetId: meta && meta.patientId ? meta.patientId : '',
-          type: 'chat', title: title, body: body, meta: { roomId: roomId }
-        });
-      }
-      return p;
-    }).catch(function (e) { console.warn('hocChatNotifyRecipient', e); });
+    return db.collection('Chats').doc(roomId).set(merge, { merge: true }).catch(function (e) { console.warn('hocChatNotifyRecipient', e); });
   };
 
   global.hocClearChatUnread = function (db, roomId, roleKey) {
@@ -295,8 +270,8 @@
     _updateBadge: function () {
       var st = this._state;
       if (!st) return;
-      var unreadNotifs = st.items.filter(function (x) { return !x.read; }).length;
-      var total = unreadNotifs + st.chatUnread + (st.extraCount || 0);
+      var unreadNotifs = st.items.filter(function (x) { return !x.read && x.type !== 'chat'; }).length;
+      var total = unreadNotifs + (st.extraCount || 0);
       st.bells.forEach(function (btn) {
         var b = btn.querySelector('.hoc-bell-badge');
         if (!b) return;
@@ -304,7 +279,7 @@
         b.classList.toggle('show', total > 0);
       });
       var chatN = st.chatUnread || 0;
-      document.querySelectorAll('#hocChatFabBadge, #chatFabBadge, #topbarChatBadge, .hoc-chat-fab-badge').forEach(function (el) {
+      document.querySelectorAll('#hocChatFabBadge, #docChatFabBadge, #chatFabBadge, #topbarChatBadge, .hoc-chat-fab-badge').forEach(function (el) {
         el.textContent = chatN > 99 ? '99+' : String(chatN);
         el.classList.toggle('show', chatN > 0);
       });
@@ -318,15 +293,13 @@
       var list = document.getElementById('hocBellList');
       if (!list || !this._state) return;
       var st = this._state;
-      if (!st.items.length && !st.chatUnread) {
+      var displayItems = st.items.filter(function (x) { return x.type !== 'chat'; });
+      if (!displayItems.length) {
         list.innerHTML = '<div class="hb-empty"><i class="fas fa-bell-slash" style="display:block;font-size:24px;margin-bottom:8px;opacity:.35"></i>No new notifications</div>';
         return;
       }
       var html = '';
-      if (st.chatUnread > 0) {
-        html += '<div class="hb-item unread"><div class="hb-title"><i class="fas fa-comments" style="color:#10b981;margin-right:4px"></i>Chat (' + st.chatUnread + ' unread)</div><div class="hb-body">Open chat to read new messages</div></div>';
-      }
-      st.items.slice(0, 40).forEach(function (it) {
+      displayItems.slice(0, 40).forEach(function (it) {
         html += '<div class="hb-item' + (it.read ? '' : ' unread') + '" data-nid="' + esc(it.id) + '">' +
           '<div class="hb-title">' + esc(it.title) + '</div>' +
           '<div class="hb-body">' + esc(it.body) + '</div>' +
@@ -402,6 +375,7 @@
           st.items = [];
           snap.forEach(function (doc) {
             var d = doc.data();
+            if (d.type === 'chat') return;
             st.items.push({ id: doc.id, read: !!d.read, title: d.title, body: d.body, type: d.type, createdAt: d.createdAt });
           });
           st.items.sort(function (a, b) {
