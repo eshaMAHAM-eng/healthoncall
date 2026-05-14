@@ -429,13 +429,7 @@ tbody tr{transition:background .2s}tbody tr:hover{background:rgba(16,185,129,.05
 /* ===== STORAGE ===== */
 var SS={_b:false,_m:{},get:function(k){if(this._b)return this._m[k]||null;try{return localStorage.getItem(k)}catch(e){this._b=true;return this._m[k]||null}},set:function(k,v){if(this._b){this._m[k]=v;return}try{localStorage.setItem(k,v)}catch(e){this._b=true;this._m[k]=v}},del:function(k){if(this._b){delete this._m[k];return}try{localStorage.removeItem(k)}catch(e){this._b=true;delete this._m[k]}}};
 
-/* ===== SIDEBAR (hoc-sidebar.js) ===== */
-window.hocToggleSidebar=window.hocToggleSidebar||function(){var sb=document.getElementById('hocSidebar'),ov=document.getElementById('hocSbOverlay');if(!sb)return;sb.classList.toggle('open');if(ov)ov.classList.toggle('active');document.body.style.overflow=sb.classList.contains('open')?'hidden':''};
-window.hocCloseSidebar=window.hocCloseSidebar||function(){var sb=document.getElementById('hocSidebar'),ov=document.getElementById('hocSbOverlay');if(sb)sb.classList.remove('open');if(ov)ov.classList.remove('active');document.body.style.overflow=''};
-document.getElementById('hocHamburger').onclick=function(e){e.stopPropagation();hocToggleSidebar();};
-document.getElementById('hocSbOverlay').onclick = hocCloseSidebar;
-document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeApptDetail();closePatDetail();closeReject();closeFbDetail();closeLogout();hocCloseSidebar()}});
-window.addEventListener('resize',function(){if(window.innerWidth>1024)hocCloseSidebar()});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeApptDetail();closePatDetail();closeReject();closeFbDetail();closeLogout();if(typeof hocCloseSidebar==='function')hocCloseSidebar()}});
 
 /* ===== THEME (synced with hoc-settings + hoc-theme-init.js) ===== */
 function hocSyncThemeIcons(){var d=document.body.classList.contains('dark-mode');var i=d?'fa-sun':'fa-moon';var a=document.getElementById('themeToggle'),b=document.getElementById('hocMobTheme');if(a)a.innerHTML='<i class="fas '+i+'"></i>';if(b)b.innerHTML='<i class="fas '+i+'"></i>'}

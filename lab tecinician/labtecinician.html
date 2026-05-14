@@ -510,7 +510,7 @@ h1,h2,h3,h4,h5{font-family:'Sora',sans-serif;font-weight:800;}
 <body>
 
 <div class="mob-topbar">
-<button class="mob-hamburger" id="hocHamburger" onclick="hocToggleSidebar()"><i class="fas fa-bars"></i></button>
+<button class="mob-hamburger" id="hocHamburger"><i class="fas fa-bars"></i></button>
     <div class="mob-logo"><div class="mob-logo-icon"><i class="fas fa-flask"></i></div><span class="mob-logo-text">Health<span>OnCall</span></span></div>
     <button class="mob-notif"><i class="fas fa-bell"></i></button>
 </div>
@@ -552,7 +552,7 @@ h1,h2,h3,h4,h5{font-family:'Sora',sans-serif;font-weight:800;}
 
 <div class="main">
     <div class="topbar">
-        <button class="topbar-hamburger" onclick="hocToggleSidebar()"><i class="fas fa-bars"></i></button>
+        <button type="button" class="topbar-hamburger" data-hoc-sidebar-toggle aria-label="Open menu"><i class="fas fa-bars"></i></button>
         <div class="topbar-left">
             <div class="topbar-title">Lab<span>OS</span></div>
             <div class="topbar-subtitle" id="topbarLabLine">HealthOnCall Central Lab — Faisalabad</div>
@@ -1272,8 +1272,6 @@ function dismissNewOrdersAlert(){
 function countCritical(s){if(!s||!s.results)return 0;var tests=testPanels[s.panel]||[];var c=0;tests.forEach(function(t){if(s.results[t.name]!==undefined&&flagResult(t,s.results[t.name])==='critical')c++;});return c;}
 
 /* ===== NAVIGATION ===== */
-document.getElementById('hocSbOverlay').addEventListener('click', hocCloseSidebar);
-
 function switchPage(page,el){
     document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
     var pg=document.getElementById('page-'+page);if(pg)pg.classList.add('active');

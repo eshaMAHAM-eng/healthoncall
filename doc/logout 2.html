@@ -154,7 +154,7 @@
 
 <!-- Mobile Top Bar -->
 <div class="mob-topbar" id="mobTopbar">
-    <button class="mob-hamburger" id="mobHamburger" aria-label="Open menu"><i class="fas fa-bars"></i></button>
+    <button class="mob-hamburger" id="hocHamburger" aria-label="Open menu"><i class="fas fa-bars"></i></button>
     <div class="mob-logo">
         <div class="mob-logo-icon"><i class="fas fa-heartbeat"></i></div>
         <span class="mob-logo-text">Health<span>OnCall</span></span>
@@ -273,34 +273,6 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-/* ═══════════════════════════════════════════════════
-   MOBILE SIDEBAR TOGGLE (Fixed)
-   ═══════════════════════════════════════════════════ */
-(function(){
-    var sidebar = document.getElementById('hocSidebar');
-    var overlay = document.getElementById('hocSbOverlay');
-    var hamburger = document.getElementById('mobHamburger');
-    function openSidebar(){
-        sidebar.classList.add('open');
-        overlay.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
-    function closeSidebar(){
-        sidebar.classList.remove('open');
-        overlay.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-    hamburger.addEventListener('click', openSidebar);
-    overlay.addEventListener('click', closeSidebar);
-
-    window.hocOpenSidebar = openSidebar;
-    window.hocCloseSidebar = closeSidebar;
-
-    window.addEventListener('resize', function(){
-        if(window.innerWidth > 1024) closeSidebar();
-    });
-})();
-
 (function () {
     var page = window.location.pathname.split("/").pop() || "";
     document.querySelectorAll(".sb-nav a").forEach(function (link) {

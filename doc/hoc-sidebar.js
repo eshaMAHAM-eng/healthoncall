@@ -1,11 +1,12 @@
 /**
- * HealthOnCall — unified sidebar toggle (all portals).
- * Defines global hocToggleSidebar / hocCloseSidebar; each page binds its own hamburger.
+ * HealthOnCall — unified sidebar toggle (Patient · Doctor · Staff · Lab · all sub-pages).
  */
 (function () {
   'use strict';
   if (window._hocSidebarJsLoaded) return;
   window._hocSidebarJsLoaded = true;
+
+  var MOBILE_BP = 1024;
 
   function $(id) { return document.getElementById(id); }
 
@@ -28,30 +29,53 @@
 
   window.hocClose = window.hocCloseSidebar;
 
+  function bindClick(el, fn) {
+    if (!el || el._hocSidebarBound) return;
+    el._hocSidebarBound = true;
+    el.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      fn();
+    });
+  }
+
   function bindSidebarControls() {
-    var hamburger = $('hocHamburger');
-    var overlay = $('hocSbOverlay');
-    if (hamburger && !hamburger._hocBound) {
-      hamburger._hocBound = true;
-      hamburger.addEventListener('click', window.hocToggleSidebar);
-    }
-    if (overlay && !overlay._hocBound) {
-      overlay._hocBound = true;
-      overlay.addEventListener('click', window.hocCloseSidebar);
+    ['hocHamburger', 'mobHamburgerBtn', 'mobHamburger'].forEach(function (id) {
+      bindClick($(id), window.hocToggleSidebar);
+    });
+
+    document.querySelectorAll('.topbar-hamburger, [data-hoc-sidebar-toggle]').forEach(function (el) {
+      bindClick(el, window.hocToggleSidebar);
+    });
+
+    bindClick($('hocSbOverlay'), window.hocCloseSidebar);
+
+    var sb = $('hocSidebar');
+    if (sb && !sb._hocNavBound) {
+      sb._hocNavBound = true;
+      sb.addEventListener('click', function (e) {
+        if (window.innerWidth > MOBILE_BP) return;
+        var link = e.target.closest('a[href], button.sb-link, .sb-link');
+        if (link) window.hocCloseSidebar();
+      });
     }
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () {
-      bindSidebarControls();
-      document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') window.hocCloseSidebar();
-      });
-      window.addEventListener('resize', function () {
-        if (window.innerWidth > 768) window.hocCloseSidebar();
-      });
-    });
-  } else {
+  function initSidebar() {
     bindSidebarControls();
+    if (window._hocSidebarKeysBound) return;
+    window._hocSidebarKeysBound = true;
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') window.hocCloseSidebar();
+    });
+    window.addEventListener('resize', function () {
+      if (window.innerWidth > MOBILE_BP) window.hocCloseSidebar();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSidebar);
+  } else {
+    initSidebar();
   }
 })();

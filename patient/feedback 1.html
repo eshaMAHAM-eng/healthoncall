@@ -442,27 +442,6 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
-    /* ===== SIDEBAR TOGGLE ===== */
-    var sidebar = document.getElementById('hocSidebar');
-    var overlay = document.getElementById('hocSbOverlay');
-    var hamburger = document.getElementById('hocHamburger');
-
-    function hocToggleSidebar(){
-        sidebar.classList.toggle('open');
-        overlay.classList.toggle('active');
-        document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
-    }
-    function hocCloseSidebar(){
-        sidebar.classList.remove('open');
-        overlay.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-
-    hamburger.addEventListener('click', hocToggleSidebar);
-    overlay.addEventListener('click', hocCloseSidebar);
-    document.addEventListener('keydown', function(e){ if(e.key === 'Escape') hocCloseSidebar(); });
-    window.addEventListener('resize', function(){ if(window.innerWidth > 768) hocCloseSidebar(); });
-
     /* ===== DATE ===== */
     document.getElementById('todayDate').innerText = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 

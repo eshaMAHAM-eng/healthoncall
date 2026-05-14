@@ -322,9 +322,7 @@
 
     <script>
     document.getElementById('todayDate').innerText = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-    var sidebar = document.getElementById('hocSidebar'); var overlay = document.getElementById('hocSbOverlay'); var hamburger = document.getElementById('hocHamburger');
-    function hocToggleSidebar(){sidebar.classList.toggle('open');overlay.classList.toggle('active');document.body.style.overflow=sidebar.classList.contains('open')?'hidden':'';} function hocCloseSidebar(){sidebar.classList.remove('open');overlay.classList.remove('active');document.body.style.overflow='';}
-    hamburger.addEventListener('click',hocToggleSidebar); overlay.addEventListener('click',hocCloseSidebar); document.addEventListener('keydown',function(e){if(e.key==='Escape'){hocCloseSidebar();closeChatWindow();endCall();}});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(typeof hocCloseSidebar==='function')hocCloseSidebar();closeChatWindow();endCall();}});
 
     /* ===== CHAT LOGIC ===== */
     var activeChatAptId = null; var chatUnsubscribe = null;
