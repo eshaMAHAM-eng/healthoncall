@@ -208,6 +208,7 @@ window.hocSyncPatientSession = function (profile, docId) {
     if (profile.name) s.name = profile.name;
     if (profile.email) s.email = profile.email;
     localStorage.setItem('hoc-patient-settings', JSON.stringify(s));
+    if (typeof window.hocApplyPatientProfileUI === 'function') window.hocApplyPatientProfileUI(profile);
   } catch (e) {}
 };
 
@@ -509,4 +510,115 @@ window.hocGetDoctorChatRoomId = function (patientId, doctorId) {
 
 window.hocGetLabChatRoomId = function (patientId) {
   return 'lab_' + window.hocNormalizePatientChatKey(patientId);
+};
+
+/** First name for greetings (strips Dr. prefix). */
+window.hocUserFirstName = function (name) {
+  name = String(name || '').trim();
+  if (!name) return 'User';
+  var stripped = name.replace(/^Dr\.\s*/i, '').trim();
+  return (stripped.split(/\s+/)[0] || stripped || name);
+};
+
+window.hocUserInitials = function (name) {
+  name = String(name || 'U');
+  return name.split(/\s+/).filter(Boolean).map(function (w) { return w[0]; }).join('').toUpperCase().slice(0, 2) || 'U';
+};
+
+window.hocAvatarUrl = function (name, bg) {
+  bg = bg || '0ea5e9';
+  return 'https://ui-avatars.com/api/?name=' + encodeURIComponent(String(name || 'User').trim() || 'User') + '&background=' + bg + '&color=fff&bold=true&size=80';
+};
+
+/** Update welcome header + sidebar footer with the registered user's name. */
+window.hocApplyRegisteredNameUI = function (opts) {
+  opts = opts || {};
+  var name = String(opts.name || '').trim() || String(opts.fallback || 'User').trim() || 'User';
+  var first = opts.welcomeFirst != null ? String(opts.welcomeFirst) : window.hocUserFirstName(name);
+  var roleLabel = opts.roleLabel;
+  var avatarBg = opts.avatarBg || '0ea5e9';
+  var welcomePrefix = opts.welcomePrefix || 'Welcome back, ';
+
+  ['sidebarName', 'sbUserName', 'adminName'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = name;
+  });
+  document.querySelectorAll('.user-info .user-name, .sb-user-name, .sb-uname').forEach(function (el) {
+    el.textContent = name;
+  });
+
+  document.querySelectorAll('.greeting-section h1').forEach(function (h) {
+    h.innerHTML = welcomePrefix + '<span>' + first + '</span>';
+  });
+  var dashFirst = document.getElementById('dashFirstName');
+  if (dashFirst) dashFirst.textContent = first;
+
+  document.querySelectorAll('.user-avatar img, #sidebarAvatarImg').forEach(function (img) {
+    img.src = window.hocAvatarUrl(name, avatarBg);
+    img.alt = name;
+  });
+
+  document.querySelectorAll('.sb-avatar, .sbf .sba, #sbUserAvatar').forEach(function (el) {
+    if (el.querySelector && el.querySelector('img')) return;
+    el.textContent = window.hocUserInitials(name);
+  });
+
+  if (roleLabel) {
+    document.querySelectorAll('.user-info .user-role, .sb-user-role, .sb-urole, #sidebarRole, #sidebarRoleLine').forEach(function (el) {
+      el.textContent = roleLabel;
+    });
+  }
+};
+
+window.hocApplyPatientProfileUI = function (profile) {
+  profile = profile || {};
+  var name = String(profile.name || '').trim();
+  if (!name && typeof window.HOC_getPatientName === 'function') name = window.HOC_getPatientName();
+  if (!name) name = 'Patient';
+  window.hocApplyRegisteredNameUI({ name: name, roleLabel: 'Patient', avatarBg: '0ea5e9' });
+};
+
+window.hocSyncLabSession = function (profile, docId) {
+  if (!profile) return;
+  try {
+    var prefs = {};
+    try { prefs = JSON.parse(localStorage.getItem('hoc_labtech_prefs_v1') || '{}'); } catch (e) { prefs = {}; }
+    if (profile.name) prefs.name = profile.name;
+    if (profile.email) prefs.email = profile.email;
+    if (profile.phone) prefs.phone = profile.phone;
+    if (profile.labTechId) prefs.empId = profile.labTechId;
+    if (profile.labDepartment) prefs.labSite = profile.labDepartment;
+    localStorage.setItem('hoc_labtech_prefs_v1', JSON.stringify(prefs));
+    localStorage.setItem('hoc_user', JSON.stringify({
+      role: 'Lab Technician',
+      name: profile.name || prefs.name || '',
+      email: profile.email || prefs.email || '',
+      labTechId: profile.labTechId || docId || ''
+    }));
+  } catch (e) {}
+  window.hocApplyLabProfileUI(profile);
+};
+
+window.hocApplyLabProfileUI = function (profile) {
+  profile = profile || {};
+  var name = String(profile.name || '').trim();
+  if (!name) {
+    try {
+      var p = JSON.parse(localStorage.getItem('hoc_labtech_prefs_v1') || '{}');
+      name = String(p.name || '').trim();
+    } catch (e) {}
+  }
+  if (!name) name = 'Lab Technician';
+  window.hocApplyRegisteredNameUI({
+    name: name,
+    roleLabel: 'Lab Technician',
+    welcomePrefix: 'Good day, ',
+    avatarBg: '10b981'
+  });
+};
+
+window.hocApplyStaffProfileUI = function (profile) {
+  profile = profile || {};
+  var name = String(profile.name || '').trim() || 'Staff';
+  window.hocApplyRegisteredNameUI({ name: name, roleLabel: 'Staff', avatarBg: '6366f1' });
 };

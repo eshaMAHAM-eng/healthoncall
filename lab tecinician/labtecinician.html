@@ -37,6 +37,7 @@
                             window.location.replace('../index.html?err=pending');
                             return;
                         }
+                        if (typeof hocSyncLabSession === 'function') hocSyncLabSession(d, q.docs[0].id);
                         if (typeof HOCNotifHub !== 'undefined' && window._hocDb) {
                             HOCNotifHub.init({ db: window._hocDb, role: 'lab', uid: user.uid, profileId: q.docs[0].id, bellSelectors: ['.topbar-notif-dot', '.mob-notif'] });
                         }
@@ -545,8 +546,8 @@ h1,h2,h3,h4,h5{font-family:'Sora',sans-serif;font-weight:800;}
     </nav>
     <div class="sb-footer">
         <div class="sb-user">
-            <div class="sb-user-avatar" id="sbUserAvatar">BR</div>
-            <div class="sb-user-info"><div class="sb-user-name" id="sbUserName">Bilal Raza</div><div class="sb-user-role">Lab Technician</div></div>
+            <div class="sb-user-avatar" id="sbUserAvatar">LT</div>
+            <div class="sb-user-info"><div class="sb-user-name" id="sbUserName">Lab Technician</div><div class="sb-user-role">Lab Technician</div></div>
         </div>
     </div>
 </aside>
@@ -572,7 +573,7 @@ h1,h2,h3,h4,h5{font-family:'Sora',sans-serif;font-weight:800;}
         <div class="dash-hero" id="dashHero">
             <div class="dash-hero-text">
                 <p class="dash-kicker">Lab overview</p>
-                <h1 class="dash-title">Good day, <span id="dashFirstName">Bilal</span></h1>
+                <h1 class="dash-title">Good day, <span id="dashFirstName">Technician</span></h1>
                 <p class="dash-meta" id="dashHeroMeta">Single view for the lab technician: home routing, clinic intake, bench throughput, safety alerts, and secure patient messaging — aligned with HealthOnCall staff workflow.</p>
             </div>
             <div class="dash-hero-side">
@@ -734,7 +735,7 @@ h1,h2,h3,h4,h5{font-family:'Sora',sans-serif;font-weight:800;}
                 <div class="set-card-h"><i class="fas fa-user"></i> Profile</div>
                 <div class="set-card-b">
                     <div class="form-row">
-                        <div class="form-group"><label class="form-label" for="settingName">Full name</label><input type="text" class="form-input" id="settingName" value="Bilal Raza" autocomplete="name" placeholder="As printed on reports"></div>
+                        <div class="form-group"><label class="form-label" for="settingName">Full name</label><input type="text" class="form-input" id="settingName" value="" autocomplete="name" placeholder="As printed on reports"></div>
                         <div class="form-group"><label class="form-label" for="settingEmail">Work email</label><input type="email" class="form-input" id="settingEmail" value="bilal.raza@hoc.pk" autocomplete="email"></div>
                     </div>
                     <div class="form-row">
@@ -1141,7 +1142,7 @@ var SETTINGS_LS='hoc_labtech_prefs_v1';
 
 function defaultLabPrefs(){
     return{
-        name:'Bilal Raza',
+        name:'',
         email:'bilal.raza@hoc.pk',
         phone:'+92 300 1234500',
         empId:'LAB-HOC-1042',

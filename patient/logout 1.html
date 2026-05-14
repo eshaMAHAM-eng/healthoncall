@@ -243,9 +243,9 @@
         </nav>
         <div class="sidebar-footer">
             <div class="user-card">
-                <div class="user-avatar"><img id="sidebarAvatarImg" src="https://ui-avatars.com/api/?name=Esha+Maham&background=10b981&color=fff&bold=true&size=80" alt=""></div>
+                <div class="user-avatar"><img id="sidebarAvatarImg" src="https://ui-avatars.com/api/?name=Patient&background=10b981&color=fff&bold=true&size=80" alt=""></div>
                 <div class="user-info">
-                    <div class="user-name" id="sidebarName">Esha Maham</div>
+                    <div class="user-name" id="sidebarName">Patient</div>
                     <div class="user-role">Patient</div>
                 </div>
             </div>
@@ -329,20 +329,16 @@
 
     /* ===== LOAD USER INFO ===== */
     function loadUserInfo() {
-        var saved = localStorage.getItem('hoc-patient-settings');
-        if (saved) {
-            try {
-                var s = JSON.parse(saved);
-                var sn = document.getElementById('sidebarName');
-                var sa = document.getElementById('sidebarAvatarImg');
-                if (sn && s.name) sn.textContent = s.name;
-                if (sa && s.avatar) sa.src = s.avatar;
-                if (s.dark) document.body.classList.add('dark-mode');
-            } catch(e) {}
-        }
-        if (typeof HOC_getPatientName === 'function') {
-            var sn2 = document.getElementById('sidebarName');
-            if (sn2 && (!sn2.textContent || !sn2.textContent.trim())) sn2.textContent = HOC_getPatientName();
+        if (typeof hocApplyPatientProfileUI === 'function') {
+            hocApplyPatientProfileUI();
+            var saved = localStorage.getItem('hoc-patient-settings');
+            if (saved) {
+                try {
+                    var s = JSON.parse(saved);
+                    if (s.dark) document.body.classList.add('dark-mode');
+                } catch(e) {}
+            }
+            return;
         }
     }
     loadUserInfo();

@@ -32,10 +32,13 @@
     var role = hocDoctorServiceLabel(profile);
     var initials = hocDoctorInitials(name);
 
-    ['sidebarName', 'sb-uname'].forEach(function (id) {
-      document.querySelectorAll('#' + id + ', .' + id).forEach(function (el) { el.textContent = name; });
-    });
-    document.querySelectorAll('.sb-uname').forEach(function (el) { el.textContent = name; });
+    if (typeof global.hocApplyRegisteredNameUI === 'function') {
+      global.hocApplyRegisteredNameUI({
+        name: name,
+        welcomeFirst: global.hocUserFirstName ? global.hocUserFirstName(name) : name.replace(/^Dr\.\s*/i, '').split(/\s+/)[0],
+        avatarBg: '6366f1'
+      });
+    }
 
     ['sidebarRole', 'sidebarRoleLine', 'sb-urole'].forEach(function (id) {
       document.querySelectorAll('#' + id + ', .' + id).forEach(function (el) { el.textContent = role; });
@@ -45,10 +48,6 @@
     document.querySelectorAll('.sb-avatar').forEach(function (el) {
       if (el.querySelector('img')) return;
       el.textContent = initials;
-    });
-
-    document.querySelectorAll('.greeting-section h1 span, .top-header .greeting-section h1 span').forEach(function (el) {
-      if (el.closest('.greeting-section')) el.textContent = name.replace(/^Dr\.\s*/i, '') || name;
     });
 
     var ctx = document.getElementById('hocDoctorScopeLine');

@@ -924,7 +924,10 @@ async function seedDemoData(){
     var st=stSnap.docs[0].data();
     if(typeof hocIsSingleSystemAdmin==='function'&&!hocIsSingleSystemAdmin(st,stSnap.docs[0].id)){await auth.signOut();window.location.replace(hocIndexHtml+'?err=staff');return}
     document.getElementById('adminName').textContent=st.name||user.displayName||user.email||'Staff';
+    if (typeof window.hocApplyStaffProfileUI === 'function') window.hocApplyStaffProfileUI({ name: st.name || user.displayName || user.email || 'Staff' });
+    else {
     var av=document.querySelector('.sbf .sba');if(av)av.textContent=gI(st.name||user.email||'ST');
+    }
     if(typeof window.hocSaveUserIndexShared==='function'){
       try{await window.hocSaveUserIndexShared(hocStaffGetDb(),user.uid,{role:'Staff',profileCollection:'Staff',profileId:stSnap.docs[0].id,email:st.email||user.email||''})}catch(uiErr){console.warn('UserIndex sync',uiErr)}
     }

@@ -332,9 +332,9 @@ body.dark-mode .symptom-chip{background:#1e293b;border-color:var(--border)}
   </nav>
   <div class="sidebar-footer">
     <div class="user-card">
-      <div class="user-avatar"><img id="sidebarAvatarImg" src="https://ui-avatars.com/api/?name=Esha+Maham&background=0ea5e9&color=fff&bold=true&size=80" alt=""></div>
+      <div class="user-avatar"><img id="sidebarAvatarImg" src="https://ui-avatars.com/api/?name=Patient&background=0ea5e9&color=fff&bold=true&size=80" alt=""></div>
       <div class="user-info">
-        <div class="user-name" id="sidebarName">Esha Maham</div>
+        <div class="user-name" id="sidebarName">Patient</div>
         <div class="user-role">Patient</div>
       </div>
     </div>
@@ -650,6 +650,7 @@ var AppStorage={
 AppStorage.loadFromStorage();
 
 (function hocApplySidebarProfile(){
+  if(typeof hocApplyPatientProfileUI==='function'){hocApplyPatientProfileUI();return;}
   try{
     var s=JSON.parse(localStorage.getItem('hoc-patient-settings')||'{}');
     var nm=document.getElementById('sidebarName');

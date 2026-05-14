@@ -346,8 +346,19 @@
     };
   }
 
+  function hocApplyPatientUIFromStorage() {
+    if (typeof window.hocApplyPatientProfileUI === 'function') {
+      window.hocApplyPatientProfileUI({ name: window.HOC_getPatientName() });
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
+    hocApplyPatientUIFromStorage();
     window.HOC_initPatientBell();
     if (typeof window.HOC_guardPatientPage === 'function') window.HOC_guardPatientPage();
+  });
+
+  window.addEventListener('storage', function (ev) {
+    if (ev.key === 'hoc_patient_name' || ev.key === 'hoc-patient-settings') hocApplyPatientUIFromStorage();
   });
 })();
