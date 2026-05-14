@@ -16,6 +16,7 @@
 <script src="../doc/hoc-booking-doctors-seed.js"></script>
 <script src="../doc/hoc-feedback-ratings.js"></script>
 <script src="../doc/hoc-notifications.js"></script>
+<script src="../doc/hoc-stripe-pay.js"></script>
 <script src="hoc-patient-common.js"></script>
 <link rel="stylesheet" href="../doc/hoc-global-theme.css">
 
@@ -475,9 +476,9 @@ body.dark-mode .symptom-chip{background:#1e293b;border-color:var(--border)}
             <div style="font-size:9px;color:var(--text-muted);">Mobile Wallet</div>
           </div>
           <div class="pay-opt" data-pay="Card" onclick="selectPayment('Card')" style="background:var(--slate-soft);border:2px solid var(--card-border);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .3s;">
-            <i class="fas fa-credit-card" style="font-size:18px;color:#6366f1;display:block;margin-bottom:6px;"></i>
-            <div style="font-size:11px;font-weight:700;color:var(--text);">Debit/Credit</div>
-            <div style="font-size:9px;color:var(--text-muted);">Visa / Mastercard</div>
+            <i class="fab fa-stripe" style="font-size:18px;color:#635bff;display:block;margin-bottom:6px;"></i>
+            <div style="font-size:11px;font-weight:700;color:var(--text);">Stripe</div>
+            <div style="font-size:9px;color:var(--text-muted);">Card / Apple Pay</div>
           </div>
           <div class="pay-opt" data-pay="Insurance" onclick="selectPayment('Insurance')" style="background:var(--slate-soft);border:2px solid var(--card-border);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .3s;">
             <i class="fas fa-shield-alt" style="font-size:18px;color:#0ea5e9;display:block;margin-bottom:6px;"></i>
@@ -1118,6 +1119,39 @@ function renderDoctors(){
 // removed external WhatsApp — use in-app Messages on dashboard
 var selectedPayment='Cash';
 
+function hocBookingFeeAmount(){
+  if(isLabBooking())return 500;
+  return selectedDoc&&selectedDoc.fee?parseInt(selectedDoc.fee,10):0;
+}
+function hocPaymentIsPaid(){
+  if(selectedPayment==='Cash')return false;
+  if(selectedPayment==='Card'){
+    var sp=typeof HOC_stripePaidSession==='function'?HOC_stripePaidSession():null;
+    var ref=document.getElementById('payAccountInput')?document.getElementById('payAccountInput').value.trim():'';
+    return !!(sp&&sp.sessionId)||!!ref;
+  }
+  var ref2=document.getElementById('payAccountInput')?document.getElementById('payAccountInput').value.trim():'';
+  return !!ref2;
+}
+function hocPaymentRefValue(){
+  if(selectedPayment==='Card'){
+    var sp=typeof HOC_stripePaidSession==='function'?HOC_stripePaidSession():null;
+    if(sp&&sp.sessionId)return sp.sessionId;
+  }
+  return document.getElementById('payAccountInput')?document.getElementById('payAccountInput').value.trim():'';
+}
+function hocLaunchStripePay(){
+  var fee=hocBookingFeeAmount();
+  if(!fee){showToast('Select service and doctor first','err');return;}
+  if(typeof HOC_startStripeCheckout!=='function'){showToast('Stripe module not loaded','err');return;}
+  HOC_startStripeCheckout({
+    amount:fee*100,
+    currency:'pkr',
+    description:(selectedService||'HealthOnCall')+' appointment fee',
+    metadata:{service:selectedService||'',fee:String(fee)}
+  }).catch(function(e){showToast((e&&e.message)||'Stripe checkout failed','err');});
+}
+
 function selectPayment(method){
   selectedPayment=method;
   document.querySelectorAll('.pay-opt').forEach(function(o){
@@ -1130,18 +1164,33 @@ function selectPayment(method){
   
   if(method==='JazzCash'){
     onlineFields.style.display='block';
-    document.getElementById('payNowLink').href='https://jazzcash.com.pk/pay'; 
+    var linkJ=document.getElementById('payNowLink');
+    if(linkJ){linkJ.onclick=null;linkJ.href='https://jazzcash.com.pk/pay';} 
     document.getElementById('payNowLink').style.background='#e11d48';
     document.getElementById('payMethodLabel').textContent='JazzCash';
     document.getElementById('payAccountInput').placeholder='e.g TXN-123456789';
   } else if(method==='EasyPaisa'){
     onlineFields.style.display='block';
-    document.getElementById('payNowLink').href='https://easypaisa.com.pk/pay'; 
+    var linkE=document.getElementById('payNowLink');
+    if(linkE){linkE.onclick=null;linkE.href='https://easypaisa.com.pk/pay';} 
     document.getElementById('payNowLink').style.background='#059669';
     document.getElementById('payMethodLabel').textContent='EasyPaisa';
     document.getElementById('payAccountInput').placeholder='e.g TXN-123456789';
   }
-  else if(method==='Card'){onlineFields.style.display='block';if(label)label.textContent='Card Number (last 4 digits)';document.getElementById('payAccountInput').placeholder='XXXX';}
+  else if(method==='Card'){
+    onlineFields.style.display='block';
+    if(label)label.textContent='Stripe Session ID';
+    var link=document.getElementById('payNowLink');
+    if(link){
+      link.href='#';
+      link.style.background='#635bff';
+      link.onclick=function(e){e.preventDefault();hocLaunchStripePay();};
+      link.innerHTML='<i class="fab fa-stripe"></i> Pay with <span id="payMethodLabel">Stripe</span>';
+    }
+    var sp=typeof HOC_stripePaidSession==='function'?HOC_stripePaidSession():null;
+    var inp=document.getElementById('payAccountInput');
+    if(inp){inp.placeholder='Filled after Stripe checkout';if(sp&&sp.sessionId)inp.value=sp.sessionId;}
+  }
   else if(method==='Insurance'){onlineFields.style.display='block';if(label)label.textContent='Insurance Policy Number';document.getElementById('payAccountInput').placeholder='Policy ID';}
   else if(method==='BankTransfer'){onlineFields.style.display='block';if(label)label.textContent='Transaction Reference Number';document.getElementById('payAccountInput').placeholder='TXN-XXXXXXXX';}
   else{onlineFields.style.display='none';}
@@ -1187,6 +1236,8 @@ function confirmBooking(){
   var needsAddr=(isLab&&selectedVisitType==='home')||(!isLab&&selectedVisitType==='Physical');
   if(needsAddr&&!ad){document.getElementById('addrGroup').classList.add('error');ok=false;}else document.getElementById('addrGroup').classList.remove('error');
   if(!ok){showToast('Please fill all required fields','err');return;}
+  if(selectedPayment==='Card'&&!hocPaymentIsPaid()){showToast('Complete Stripe payment first (Pay with Stripe)','err');return;}
+  if(selectedPayment!=='Cash'&&selectedPayment!=='Card'&&!hocPaymentIsPaid()){showToast('Enter transaction / reference ID after payment','err');return;}
   if(typeof hocValidateFutureDate==='function'){var dv=hocValidateFutureDate(dt);if(!dv.ok){document.getElementById('dateGroup').classList.add('error');showToast(dv.msg,'err');return;}}
   var reasonCheck=validateReasonForService(selectedService,rs);
   if(!reasonCheck.ok){
@@ -1197,10 +1248,10 @@ function confirmBooking(){
   var btn=document.getElementById('confirmBtn');btn.classList.add('saving');
   var bookPayload;
   if(isLab){
-    bookPayload={service:'Lab Tests',routedTo:'lab',doctorId:'',doctorName:'Lab Team',doctorSpec:'Sample Collection',date:dt,time:tm,symptoms:rs,visitType:selectedVisitType==='clinic'?'clinic':'home',address:ad,fee:500,notes:document.getElementById('notesInput').value.trim(),paymentMethod:selectedPayment,paymentRef:document.getElementById('payAccountInput')?document.getElementById('payAccountInput').value.trim():'',paymentStatus:selectedPayment==='Cash'?'Pending':'Paid',labWorkflowStatus:'patient_confirmed',city:'Faisalabad'};
+    bookPayload={service:'Lab Tests',routedTo:'lab',doctorId:'',doctorName:'Lab Team',doctorSpec:'Sample Collection',date:dt,time:tm,symptoms:rs,visitType:selectedVisitType==='clinic'?'clinic':'home',address:ad,fee:500,notes:document.getElementById('notesInput').value.trim(),paymentMethod:selectedPayment,paymentRef:hocPaymentRefValue(),paymentStatus:hocPaymentIsPaid()?'Paid':'Pending',labWorkflowStatus:'patient_confirmed',city:'Faisalabad'};
   }else{
     var doctorId=(typeof hocDoctorIdForBooking==='function'?hocDoctorIdForBooking(selectedDoc):String(selectedDoc.id));
-    bookPayload={doctorId:doctorId,doctorName:selectedDoc.name,doctorSpec:selectedDoc.specialty,service:selectedService||selectedDoc.service||'',date:dt,time:tm,symptoms:rs,visitType:selectedVisitType,address:ad,fee:selectedDoc.fee,notes:document.getElementById('notesInput').value.trim(),paymentMethod:selectedPayment,paymentRef:document.getElementById('payAccountInput')?document.getElementById('payAccountInput').value.trim():'',paymentStatus:selectedPayment==='Cash'?'Pending':'Paid'};
+    bookPayload={doctorId:doctorId,doctorName:selectedDoc.name,doctorSpec:selectedDoc.specialty,service:selectedService||selectedDoc.service||'',date:dt,time:tm,symptoms:rs,visitType:selectedVisitType,address:ad,fee:selectedDoc.fee,notes:document.getElementById('notesInput').value.trim(),paymentMethod:selectedPayment,paymentRef:hocPaymentRefValue(),paymentStatus:hocPaymentIsPaid()?'Paid':'Pending'};
   }
   (typeof HOC_resolvePatientContext==='function'?HOC_resolvePatientContext():Promise.resolve({patientName:(typeof HOC_getPatientName==='function'?HOC_getPatientName():'Patient'),patientId:(typeof HOC_getPatientId==='function'?HOC_getPatientId():''),patientUid:''})).then(function(ctx){
     if(ctx.needsLogin){btn.classList.remove('saving');showToast('Please sign in first','err');setTimeout(function(){window.location.href='../index.html';},900);return null;}
@@ -1250,6 +1301,10 @@ function showToast(m,t){
 }
 
 try { renderServices(); } catch(e) { console.warn('renderServices error:', e); }
+if(typeof HOC_captureStripeReturn==='function'){
+  var _hocStripePaid=HOC_captureStripeReturn();
+  if(_hocStripePaid){selectPayment('Card');showToast('Stripe payment received — tap Confirm Booking','success');}
+}
 (function(){
   var ri=document.getElementById('reasonInput');
   if(ri)ri.addEventListener('input',function(){document.getElementById('reasonGroup').classList.remove('error');});

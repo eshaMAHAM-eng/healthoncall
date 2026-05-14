@@ -11,3 +11,6 @@ window.HOC_FIREBASE_CONFIG = {
   messagingSenderId: "159711752974",
   appId: "1:159711752974:web:0667526008707309e81d5f"
 };
+
+/** Stripe — set STRIPE_SECRET_KEY in Vercel env; optional publishable key for Elements later */
+window.HOC_STRIPE_PUBLISHABLE_KEY = "";

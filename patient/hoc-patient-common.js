@@ -342,7 +342,11 @@
 
   if (!window.markNotifRead) {
     window.markNotifRead = function () {
-      if (typeof window.HOCNotifHub !== 'undefined') window.HOCNotifHub.markAllRead();
+      if (typeof window.HOCNotifHub !== 'undefined' && typeof window.HOCNotifHub.markNotifRead === 'function') {
+        window.HOCNotifHub.markNotifRead();
+      } else if (typeof window.HOCNotifHub !== 'undefined') {
+        window.HOCNotifHub.markAllRead();
+      }
     };
   }
 

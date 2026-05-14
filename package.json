@@ -1,0 +1,7 @@
+{
+  "name": "healthoncall",
+  "private": true,
+  "dependencies": {
+    "stripe": "^17.7.0"
+  }
+}

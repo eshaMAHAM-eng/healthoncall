@@ -26,6 +26,8 @@
       '#hoc-bell-panel{position:fixed;z-index:6000;width:min(360px,calc(100vw - 24px));max-height:min(420px,70vh);background:var(--card,#fff);border:1px solid var(--card-border,rgba(15,23,42,.08));border-radius:16px;box-shadow:0 20px 50px rgba(15,23,42,.18);display:none;flex-direction:column;overflow:hidden}' +
       '#hoc-bell-panel.open{display:flex}' +
       '#hoc-bell-panel .hb-head{padding:14px 16px;border-bottom:1px solid var(--bd,#e2e8f0);display:flex;align-items:center;justify-content:space-between;gap:10px}' +
+      '#hoc-bell-panel .hb-close{background:none;border:none;color:var(--mt,#94a3b8);cursor:pointer;font-size:16px;padding:4px 8px;line-height:1}' +
+      '#hoc-bell-panel .hb-close:hover{color:var(--tx,#0f172a)}' +
       '#hoc-bell-panel .hb-head h4{margin:0;font-size:14px;font-weight:800;color:var(--tx,#0f172a)}' +
       '#hoc-bell-panel .hb-list{overflow-y:auto;flex:1;padding:8px}' +
       '#hoc-bell-panel .hb-item{padding:10px 12px;border-radius:12px;margin-bottom:4px;cursor:pointer;border:1px solid transparent}' +
@@ -242,11 +244,12 @@
       var p = document.createElement('div');
       p.id = PANEL_ID;
       p.innerHTML =
-        '<div class="hb-head"><h4><i class="fas fa-bell" style="color:#10b981;margin-right:6px"></i>Notifications</h4><button type="button" class="hb-mark" id="hocBellMarkAll">Mark all read</button></div>' +
+        '<div class="hb-head"><h4><i class="fas fa-bell" style="color:#10b981;margin-right:6px"></i>Notifications</h4><div style="display:flex;align-items:center;gap:8px"><button type="button" class="hb-mark" id="hocBellMarkAll">Mark all read</button><button type="button" class="hb-close" id="hocBellClose" aria-label="Close"><i class="fas fa-times"></i></button></div></div>' +
         '<div class="hb-list" id="hocBellList"><div class="hb-empty">No notifications yet</div></div>';
       document.body.appendChild(p);
       var self = this;
       document.getElementById('hocBellMarkAll').onclick = function () { self.markAllRead(); };
+      document.getElementById('hocBellClose').onclick = function () { self._closePanel(); };
     },
 
     _togglePanel: function () {
@@ -323,6 +326,9 @@
     _markOneRead: function (id) {
       var st = this._state;
       if (!st || !st.db) return;
+      st.items.forEach(function (it) { if (it.id === id) it.read = true; });
+      this._updateBadge();
+      this._renderList();
       st.db.collection('Notifications').doc(id).update({ read: true }).catch(function () {});
     },
 
@@ -331,12 +337,18 @@
       if (!st || !st.db) return;
       var batch = [];
       st.items.forEach(function (it) {
-        if (!it.read) batch.push(st.db.collection('Notifications').doc(it.id).update({ read: true }));
+        if (!it.read) {
+          it.read = true;
+          batch.push(st.db.collection('Notifications').doc(it.id).update({ read: true }));
+        }
       });
+      this._updateBadge();
+      this._renderList();
       Promise.all(batch).catch(function () {});
-      if (typeof global.markNotifRead === 'function') global.markNotifRead();
       this._closePanel();
     },
+
+    markNotifRead: function () { this.markAllRead(); },
 
     setExtraCount: function (n) {
       if (!this._state) return;
@@ -359,6 +371,8 @@
       var q;
       if (st.role === 'staff') {
         q = st.db.collection('Notifications').where('targetRole', '==', 'staff').limit(80);
+      } else if (st.role === 'lab' && st.uid) {
+        q = st.db.collection('Notifications').where('targetUid', '==', st.uid).limit(80);
       } else if (st.role === 'lab') {
         q = st.db.collection('Notifications').where('targetRole', '==', 'lab').limit(80);
       } else if (st.uid) {
@@ -376,6 +390,10 @@
           snap.forEach(function (doc) {
             var d = doc.data();
             if (d.type === 'chat') return;
+            if (st.role === 'lab' && st.uid) {
+              var tu = String(d.targetUid || '');
+              if (tu && tu !== st.uid && tu !== '_broadcast') return;
+            }
             st.items.push({ id: doc.id, read: !!d.read, title: d.title, body: d.body, type: d.type, createdAt: d.createdAt });
           });
           st.items.sort(function (a, b) {
