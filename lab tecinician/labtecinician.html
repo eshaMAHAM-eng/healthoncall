@@ -9,6 +9,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="../doc/hoc-clinical-shared.js"></script>
     <script src="../doc/hoc-notifications.js"></script>
+    <script src="../doc/hoc-chat-render.js"></script>
+    <link rel="stylesheet" href="../doc/hoc-chat-ui.css">
     <script src="../firebase-service.js"></script>
     <script>
     // SAFETY WRAPPER: If Firebase fails, don't crash the app
@@ -912,7 +914,7 @@ h1,h2,h3,h4,h5{font-family:'Sora',sans-serif;font-weight:800;}
             </div>
             <select id="chatPatientSelect" onchange="onChatPatientSelectChange()"><option value="">Select patient…</option></select>
         </div>
-        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-messages hoc-chat-messages" id="chatMessages"></div>
         <p class="chat-hint" id="chatHintLine"><i class="fas fa-cloud" style="opacity:.65;"></i> <span id="chatHintText">Loading chat backend…</span></p>
         <div class="chat-input-area">
             <textarea class="chat-input" id="chatInput" rows="1" placeholder="Write to patient…"></textarea>
@@ -1077,6 +1079,18 @@ function subscribeFirestoreLabChat(mrn){
     var ref=window._hocDb.collection('Chats').doc(docId).collection('Messages').orderBy('timestamp','asc');
     _labFsUnsub=ref.onSnapshot(function(snap){
         if(document.getElementById('chatPatientSelect').value!==mrn)return;
+        var box=document.getElementById('chatMessages');
+        if(typeof hocChatRenderSnapshot==='function'){
+            hocChatRenderSnapshot(box,snap,{
+                isMe:function(msg){return msg.role==='lab'||msg.role==='labTech'||String(msg.senderId||'')==='lab';},
+                labelFor:function(msg){
+                    if(msg.role==='system')return 'System';
+                    if(msg.role==='patient')return msg.senderName||'Patient';
+                    return msg.senderName||'Lab technician';
+                }
+            });
+            return;
+        }
         var rows=[];
         snap.forEach(function(d){
             var m=d.data()||{};

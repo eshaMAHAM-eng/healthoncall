@@ -9,6 +9,7 @@
     <script src="hoc-doctor-notifications-boot.js"></script>
     <script src="hoc-medical-reports.js"></script>
     <script src="hoc-chat-render.js"></script>
+    <script src="hoc-video-call.js"></script>
     <link rel="stylesheet" href="hoc-chat-ui.css">
     <script src="hoc-doctor-sidebar-profile.js"></script>
     <!-- Firebase Scripts -->
@@ -771,6 +772,12 @@
             animation: docCallBreathe 4s infinite ease-in-out;
         }
         @keyframes docCallBreathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .remote-video { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; display: none; background: #0f172a; }
+        .video-call-status {
+            position: absolute; top: 24px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,.55); color: #e2e8f0; padding: 8px 16px; border-radius: 999px;
+            font-size: 12px; font-weight: 600; z-index: 2;
+        }
         .remote-name-tag {
             position: absolute; bottom: 100px; background: rgba(0,0,0,0.5);
             backdrop-filter: blur(10px); padding: 8px 20px; border-radius: 30px;
@@ -1103,7 +1110,6 @@
             <div class="chat-header-right">
                 <div class="chat-header-actions">
                     <button type="button" class="hoc-call-pill" onclick="docStartVideoCall()" aria-label="Video call"><i class="fas fa-video"></i> Video</button>
-                    <button type="button" class="hoc-call-pill" onclick="docStartAudioCall()" aria-label="Audio call"><i class="fas fa-phone"></i> Audio</button>
                 </div>
                 <button class="btn-icon-action" onclick="closeChatModal()" aria-label="Close"><i class="fas fa-times"></i></button>
             </div>
@@ -1126,9 +1132,11 @@
     </div>
 </div>
 
-<!-- Video / audio call (same pattern as patient dashboard) -->
+<!-- Video call (WebRTC — patient ↔ doctor) -->
 <div class="video-call-overlay" id="docVideoCallOverlay">
+    <div class="video-call-status" id="docVideoCallStatus"></div>
     <div class="remote-video-placeholder">
+        <video id="docRemoteVideoElement" class="remote-video" autoplay playsinline></video>
         <div class="remote-avatar-lg" id="docVideoRemoteAvatar">PT</div>
         <div class="remote-name-tag" id="docVideoRemoteName">Patient</div>
     </div>
@@ -1279,8 +1287,8 @@
     let rxCounter = 0;
     let ddHighlightIndex = -1;
     let currentChatPatientId = null;
-    var docLocalStream = null;
     var docChatUnsub = null;
+    var docVideoIncomingUnsub = null;
 
     function hocEscReg(s) {
         if (s === undefined || s === null) return '';
@@ -1694,10 +1702,12 @@
             console.error('Doctor chat listener:', err);
             showToast('Could not load messages. Check Firestore rules for Chats.', 'error');
         });
+        docWatchVideoIncoming();
     }
 
     function closeChatModal() {
         docEndCall();
+        docStopVideoIncomingWatch();
         if (docChatUnsub) { try { docChatUnsub(); } catch (e2) {} docChatUnsub = null; }
         document.getElementById('chatModal').classList.remove('show');
         currentChatPatientId = null;
@@ -1705,6 +1715,31 @@
         var ack = document.getElementById('regSnapAck');
         if (snap) snap.style.display = 'none';
         if (ack) ack.checked = false;
+    }
+
+    function docGetActiveVideoRoomId() {
+        if (!currentChatPatientId) return null;
+        var apt = readApts().find(function (a) { return a.id === currentChatPatientId; });
+        if (!apt) return null;
+        return getChatRoomIdFromApt(apt);
+    }
+
+    function docStopVideoIncomingWatch() {
+        if (docVideoIncomingUnsub) { try { docVideoIncomingUnsub(); } catch (e) {} docVideoIncomingUnsub = null; }
+    }
+
+    function docWatchVideoIncoming() {
+        docStopVideoIncomingWatch();
+        var roomId = docGetActiveVideoRoomId();
+        if (!roomId || !window._hocDb || typeof HOCVideoCall === 'undefined') return;
+        docVideoIncomingUnsub = HOCVideoCall.watchIncoming({
+            db: window._hocDb,
+            roomId: roomId,
+            role: 'doctor',
+            onIncoming: function () {
+                showToast('Patient is calling — tap Video to join', 'info');
+            }
+        });
     }
 
     function docSetRemoteFromCurrentPatient() {
@@ -1716,71 +1751,11 @@
     }
 
     function docEndCall() {
-        var overlay = document.getElementById('docVideoCallOverlay');
-        if (!overlay) return;
-        overlay.classList.remove('active', 'audio-only');
-        if (docLocalStream) {
-            docLocalStream.getTracks().forEach(function(t) { t.stop(); });
-            docLocalStream = null;
-        }
-        var vid = document.getElementById('docLocalVideoElement');
-        if (vid) vid.srcObject = null;
-        var ph = document.getElementById('docLocalVideoPlaceholder');
-        if (ph) {
-            ph.style.display = 'flex';
-            ph.innerHTML = '<i class="fas fa-video-slash"></i>';
-        }
+        if (typeof HOCVideoCall !== 'undefined') HOCVideoCall.end('doc');
         var bMic = document.getElementById('docBtnMic');
         if (bMic) { bMic.classList.remove('active-state'); bMic.innerHTML = '<i class="fas fa-microphone"></i>'; }
         var bCam = document.getElementById('docBtnCam');
-        if (bCam) { bCam.classList.remove('active-state'); bCam.innerHTML = '<i class="fas fa-video"></i>'; bCam.style.display = ''; }
-    }
-
-    function docOpenMediaCall(withVideo) {
-        if (!currentChatPatientId) {
-            showToast('Select a patient from the queue or open chat first.', 'warning');
-            return;
-        }
-        var ack = document.getElementById('regSnapAck');
-        if (!ack || !ack.checked) {
-            showToast('Pehle registration details review karein aur checkbox tick karein — phir video/audio start ho sakta hai.', 'warning');
-            return;
-        }
-        docEndCall();
-        var overlay = document.getElementById('docVideoCallOverlay');
-        if (!overlay) return;
-        overlay.classList.toggle('audio-only', !withVideo);
-        overlay.classList.add('active');
-        docSetRemoteFromCurrentPatient();
-        var vidEl = document.getElementById('docLocalVideoElement');
-        var phEl = document.getElementById('docLocalVideoPlaceholder');
-        if (withVideo && vidEl && phEl) {
-            phEl.style.display = 'flex';
-            phEl.innerHTML = '<i class="fas fa-video-slash"></i>';
-            vidEl.style.display = 'block';
-        } else if (vidEl && phEl) {
-            phEl.style.display = 'none';
-            vidEl.style.display = 'none';
-        }
-        var constraints = withVideo ? { video: true, audio: true } : { audio: true, video: false };
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
-                docLocalStream = stream;
-                if (withVideo && vidEl) {
-                    vidEl.srcObject = stream;
-                    if (phEl) phEl.style.display = 'none';
-                }
-            }).catch(function(err) {
-                console.warn('Media access:', err);
-                showToast(withVideo ? 'Camera or mic not available.' : 'Microphone not available.', 'warning');
-                if (withVideo && phEl) {
-                    phEl.style.display = 'flex';
-                    phEl.innerHTML = '<i class="fas fa-video-slash"></i><br><span style="font-size:10px">Cam Off</span>';
-                }
-            });
-        } else {
-            showToast('Browser does not support calls.', 'warning');
-        }
+        if (bCam) { bCam.classList.remove('active-state'); bCam.innerHTML = '<i class="fas fa-video"></i>'; }
     }
 
     function docStartVideoCall() {
@@ -1788,47 +1763,37 @@
             showToast('Open in-app chat first — Video is only inside the chat window.', 'warning');
             return;
         }
-        docOpenMediaCall(true);
-    }
-
-    function docStartAudioCall() {
-        if (!currentChatPatientId) {
-            showToast('Open in-app chat first — Audio is only inside the chat window.', 'warning');
+        if (!window._hocDb || typeof HOCVideoCall === 'undefined') {
+            showToast('Video call needs Firebase connection.', 'error');
             return;
         }
-        docOpenMediaCall(false);
+        var apt = readApts().find(function (a) { return a.id === currentChatPatientId; });
+        if (!apt) return;
+        docSetRemoteFromCurrentPatient();
+        HOCVideoCall.start({
+            db: window._hocDb,
+            roomId: getChatRoomIdFromApt(apt),
+            role: 'doctor',
+            prefix: 'doc',
+            remoteName: apt.patientName || 'Patient',
+            onError: function () { showToast('Allow camera & microphone for video consult.', 'warning'); }
+        }).catch(function () {});
     }
 
     function docToggleMic() {
         var btn = document.getElementById('docBtnMic');
-        if (!btn || !docLocalStream) return;
-        var audioTracks = docLocalStream.getAudioTracks();
-        if (!audioTracks.length) return;
-        btn.classList.toggle('active-state');
-        if (btn.classList.contains('active-state')) {
-            btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
-            audioTracks[0].enabled = false;
-        } else {
-            btn.innerHTML = '<i class="fas fa-microphone"></i>';
-            audioTracks[0].enabled = true;
-        }
+        if (!btn || typeof HOCVideoCall === 'undefined') return;
+        var on = HOCVideoCall.toggleMic('doc');
+        btn.classList.toggle('active-state', !on);
+        btn.innerHTML = on ? '<i class="fas fa-microphone"></i>' : '<i class="fas fa-microphone-slash"></i>';
     }
 
     function docToggleCam() {
-        var overlay = document.getElementById('docVideoCallOverlay');
-        if (overlay && overlay.classList.contains('audio-only')) return;
         var btn = document.getElementById('docBtnCam');
-        if (!btn || !docLocalStream) return;
-        var videoTracks = docLocalStream.getVideoTracks();
-        if (!videoTracks.length) return;
-        btn.classList.toggle('active-state');
-        if (btn.classList.contains('active-state')) {
-            btn.innerHTML = '<i class="fas fa-video-slash"></i>';
-            videoTracks[0].enabled = false;
-        } else {
-            btn.innerHTML = '<i class="fas fa-video"></i>';
-            videoTracks[0].enabled = true;
-        }
+        if (!btn || typeof HOCVideoCall === 'undefined') return;
+        var on = HOCVideoCall.toggleCam('doc');
+        btn.classList.toggle('active-state', !on);
+        btn.innerHTML = on ? '<i class="fas fa-video"></i>' : '<i class="fas fa-video-slash"></i>';
     }
 
     function handleChatKey(e) {

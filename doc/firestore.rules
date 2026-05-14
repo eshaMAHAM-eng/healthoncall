@@ -240,6 +240,13 @@ service cloud.firestore {
       }
     }
 
+    match /VideoCalls/{roomId} {
+      allow read, write: if canAccessChatRoom(roomId);
+      match /candidates/{id} {
+        allow read, write: if canAccessChatRoom(roomId);
+      }
+    }
+
     match /Notifications/{id} {
       allow read: if signedIn() && (
         isStaff() ||
