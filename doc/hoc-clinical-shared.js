@@ -529,6 +529,41 @@ window.hocDoctorDirectoryScore = function (profile, docId) {
 };
 
 /** Login: LabTechnicians always beat stale Doctors / UserIndex for same uid or known lab email. */
+window.hocStaffPickLabTechnician = async function (db) {
+  if (!db) return null;
+  try {
+    var snap = await db.collection('LabTechnicians').where('status', '==', 'active').get();
+    if (snap.empty) return null;
+    var list = [];
+    snap.forEach(function (doc) {
+      var d = doc.data() || {};
+      if (d.verified === false || d.status === 'pending') return;
+      list.push({
+        docId: doc.id,
+        labTechId: d.labTechId || doc.id,
+        name: d.name || 'Lab Technician',
+        uid: d.uid || ''
+      });
+    });
+    if (!list.length) return null;
+    var load = {};
+    list.forEach(function (l) { load[l.labTechId] = 0; });
+    try {
+      var apts = await db.collection('Appointments').where('routedTo', '==', 'lab').get();
+      apts.forEach(function (doc) {
+        var a = doc.data() || {};
+        var st = String(a.status || '');
+        if (st === 'completed' || st === 'rejected') return;
+        if (a.assignedLabTechId && load[a.assignedLabTechId] != null) load[a.assignedLabTechId]++;
+      });
+    } catch (eLoad) { /* ignore */ }
+    list.sort(function (x, y) { return (load[x.labTechId] || 0) - (load[y.labTechId] || 0); });
+    return list[0];
+  } catch (e) {
+    return null;
+  }
+};
+
 window.hocFinalizeLoginProfile = async function (db, uid, email, found) {
   if (!db || !uid) return found;
   email = String(email || '').trim().toLowerCase();

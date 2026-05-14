@@ -37,6 +37,9 @@
                             window.location.replace('../index.html?err=pending');
                             return;
                         }
+                        window._hocLabTechUid = user.uid;
+                        window._hocLabTechDocId = q.docs[0].id;
+                        window._hocLabTechProfileId = d.labTechId || q.docs[0].id;
                         if (typeof hocSyncLabSession === 'function') hocSyncLabSession(d, q.docs[0].id);
                         if (typeof HOCNotifHub !== 'undefined' && window._hocDb) {
                             HOCNotifHub.init({ db: window._hocDb, role: 'lab', uid: user.uid, profileId: q.docs[0].id, bellSelectors: ['.topbar-notif-dot', '.mob-notif'] });
@@ -929,8 +932,7 @@ h1,h2,h3,h4,h5{font-family:'Sora',sans-serif;font-weight:800;}
 <div class="toast-container" id="toastBox"></div>
 
 <script>
-/* ===== FAIL-SAFE DATA ===== */
-// Immediate data injection to ensure app works even if storage fails
+/* ===== FAIL-SAFE DATA (offline demo only — hidden when Firebase + real assignments exist) ===== */
 var patients=[
     {name:'Esha Maham',id:'PAT-001',age:'26F',bg:'B+',referred:'Dr. Ali',phone:'923001234501'},
     {name:'Ahmed Khan',id:'PAT-002',age:'45M',bg:'O+',referred:'Dr. Sara',phone:'923001234502'},
@@ -971,7 +973,7 @@ function mergeAppointmentsFromFirestore(remoteApts) {
         var idx = existing.findIndex(function (e) { return e.id === remote.id; });
         if (idx === -1) existing.push(remote);
         else {
-            ['labResults', 'labTests', 'labCompletedAt', 'labOrderAt', 'status', 'prescription', 'doctorId', 'doctorName', 'patientName', 'patientId', 'service', 'routedTo', 'visitType', 'address', 'city', 'labWorkflowStatus', 'staffApprovedAt', 'symptoms'].forEach(function (k) {
+            ['labResults', 'labTests', 'labCompletedAt', 'labOrderAt', 'status', 'prescription', 'doctorId', 'doctorName', 'patientName', 'patientId', 'service', 'routedTo', 'visitType', 'address', 'city', 'labWorkflowStatus', 'staffApprovedAt', 'symptoms', 'assignedLabTechId', 'assignedLabTechUid', 'assignedLabTechName', 'patientPhone'].forEach(function (k) {
                 if (remote[k] !== undefined) existing[idx][k] = remote[k];
             });
         }
@@ -979,6 +981,38 @@ function mergeAppointmentsFromFirestore(remoteApts) {
     try { localStorage.setItem('hoc_appointments', JSON.stringify(existing)); } catch (e2) {}
 }
 
+
+function hocLabRequestBelongsToMe(req) {
+    if (!req) return false;
+    if (!window._hocFirebaseInit) return true;
+    var myUid = window._hocLabTechUid || '';
+    var myIds = [window._hocLabTechProfileId, window._hocLabTechDocId].filter(Boolean);
+    if (req.assignedLabTechUid && myUid && req.assignedLabTechUid === myUid) return true;
+    if (req.assignedLabTechId && myIds.indexOf(req.assignedLabTechId) >= 0) return true;
+    return false;
+}
+function getMyLabRequests() {
+    if (!window._hocFirebaseInit) return labRequests;
+    return labRequests.filter(hocLabRequestBelongsToMe);
+}
+function rebuildPatientsFromLabRequests() {
+    if (!window._hocFirebaseInit) return;
+    var seen = {}, next = [];
+    getMyLabRequests().forEach(function (r) {
+        var pid = r.patientId || r.id;
+        if (!pid || seen[pid]) return;
+        seen[pid] = true;
+        next.push({
+            name: r.patientName || 'Patient',
+            id: pid,
+            age: '—',
+            bg: '—',
+            referred: r.doctorName || 'Lab booking',
+            phone: r.phone || ''
+        });
+    });
+    patients = next;
+}
 
 function syncLabRequestsFromAppointments() {
     var apts = [];
@@ -1005,10 +1039,14 @@ function syncLabRequestsFromAppointments() {
             workflowStatus: wf,
             confirmedByPatientAt: apt.createdAt ? new Date(apt.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
             staffApprovedAt: apt.staffApprovedAt ? new Date(apt.staffApprovedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-            phone: apt.patientPhone || ''
+            phone: apt.patientPhone || '',
+            assignedLabTechId: apt.assignedLabTechId || '',
+            assignedLabTechUid: apt.assignedLabTechUid || '',
+            assignedLabTechName: apt.assignedLabTechName || ''
         };
     });
     labRequests = built.concat(fulfilled.filter(function (f) { return !built.some(function (b) { return b.id === f.id; }); }));
+    rebuildPatientsFromLabRequests();
 }
 
 function syncLabOrdersFromAppointments() {
@@ -1293,7 +1331,7 @@ function flagClass(f){return'f-'+f;}
 function getInitials(name){if(!name)return'?';return name.split(' ').map(function(w){return w.charAt(0);}).join('').substring(0,2).toUpperCase();}
 function statusPill(s){return'<span class="status-pill sp-'+s+'"><span class="dot"></span>'+s+'</span>';}
 function statusCount(st){return samples.filter(function(x){return x.status===st;}).length;}
-function homeVisitReadyCount(){return labRequests.filter(function(r){return r.visitType==='home'&&r.workflowStatus==='staff_approved';}).length;}
+function homeVisitReadyCount(){return getMyLabRequests().filter(function(r){return r.visitType==='home'&&r.workflowStatus==='staff_approved';}).length;}
 
 function dismissNewOrdersAlert(){
     var el=document.getElementById('newOrdersAlert');
@@ -1345,7 +1383,7 @@ function renderDashboard(){
     renderHomeQueues();
     renderPendingOrders();
 
-    var pipe=labRequests.filter(function(r){return r.workflowStatus==='patient_confirmed'||r.workflowStatus==='staff_approved';}).length;
+    var pipe=getMyLabRequests().filter(function(r){return r.workflowStatus==='patient_confirmed'||r.workflowStatus==='staff_approved';}).length;
     var na=document.getElementById('newOrdersAlert');
     var nc=document.getElementById('newOrdersCount');
     if(na&&nc){
@@ -1355,8 +1393,8 @@ function renderDashboard(){
 }
 
 function renderHomeQueues(){
-    var wait=labRequests.filter(function(r){return r.visitType==='home'&&r.workflowStatus==='patient_confirmed';});
-    var ready=labRequests.filter(function(r){return r.visitType==='home'&&r.workflowStatus==='staff_approved';});
+    var wait=getMyLabRequests().filter(function(r){return r.visitType==='home'&&r.workflowStatus==='patient_confirmed';});
+    var ready=getMyLabRequests().filter(function(r){return r.visitType==='home'&&r.workflowStatus==='staff_approved';});
     var badge=document.getElementById('homeVisitBadge');
     if(badge){
         if(ready.length){badge.style.display='inline-flex';badge.textContent=ready.length+' ready';}
@@ -1377,7 +1415,7 @@ function renderHomeQueues(){
 }
 
 function simulateStaffApprove(reqId){
-    var req=labRequests.find(function(r){return r.id===reqId;});
+    var req=getMyLabRequests().find(function(r){return r.id===reqId;});
     if(!req||req.workflowStatus!=='patient_confirmed')return;
     req.workflowStatus='staff_approved';
     req.staffApprovedAt=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
@@ -1386,7 +1424,7 @@ function simulateStaffApprove(reqId){
 }
 
 function renderPendingOrders(){
-    var clinicRows=labRequests.filter(function(r){return r.visitType==='clinic'&&r.workflowStatus==='staff_approved';}).map(function(r){
+    var clinicRows=getMyLabRequests().filter(function(r){return r.visitType==='clinic'&&r.workflowStatus==='staff_approved';}).map(function(r){
         return{pid:r.patientId,name:r.patientName,ini:getInitials(r.patientName),panel:r.panel,doc:r.doctorName||'Direct',site:'Visit lab',time:(r.staffApprovedAt?'Staff '+r.staffApprovedAt:'Today'),apt:r.id,phone:r.phone||''};
     });
     if(!clinicRows.length){
@@ -1569,7 +1607,7 @@ function renderReports(){
 
 /* ===== HOME & CLINIC COLLECTION ===== */
 function openCollectionSheet(reqId){
-    var req=labRequests.find(function(r){return r.id===reqId;});
+    var req=getMyLabRequests().find(function(r){return r.id===reqId;});
     if(!req||req.workflowStatus!=='staff_approved'){toast('Staff must approve this visit first','warn');return;}
     var mt=document.getElementById('collectionModalTitle');if(mt)mt.textContent='Home visit · sample collection';
     document.getElementById('collectionModalContent').innerHTML='<p class="mini-h">Doorstep collection checklist</p><div style="font-size:14px;font-weight:700;margin-bottom:8px;">'+req.patientName+' · '+req.panel+'</div><p class="addr-line" style="max-width:none;margin-bottom:14px;"><i class="fas fa-location-dot" style="color:var(--accent);"></i> '+(req.address||'')+', '+(req.city||'')+'</p><ul style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-bottom:18px;padding-left:18px;"><li>Verify patient identity / booking ID</li><li>Label tubes at bedside, follow draw order</li><li>Hand over after-care sheet if applicable</li></ul><div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;"><button type="button" class="btn btn-outline" onclick="closeCollectionModal()">Cancel</button><button type="button" class="btn btn-primary" onclick="collectFromRequest(\''+req.id+'\')"><i class="fas fa-check"></i> Confirm sample collected</button></div>';
@@ -1577,7 +1615,7 @@ function openCollectionSheet(reqId){
 }
 function collectFromRequest(reqId){
     closeCollectionModal();
-    var req=labRequests.find(function(r){return r.id===reqId;});
+    var req=getMyLabRequests().find(function(r){return r.id===reqId;});
     if(!req)return;
     var sampleId='SMP-'+Date.now().toString(36).toUpperCase();
     var addrFull=(req.address||'')+(req.city?', '+req.city:'');
@@ -1599,7 +1637,15 @@ function closeCollectionModal(){document.getElementById('collectionModal').class
 
 /* ===== PATIENTS ===== */
 function renderPatients(){
-    document.getElementById('patientsBody').innerHTML=patients.map(function(p){
+    rebuildPatientsFromLabRequests();
+    var rows=patients;
+    var body=document.getElementById('patientsBody');
+    if(!body)return;
+    if(!rows.length){
+        body.innerHTML='<tr><td colspan="5"><div class="empty-state" style="padding:28px;text-align:center;color:var(--text-muted);">No patients assigned to you yet. Staff will assign lab bookings after patient confirms.</div></td></tr>';
+        return;
+    }
+    body.innerHTML=rows.map(function(p){
         return'<tr><td><div class="patient-cell"><div class="patient-avatar">'+getInitials(p.name)+'</div><div><strong>'+p.name+'</strong><br><small class="mono">'+p.id+'</small></div></div></td><td>'+p.age+'</td><td><span style="background:#fee2e2;color:#991b1b;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:700;">'+p.bg+'</span></td><td>'+p.referred+'</td><td><button type="button" class="btn btn-sm btn-chat" onclick="openChatWithPatient(\''+p.id+'\')"><i class="fas fa-comment-dots"></i> Chat</button></td></tr>';
     }).join('');
 }
