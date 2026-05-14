@@ -852,7 +852,7 @@ h1,h2,h3,h4,h5{font-family:'Sora',sans-serif;font-weight:800;}
         <div class="card" style="margin-top:16px;border-color:rgba(239,68,68,.25);">
             <div class="card-body">
                 <h4 style="font-size:14px;font-weight:800;color:var(--critical);margin-bottom:10px;display:flex;align-items:center;gap:8px;"><i class="fas fa-right-from-bracket"></i> Session</h4>
-                <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Sign out clears this session overlay only. Worklist and chat data in this browser are unchanged until you clear site data or use the chat reset above.</p>
+                <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Sign out ends your session and returns you to the login page.</p>
                 <button type="button" class="btn btn-danger" onclick="labLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
             </div>
         </div>
@@ -891,7 +891,7 @@ h1,h2,h3,h4,h5{font-family:'Sora',sans-serif;font-weight:800;}
 </div>
 
 <div class="logout-overlay" id="logoutOverlay">
-    <div class="logout-box"><h3>Sign Out</h3><p>Are you sure?</p><div style="display:flex;gap:10px;justify-content:center;"><button class="btn btn-outline" onclick="cancelLogout()">Cancel</button><button class="btn btn-danger" onclick="location.reload()">Sign Out</button></div></div>
+    <div class="logout-box"><h3>Sign Out</h3><p>Are you sure?</p><div style="display:flex;gap:10px;justify-content:center;"><button class="btn btn-outline" onclick="cancelLogout()">Cancel</button><button class="btn btn-danger" onclick="confirmLabLogout()">Sign Out</button></div></div>
 </div>
 
 <!-- In-app chat (unified patient-style UI) -->
@@ -1568,6 +1568,13 @@ function renderPatients(){
 /* ===== LOGOUT ===== */
 function labLogout(){document.getElementById('logoutOverlay').classList.add('show');}
 function cancelLogout(){document.getElementById('logoutOverlay').classList.remove('show');}
+function confirmLabLogout(){
+    cancelLogout();
+    if(typeof hocLogoutAndGoHome==='function'){hocLogoutAndGoHome();return;}
+    try{localStorage.removeItem('hoc_current_role');localStorage.setItem('hoc_manual_logout','1');}catch(e){}
+    try{if(window._hocAuth)window._hocAuth.signOut().catch(function(){});}catch(e2){}
+    window.location.assign('../index.html?signedout=1');
+}
 
 /* ===== IN-APP CHAT ===== */
 function loadChatStore(){
