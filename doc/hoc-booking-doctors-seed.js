@@ -287,12 +287,7 @@
     if (!db || !global.HOC_BOOKING_LAB_PROFILES || typeof firebase === 'undefined') {
       return Promise.resolve(0);
     }
-    var sk = 'hoc_booking_lab_auth_v1';
-    try {
-      if (typeof localStorage !== 'undefined' && localStorage.getItem(sk)) {
-        return Promise.resolve(0);
-      }
-    } catch (e) { /* ignore */ }
+    var sk = 'hoc_booking_lab_auth_v2';
 
     var cfg = config || (typeof firebase !== 'undefined' && firebase.app ? firebase.app().options : {});
     var secAuth;

@@ -528,6 +528,124 @@ window.hocDoctorDirectoryScore = function (profile, docId) {
   return 50;
 };
 
+/** Login: LabTechnicians always beat stale Doctors / UserIndex for same uid or known lab email. */
+window.hocFinalizeLoginProfile = async function (db, uid, email, found) {
+  if (!db || !uid) return found;
+  email = String(email || '').trim().toLowerCase();
+
+  async function adoptLabSnap(labSnap) {
+    var data = Object.assign({}, labSnap.data() || {});
+    var docId = labSnap.id;
+    if (!data.uid) {
+      try {
+        await db.collection('LabTechnicians').doc(docId).set({ uid: uid }, { merge: true });
+        data.uid = uid;
+      } catch (e0) { /* ignore */ }
+    }
+    if (typeof window.hocSaveUserIndexShared === 'function') {
+      await window.hocSaveUserIndexShared(db, uid, {
+        role: 'Lab Technician',
+        profileCollection: 'LabTechnicians',
+        profileId: docId,
+        email: data.email || email
+      });
+    }
+    return { data: data, docId: docId };
+  }
+
+  async function purgeMisclassifiedDoctorDocs() {
+    try {
+      var dq = await db.collection('Doctors').where('uid', '==', uid).get();
+      var dels = [];
+      dq.forEach(function (d) {
+        var dd = d.data() || {};
+        if (typeof window.hocIsMisclassifiedLabDoctor === 'function' && window.hocIsMisclassifiedLabDoctor(dd)) {
+          dels.push(db.collection('Doctors').doc(d.id).delete());
+        }
+      });
+      if (found && found.docId && found.data && found.data.role === 'Doctor' &&
+          typeof window.hocIsMisclassifiedLabDoctor === 'function' && window.hocIsMisclassifiedLabDoctor(found.data)) {
+        dels.push(db.collection('Doctors').doc(found.docId).delete());
+      }
+      if (dels.length) await Promise.all(dels);
+    } catch (e1) { /* ignore */ }
+  }
+
+  try {
+    var byUid = await db.collection('LabTechnicians').where('uid', '==', uid).limit(1).get();
+    if (!byUid.empty) {
+      await purgeMisclassifiedDoctorDocs();
+      return adoptLabSnap(byUid.docs[0]);
+    }
+  } catch (e2) { /* ignore */ }
+
+  if (email) {
+    try {
+      var byEmail = await db.collection('LabTechnicians').where('email', '==', email).limit(1).get();
+      if (!byEmail.empty) {
+        await purgeMisclassifiedDoctorDocs();
+        return adoptLabSnap(byEmail.docs[0]);
+      }
+    } catch (e3) { /* ignore */ }
+  }
+
+  var labList = window.HOC_BOOKING_LAB_PROFILES || [];
+  var known = null;
+  for (var i = 0; i < labList.length; i++) {
+    if (String(labList[i].email || '').toLowerCase() === email) { known = labList[i]; break; }
+  }
+  if (known) {
+    var lid = known.labTechId;
+    var parts = String(known.name || '').split(/\s+/);
+    var row = {
+      name: known.name,
+      firstName: parts[0] || known.name,
+      lastName: parts.slice(1).join(' ') || '',
+      email: known.email,
+      phone: known.phone || '',
+      gender: known.gender || '',
+      role: 'Lab Technician',
+      status: 'active',
+      verified: true,
+      uid: uid,
+      labTechId: lid,
+      labDepartment: known.labDepartment || 'Lab Tests',
+      labDesignation: known.labDesignation || 'Lab Technician',
+      labLicenseId: known.labLicenseId || '',
+      labExperience: known.labExperience || '',
+      qualification: known.qualification || '',
+      service: 'Lab Tests'
+    };
+    await db.collection('LabTechnicians').doc(lid).set(row, { merge: true });
+    if (typeof window.hocSaveUserIndexShared === 'function') {
+      await window.hocSaveUserIndexShared(db, uid, {
+        role: 'Lab Technician',
+        profileCollection: 'LabTechnicians',
+        profileId: lid,
+        email: known.email
+      });
+    }
+    await purgeMisclassifiedDoctorDocs();
+    return { data: row, docId: lid };
+  }
+
+  if (found && found.data && found.data.role === 'Doctor' &&
+      typeof window.hocIsMisclassifiedLabDoctor === 'function' && window.hocIsMisclassifiedLabDoctor(found.data)) {
+    var em2 = String(found.data.email || email).toLowerCase();
+    if (em2) {
+      try {
+        var lq = await db.collection('LabTechnicians').where('email', '==', em2).limit(1).get();
+        if (!lq.empty) {
+          await purgeMisclassifiedDoctorDocs();
+          return adoptLabSnap(lq.docs[0]);
+        }
+      } catch (e4) { /* ignore */ }
+    }
+  }
+
+  return found;
+};
+
 window.hocGetLabChatRoomId = function (patientId) {
   return 'lab_' + window.hocNormalizePatientChatKey(patientId);
 };

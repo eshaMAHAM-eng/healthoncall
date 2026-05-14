@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700,1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="doc/hoc-global-theme.css">
 <script src="doc/hoc-clinical-shared.js"></script>
+<script src="doc/hoc-booking-doctors-seed.js"></script>
 <script src="doc/hoc-validation.js"></script>
 <script src="doc/hoc-notifications.js"></script>
 <script src="doc/hoc-firebase-config.js"></script>
@@ -1651,7 +1652,14 @@ async function hocResolveLoginProfile(db, uid) {
       if (m.profileCollection && m.profileId) {
         try {
           var prof = await db.collection(m.profileCollection).doc(m.profileId).get();
-          if (prof.exists) return { data: prof.data(), docId: prof.id };
+          if (prof.exists) {
+            var pdata = prof.data();
+            if (m.profileCollection === 'Doctors' && typeof hocIsMisclassifiedLabDoctor === 'function' && hocIsMisclassifiedLabDoctor(pdata)) {
+              /* stale UserIndex → Doctors for lab staff; fall through to LabTechnicians */
+            } else {
+              return { data: pdata, docId: prof.id };
+            }
+          }
         } catch (eProf) {
           console.warn('UserIndex profile get', eProf);
         }
@@ -1660,7 +1668,7 @@ async function hocResolveLoginProfile(db, uid) {
   } catch (e1) {
     console.warn('UserIndex lookup', e1);
   }
-  var cols = ['Patients', 'Doctors', 'Staff', 'LabTechnicians'];
+  var cols = ['Patients', 'LabTechnicians', 'Staff', 'Doctors'];
   for (var i = 0; i < cols.length; i++) {
     try {
       var q = await db.collection(cols[i]).where('uid', '==', uid).limit(1).get();
@@ -1717,6 +1725,9 @@ async function doLogin() {
         uid = cr.user.uid;
     await hocWaitFirestoreAuth(cr.user);
     var found = await hocResolveLoginProfile(db, uid);
+    if (typeof hocFinalizeLoginProfile === 'function') {
+      found = await hocFinalizeLoginProfile(db, uid, em, found);
+    }
 
     if (!found || !found.data) {
       if (typeof window.hocRepairMissingLoginProfile === 'function') {
@@ -1737,18 +1748,6 @@ async function doLogin() {
       await auth.signOut();
       showErr('loginErr', 'No profile found. Register again, or use demo patient@hoc.com / pat789');
       return;
-    }
-
-    if (found.data.role === 'Doctor' && typeof hocIsMisclassifiedLabDoctor === 'function' && hocIsMisclassifiedLabDoctor(found.data)) {
-      try {
-        var labQ = await db.collection('LabTechnicians').where('uid', '==', uid).limit(1).get();
-        if (!labQ.empty) {
-          found = { data: labQ.docs[0].data(), docId: labQ.docs[0].id };
-        } else if (found.data.email) {
-          var labQ2 = await db.collection('LabTechnicians').where('email', '==', found.data.email).limit(1).get();
-          if (!labQ2.empty) found = { data: labQ2.docs[0].data(), docId: labQ2.docs[0].id };
-        }
-      } catch (eLab) { console.warn('Lab profile redirect', eLab); }
     }
 
     if ((found.data.role === 'Doctor' || found.data.role === 'Lab Technician') && typeof hocRoleCanAccessDashboard === 'function' && !hocRoleCanAccessDashboard(found.data)) {
