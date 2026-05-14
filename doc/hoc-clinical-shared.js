@@ -446,23 +446,24 @@ window.hocOpenAllPortals = function () {
   });
 };
 
-/** Canonical patient key for lab_* and pt_* chat rooms (PAT-001 → p1, etc.). */
+/** Canonical patient key for lab_* and pt_* chat rooms (uses profile id, e.g. PAT-001). */
 window.hocNormalizePatientChatKey = function (pid) {
   if (!pid) {
     try { pid = localStorage.getItem('hoc_patient_id') || ''; } catch (e) {}
   }
   pid = String(pid || '').trim();
   if (!pid) return 'p1';
-  var demoMap = { 'PAT-001': 'p1', 'PAT-002': 'p2', 'PAT-003': 'p3', 'PAT-004': 'p4', 'PAT-005': 'p5', 'PAT-006': 'p6' };
-  if (demoMap[pid]) return demoMap[pid];
-  if (/^PAT-/i.test(pid)) {
-    var short = pid.replace(/^PAT-/i, 'p').replace(/[^a-zA-Z0-9]/g, '');
-    return short || pid;
-  }
-  return pid;
+  return pid.replace(/[^a-zA-Z0-9_-]/g, '_');
 };
 
-/** All ids that refer to the same patient thread (profile doc id vs MRN). */
+/** Legacy demo slugs (p1) still used in older chat threads. */
+window.hocPatientLegacyChatSlug = function (pid) {
+  pid = String(pid || '').trim();
+  var map = { 'PAT-001': 'p1', 'PAT-002': 'p2', 'PAT-003': 'p3', 'PAT-004': 'p4', 'PAT-005': 'p5', 'PAT-006': 'p6' };
+  return map[pid] || '';
+};
+
+/** All ids that refer to the same patient thread (profile doc id vs legacy slug). */
 window.hocPatientChatKeys = function (pid) {
   if (!pid) {
     try { pid = localStorage.getItem('hoc_patient_id') || ''; } catch (e) {}
@@ -472,6 +473,13 @@ window.hocPatientChatKeys = function (pid) {
   if (pid) keys.push(pid);
   var norm = window.hocNormalizePatientChatKey(pid);
   if (norm && keys.indexOf(norm) < 0) keys.push(norm);
+  var legacy = window.hocPatientLegacyChatSlug(pid);
+  if (legacy && keys.indexOf(legacy) < 0) keys.push(legacy);
+  Object.keys({ 'PAT-001': 1, 'PAT-002': 1, 'PAT-003': 1, 'PAT-004': 1, 'PAT-005': 1, 'PAT-006': 1 }).forEach(function (k) {
+    if (window.hocPatientLegacyChatSlug(k) === pid || window.hocPatientLegacyChatSlug(k) === norm) {
+      if (keys.indexOf(k) < 0) keys.push(k);
+    }
+  });
   return keys.filter(Boolean);
 };
 

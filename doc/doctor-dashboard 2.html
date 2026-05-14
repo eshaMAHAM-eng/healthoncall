@@ -8,6 +8,8 @@
     <script src="hoc-notifications.js"></script>
     <script src="hoc-doctor-notifications-boot.js"></script>
     <script src="hoc-medical-reports.js"></script>
+    <script src="hoc-chat-render.js"></script>
+    <link rel="stylesheet" href="hoc-chat-ui.css">
     <script src="hoc-doctor-sidebar-profile.js"></script>
     <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -1106,14 +1108,13 @@
                 <button class="btn-icon-action" onclick="closeChatModal()" aria-label="Close"><i class="fas fa-times"></i></button>
             </div>
         </div>
-        <div id="chatRegSnapshot" class="chat-reg-snapshot" style="display:none;">
+        <div id="chatRegSnapshot" class="chat-reg-snapshot" style="display:none !important;" aria-hidden="true">
             <div class="chat-reg-snapshot-title"><i class="fas fa-heart-pulse"></i> Registration vitals (review before call)</div>
             <div id="chatRegSnapshotBody" class="chat-reg-snapshot-body">—</div>
             <label class="chat-reg-ack"><input type="checkbox" id="regSnapAck"> I have reviewed the patient’s registration details — OK to start video / audio</label>
         </div>
-        <div class="chat-body" id="chatBody">
+        <div class="chat-body hoc-chat-messages" id="chatBody">
             <!-- Messages will be injected here -->
-            <div style="text-align:center; color:var(--text-muted); font-size:12px; margin-top:20px;">Start of conversation</div>
         </div>
         <div class="chat-input-area">
             <div class="chat-input-wrapper">
@@ -1658,13 +1659,23 @@
         var chatBody = document.getElementById('chatBody');
         chatBody.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:24px;font-size:13px;"><i class="fas fa-spinner fa-spin"></i> Loading messages…</div>';
         document.getElementById('chatModal').classList.add('show');
-        showRegistrationInChat(apt);
 
         var roomId = getChatRoomIdFromApt(apt);
         if (window._hocDb && typeof hocClearChatUnread === 'function') hocClearChatUnread(window._hocDb, roomId, 'doctor');
         var doctorId = apt.doctorId || '';
 
         docChatUnsub = window._hocDb.collection('Chats').doc(roomId).collection('Messages').orderBy('timestamp', 'asc').onSnapshot(function(snapshot) {
+            if (typeof hocChatRenderSnapshot === 'function') {
+                hocChatRenderSnapshot(chatBody, snapshot, {
+                    isMe: function (msg) {
+                        return (msg.role === 'doctor') || (doctorId && msg.senderId === doctorId);
+                    },
+                    labelFor: function (msg) {
+                        return msg.senderName || (msg.role === 'patient' ? 'Patient' : 'User');
+                    }
+                });
+                return;
+            }
             chatBody.innerHTML = '';
             if (snapshot.empty) {
                 chatBody.innerHTML = '<div style="text-align:center; color:var(--text-muted); font-size:13px; margin-top:20px; font-style:italic;">No messages yet. Say hello!</div>';

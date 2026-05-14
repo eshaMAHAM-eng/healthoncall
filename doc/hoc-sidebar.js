@@ -27,4 +27,31 @@
   };
 
   window.hocClose = window.hocCloseSidebar;
+
+  function bindSidebarControls() {
+    var hamburger = $('hocHamburger');
+    var overlay = $('hocSbOverlay');
+    if (hamburger && !hamburger._hocBound) {
+      hamburger._hocBound = true;
+      hamburger.addEventListener('click', window.hocToggleSidebar);
+    }
+    if (overlay && !overlay._hocBound) {
+      overlay._hocBound = true;
+      overlay.addEventListener('click', window.hocCloseSidebar);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      bindSidebarControls();
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') window.hocCloseSidebar();
+      });
+      window.addEventListener('resize', function () {
+        if (window.innerWidth > 768) window.hocCloseSidebar();
+      });
+    });
+  } else {
+    bindSidebarControls();
+  }
 })();

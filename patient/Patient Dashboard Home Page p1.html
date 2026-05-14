@@ -21,6 +21,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
     <script src="../doc/hoc-medical-reports.js"></script>
     <script src="../doc/hoc-appointment-reminders.js"></script>
+    <script src="../doc/hoc-chat-render.js"></script>
+    <link rel="stylesheet" href="../doc/hoc-chat-ui.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <script>
@@ -280,7 +282,7 @@
         </div>
 
         <!-- Step 2: Chat Messages Area -->
-        <div class="chat-body" id="chatMessages" style="display:none;"></div>
+        <div class="chat-body hoc-chat-messages" id="chatMessages" style="display:none;"></div>
         
         <!-- Step 3: Chat Input -->
         <div class="chat-footer" id="chatFooter" style="display:none;">
@@ -377,6 +379,18 @@
         if (window._hocDb && typeof hocClearChatUnread === 'function') hocClearChatUnread(window._hocDb, labId, 'patient');
         var ref = window._hocDb.collection('Chats').doc(labId).collection('Messages').orderBy('timestamp', 'asc');
         chatUnsubscribe = ref.onSnapshot(function(snapshot) {
+            var pid=(typeof HOC_getPatientId==='function'?HOC_getPatientId():'p1');
+            if (typeof hocChatRenderSnapshot === 'function') {
+                hocChatRenderSnapshot(document.getElementById('chatMessages'), snapshot, {
+                    isMe: function (msg) {
+                        return (msg.role === 'patient') || (typeof hocPatientIdsMatch === 'function' ? hocPatientIdsMatch(msg.senderId, pid) : msg.senderId === pid);
+                    },
+                    labelFor: function (msg) {
+                        return msg.senderName || 'Lab';
+                    }
+                });
+                return;
+            }
             var html = '';
             snapshot.forEach(function(doc) {
                 var msg = doc.data();
@@ -448,6 +462,18 @@
         if(chatUnsubscribe) chatUnsubscribe();
 
         chatUnsubscribe = chatRef.onSnapshot(function(snapshot) {
+            var myPid = typeof HOC_getPatientId==='function'?HOC_getPatientId():'p1';
+            if (typeof hocChatRenderSnapshot === 'function') {
+                hocChatRenderSnapshot(document.getElementById('chatMessages'), snapshot, {
+                    isMe: function (msg) {
+                        return (msg.role === 'patient') || (typeof hocPatientIdsMatch === 'function' ? hocPatientIdsMatch(msg.senderId, myPid) : msg.senderId === myPid);
+                    },
+                    labelFor: function (msg) {
+                        return msg.senderName || 'Doctor';
+                    }
+                });
+                return;
+            }
             var html = '';
             var lastDate = '';
             var myPid = typeof HOC_getPatientId==='function'?HOC_getPatientId():'p1';
@@ -716,15 +742,48 @@
     function markDashboardAptNotifsRead(){document.querySelectorAll('.notif-dot.unread').forEach(function(d){d.classList.remove('unread');d.classList.add('read');});showToast('Appointment alerts marked read','info');}
     function showToast(msg,type){type=type||'success';var c=document.getElementById('toastContainer');var t=document.createElement('div');t.className='toast';var icon=type==='success'?'fa-check-circle':type==='error'?'fa-times-circle':type==='warning'?'fa-exclamation-circle':'fa-info-circle';var color=type==='success'?'#10b981':type==='error'?'#f43f5e':type==='warning'?'#f59e0b':'#0ea5e9';t.style.borderLeftColor=color;t.innerHTML='<i class="fas '+icon+' t-'+type+'" style="flex-shrink:0;"></i><span>'+msg+'</span>';c.appendChild(t);setTimeout(function(){t.classList.add('show');},50);setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.remove();},500);},3000);}
 
-    renderAll(); setInterval(function(){renderAll();},2000);
+    renderAll(); setInterval(function(){renderAll();try{var el=document.getElementById('medicalReportsList');if(el){el.querySelectorAll('[data-lab-report]').forEach(function(n){n.remove();});var lb=hocRenderLabReportsInMedicalSection();if(lb)el.insertAdjacentHTML('afterbegin',lb);}}catch(e){}},2000);
 
     var _hocPatientUid = '';
+    var _hocSeenLabReports = {};
+    function hocRenderLabReportsInMedicalSection() {
+        var labHtml = '';
+        getAppointments().forEach(function (a) {
+            if (!patientHasLabReport(a)) return;
+            var lr = a.labReport || {};
+            var title = (lr.panel || 'Lab report') + ' · ' + (lr.reportId || a.id);
+            labHtml += '<div class="presc-row" data-lab-report="1" style="border-left:3px solid #0ea5e9;">' +
+                '<div class="presc-info"><div class="presc-icon" style="background:#e0f2fe;color:#0284c7;"><i class="fas fa-flask"></i></div>' +
+                '<div class="presc-text"><div class="pt-name">' + title + '</div>' +
+                '<div class="pt-doc">From lab · ' + (a.doctorName || 'HealthOnCall') + '</div></div></div>' +
+                '<button class="btn btn-view" onclick="openLabReportModal(\'' + a.id + '\')"><i class="fas fa-eye"></i> View</button></div>';
+            if (!_hocSeenLabReports[a.id]) {
+                _hocSeenLabReports[a.id] = true;
+                showToast('New lab report ready: ' + (lr.panel || 'Lab panel'), 'success');
+            }
+        });
+        return labHtml;
+    }
     function hocRefreshMedicalReports(){
-        if(typeof HOCMedicalReports==='undefined')return;
+        if(typeof HOCMedicalReports==='undefined'){
+            var el = document.getElementById('medicalReportsList');
+            if (el) el.innerHTML = hocRenderLabReportsInMedicalSection() || '<div class="empty-state"><i class="fas fa-file-medical"></i><p>No reports yet</p></div>';
+            return;
+        }
         HOCMedicalReports.bootstrap();
         var pid=typeof HOC_getPatientId==='function'?HOC_getPatientId():'';
         HOCMedicalReports.listPatientReports(pid).then(function(rows){
-            HOCMedicalReports.renderPatientList('medicalReportsList',rows);
+            var el = document.getElementById('medicalReportsList');
+            if (!el) return;
+            var labBlock = hocRenderLabReportsInMedicalSection();
+            if (rows && rows.length) {
+                HOCMedicalReports.renderPatientList('medicalReportsList', rows);
+                if (labBlock) {
+                    el.insertAdjacentHTML('afterbegin', labBlock);
+                }
+            } else {
+                el.innerHTML = labBlock || '<div class="empty-state"><i class="fas fa-file-medical"></i><p>Upload reports or wait for lab results</p></div>';
+            }
         });
     }
     function hocUploadMedicalReport(ev){

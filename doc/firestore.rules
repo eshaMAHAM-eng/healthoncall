@@ -175,13 +175,26 @@ service cloud.firestore {
       return isStaff() || isAppointmentPatient() || isAppointmentDoctor() || isLabTech();
     }
 
+    function patientLegacyChatSlug() {
+      return userProfileId() == 'PAT-001' ? 'p1'
+        : userProfileId() == 'PAT-002' ? 'p2'
+        : userProfileId() == 'PAT-003' ? 'p3'
+        : userProfileId() == 'PAT-004' ? 'p4'
+        : userProfileId() == 'PAT-005' ? 'p5'
+        : userProfileId() == 'PAT-006' ? 'p6'
+        : '';
+    }
+
     function canAccessChatRoom(roomId) {
+      let legacy = patientLegacyChatSlug();
       return isStaff()
         || isLabTech()
         || (hasUserIndex() && roomId == 'lab_' + userProfileId())
         || (hasUserIndex() && roomId.matches('lab_' + userProfileId() + '.*'))
         || (hasUserIndex() && roomId.matches('pt_' + userProfileId() + '_doc_.*'))
-        || (hasUserIndex() && userRole() == 'Doctor' && roomId.matches('pt_.*_doc_' + userProfileId()));
+        || (hasUserIndex() && userRole() == 'Doctor' && roomId.matches('pt_.*_doc_' + userProfileId()))
+        || (hasUserIndex() && legacy != '' && roomId == 'lab_' + legacy)
+        || (hasUserIndex() && legacy != '' && roomId.matches('pt_' + legacy + '_doc_.*'));
     }
 
     function patientSharesRecords(patientId) {
