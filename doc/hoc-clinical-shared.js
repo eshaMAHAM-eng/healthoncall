@@ -91,6 +91,16 @@ window.hocMapToService = function (text) {
   return 'General Physician';
 };
 
+window.hocIsLabService = function (service) {
+  return String(service || '').trim() === 'Lab Tests';
+};
+
+window.hocIsLabAppointment = function (apt) {
+  if (!apt) return false;
+  if (apt.routedTo === 'lab') return true;
+  return window.hocIsLabService(apt.service);
+};
+
 window.hocDoctorIdForBooking = function (doc) {
   if (!doc) return '';
   if (doc.doctorId) return String(doc.doctorId);

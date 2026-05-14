@@ -450,7 +450,7 @@
                 global.hocPlayNotifSound();
                 global.hocNotifyPush(st.db, {
                   targetRole: 'patient', targetUid: st.uid, targetId: st.profileId,
-                  type: 'appointment', title: 'Staff confirmed', body: 'Your appointment with ' + (d.doctorName || 'doctor') + ' was approved.'
+                  type: 'appointment', title: 'Staff confirmed', body: (typeof global.hocIsLabAppointment === 'function' && global.hocIsLabAppointment(d)) ? 'Staff approved your lab test booking. Our lab team will contact you.' : ('Your appointment with ' + (d.doctorName || 'doctor') + ' was approved.')
                 });
               }
               if (!prev.hadRx && d.prescription) {
@@ -472,6 +472,7 @@
         var unsubD = st.db.collection('Appointments').onSnapshot(function (snap) {
           snap.forEach(function (doc) {
             var d = doc.data();
+            if (typeof global.hocIsLabAppointment === 'function' && global.hocIsLabAppointment(d)) return;
             if (d.doctorId !== st.profileId && String(d.doctorId || '').replace(/^doc_/, '') !== String(st.profileId).replace(/^doc_/, '')) return;
             var id = doc.id;
             var prev = prevDocAppt[id];
@@ -486,6 +487,28 @@
           });
         });
         st.unsub.push(unsubD);
+      }
+
+      if (st.role === 'lab') {
+        var prevLabAppt = {};
+        var unsubLabA = st.db.collection('Appointments').onSnapshot(function (snap) {
+          snap.forEach(function (doc) {
+            var d = doc.data();
+            if (typeof global.hocIsLabAppointment === 'function' && !global.hocIsLabAppointment(d)) return;
+            var id = doc.id;
+            var prev = prevLabAppt[id];
+            if (prev && prev.status !== 'staff-approved' && d.status === 'staff-approved') {
+              global.hocPlayNotifSound();
+              global.hocNotifyPush(st.db, {
+                targetRole: 'lab', targetUid: st.uid, targetId: st.profileId || '',
+                type: 'appointment', title: 'New lab booking',
+                body: (d.patientName || 'Patient') + ' — ' + (d.symptoms || 'Lab test') + ' (' + (d.visitType === 'clinic' ? 'clinic' : 'home') + ')'
+              });
+            }
+            prevLabAppt[id] = { status: d.status || '' };
+          });
+        });
+        st.unsub.push(unsubLabA);
       }
 
       if (st.role === 'staff') {

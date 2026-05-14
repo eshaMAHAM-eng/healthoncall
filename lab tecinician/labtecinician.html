@@ -49,6 +49,7 @@
             window._hocDb.collection('Appointments').onSnapshot(function(snap){
                 var apts=[];snap.forEach(function(d){apts.push(Object.assign({id:d.id},d.data()));});
                 if(typeof mergeAppointmentsFromFirestore==='function') mergeAppointmentsFromFirestore(apts);
+                if(typeof syncLabRequestsFromAppointments==='function') syncLabRequestsFromAppointments();
                 if(typeof syncLabOrdersFromAppointments==='function') syncLabOrdersFromAppointments();
             },function(err){console.warn('Firestore offline or restricted. Running in offline mode.',err);});
         }
@@ -955,11 +956,7 @@ var samples=[
 ];
 
 /* Home visits: patient_confirmed → staff_approved → lab tech collects (fulfilled) */
-var labRequests=[
-    {id:'LRQ-01',patientName:'Esha Maham',patientId:'PAT-001',panel:'CBC',doctorName:'Dr. Ali',address:'House 12-B, Peoples Colony-2',city:'Faisalabad',visitType:'home',channel:'chgt',workflowStatus:'patient_confirmed',confirmedByPatientAt:'09:12',phone:'923001234501'},
-    {id:'LRQ-02',patientName:'Ahmed Khan',patientId:'PAT-002',panel:'Lipid Profile',doctorName:'Dr. Sara',address:'Susan Road, Madina Town (near ChenOne)',city:'Faisalabad',visitType:'home',channel:'idc',workflowStatus:'staff_approved',confirmedByPatientAt:'08:35',staffApprovedAt:'09:05',phone:'923001234502'},
-    {id:'LRQ-03',patientName:'Fatima Noor',patientId:'PAT-003',panel:'LFT',doctorName:'Dr. Kamran',address:'Khurrianwala Road, D-type houses',city:'Faisalabad',visitType:'home',channel:'chgt',workflowStatus:'staff_approved',confirmedByPatientAt:'08:20',staffApprovedAt:'08:50',phone:'923001234503'}
-];
+var labRequests=[];
 
 /* ===== UTILS & HELPERS ===== */
 var generatedReports=[],currentReportFormat='chgt',entryResults={},_isLoggingOut=false,currentReportSampleId=null;
@@ -973,12 +970,44 @@ function mergeAppointmentsFromFirestore(remoteApts) {
         var idx = existing.findIndex(function (e) { return e.id === remote.id; });
         if (idx === -1) existing.push(remote);
         else {
-            ['labResults', 'labTests', 'labCompletedAt', 'labOrderAt', 'status', 'prescription', 'doctorId', 'doctorName', 'patientName', 'patientId'].forEach(function (k) {
+            ['labResults', 'labTests', 'labCompletedAt', 'labOrderAt', 'status', 'prescription', 'doctorId', 'doctorName', 'patientName', 'patientId', 'service', 'routedTo', 'visitType', 'address', 'city', 'labWorkflowStatus', 'staffApprovedAt', 'symptoms'].forEach(function (k) {
                 if (remote[k] !== undefined) existing[idx][k] = remote[k];
             });
         }
     });
     try { localStorage.setItem('hoc_appointments', JSON.stringify(existing)); } catch (e2) {}
+}
+
+
+function syncLabRequestsFromAppointments() {
+    var apts = [];
+    try { apts = JSON.parse(localStorage.getItem('hoc_appointments') || '[]'); } catch (e) { return; }
+    var fulfilled = labRequests.filter(function (r) { return r.workflowStatus === 'fulfilled'; });
+    var built = apts.filter(function (apt) {
+        return typeof hocIsLabAppointment === 'function' ? hocIsLabAppointment(apt) : (apt.service === 'Lab Tests' || apt.routedTo === 'lab');
+    }).map(function (apt) {
+        var wf = apt.labWorkflowStatus || 'patient_confirmed';
+        if (apt.status === 'staff-approved' && wf !== 'fulfilled') wf = 'staff_approved';
+        if (apt.status === 'requested' || apt.status === 'pending' || apt.status === 'Pending') wf = 'patient_confirmed';
+        if (apt.labWorkflowStatus === 'fulfilled' || apt.status === 'completed') wf = 'fulfilled';
+        return {
+            id: apt.id,
+            aptId: apt.id,
+            patientName: apt.patientName || 'Patient',
+            patientId: apt.patientId || '',
+            panel: apt.symptoms || 'Lab panel',
+            doctorName: apt.doctorName || 'Direct booking',
+            address: apt.address || '',
+            city: apt.city || 'Faisalabad',
+            visitType: apt.visitType === 'clinic' ? 'clinic' : 'home',
+            channel: apt.reportChannel || 'chgt',
+            workflowStatus: wf,
+            confirmedByPatientAt: apt.createdAt ? new Date(apt.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+            staffApprovedAt: apt.staffApprovedAt ? new Date(apt.staffApprovedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+            phone: apt.patientPhone || ''
+        };
+    });
+    labRequests = built.concat(fulfilled.filter(function (f) { return !built.some(function (b) { return b.id === f.id; }); }));
 }
 
 function syncLabOrdersFromAppointments() {
@@ -1356,16 +1385,24 @@ function simulateStaffApprove(reqId){
 }
 
 function renderPendingOrders(){
-    var clinicRows=[
-        {pid:'PAT-004',name:'Usman Tariq',ini:'UT',panel:'RFT',doc:'Dr. Nadia',site:'Clinic',time:'Today · 11:20',apt:'CLN-91'},
-        {pid:'PAT-005',name:'Sana Rafiq',ini:'SR',panel:'CBC',doc:'Dr. Zain',site:'Video consult',time:'Today · 11:05',apt:'CLN-92'}
-    ];
+    var clinicRows=labRequests.filter(function(r){return r.visitType==='clinic'&&r.workflowStatus==='staff_approved';}).map(function(r){
+        return{pid:r.patientId,name:r.patientName,ini:getInitials(r.patientName),panel:r.panel,doc:r.doctorName||'Direct',site:'Visit lab',time:(r.staffApprovedAt?'Staff '+r.staffApprovedAt:'Today'),apt:r.id,phone:r.phone||''};
+    });
+    if(!clinicRows.length){
+        document.getElementById('pendingOrdersTable').innerHTML='';
+        document.getElementById('pendingOrdersTable').innerHTML='';
+        document.getElementById('pendingOrdersTable').innerHTML='<div class="empty-state" style="padding:32px;"><p>No clinic / walk-in lab bookings released yet.</p></div>';
+        var b0=document.getElementById('pendingOrdersBadge');if(b0)b0.style.display='none';
+        return;
+    }
     var body=clinicRows.map(function(o){
-        return'<tr><td><div class="patient-cell"><div class="patient-avatar">'+o.ini+'</div><div><strong>'+o.name+'</strong><br><small class="mono">'+o.pid+'</small></div></div></td><td><strong>'+o.panel+'</strong></td><td>'+o.doc+'</td><td><i class="fas fa-'+(o.site==='Clinic'?'hospital':'video')+'"></i> '+o.site+'</td><td class="mono" style="color:var(--text-muted);">'+o.time+'</td><td><button type="button" class="btn btn-sm btn-primary" onclick="collectSample(\''+o.apt+'\',\''+o.name+'\',\''+o.panel+'\',\'923000000000\',\'clinic\')"><i class="fas fa-vial"></i> Receive</button></td></tr>';
+        return'<tr><td><div class="patient-cell"><div class="patient-avatar">'+o.ini+'</div><div><strong>'+o.name+'</strong><br><small class="mono">'+o.pid+'</small></div></div></td><td><strong>'+o.panel+'</strong></td><td>'+o.doc+'</td><td><i class="fas fa-hospital"></i> '+o.site+'</td><td class="mono" style="color:var(--text-muted);">'+o.time+'</td><td><button type="button" class="btn btn-sm btn-primary" onclick="collectSample(\''+o.apt+'\',\''+o.name.replace(/'/g,"\\'")+'\',\''+o.panel.replace(/'/g,"\\'")+'\',\''+(o.phone||'')+'\',\'clinic\')"><i class="fas fa-vial"></i> Receive</button></td></tr>';
     }).join('');
-    document.getElementById('pendingOrdersTable').innerHTML='<div class="table-scroll"><table class="data-table"><thead><tr><th>Patient</th><th>Panel</th><th>Doctor</th><th>Site</th><th>Time</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
+    document.getElementById('pendingOrdersTable').innerHTML='<div class="table-scroll"><table class="data-table"><thead><tr><th>Patient</th><th>Panel</th><th>Ref</th><th>Site</th><th>Time</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+    document.getElementById('pendingOrdersTable').innerHTML='<div class="table-scroll"><table class="data-table"><thead><tr><th>Patient</th><th>Panel</th><th>Ref</th><th>Site</th><th>Time</th><th></th></tr></thead><tbody>'+body+'</tbody></table>';
+    document.getElementById('pendingOrdersTable').innerHTML='<div class="table-scroll"><table class="data-table"><thead><tr><th>Patient</th><th>Panel</th><th>Ref</th><th>Site</th><th>Time</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
     var b=document.getElementById('pendingOrdersBadge');
-    if(b){b.style.display='inline';b.textContent=clinicRows.length+' clinic / online';}
+    if(b){b.style.display='inline';b.textContent=clinicRows.length+' clinic';}
 }
 
 /* ===== WORKLIST ===== */
@@ -1545,6 +1582,7 @@ function collectFromRequest(reqId){
     var addrFull=(req.address||'')+(req.city?', '+req.city:'');
     samples.push({id:sampleId,aptId:req.id,patientName:req.patientName,patientId:req.patientId,panel:req.panel,sampleType:'Blood',collectionSite:'home',collectionAddress:addrFull,status:'collected',collectedAt:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),results:null,verified:false,doctorName:req.doctorName,phone:req.phone||'',reportChannel:req.channel||'chgt'});
     req.workflowStatus='fulfilled';
+    if(window._hocDb&&req.aptId){window._hocDb.collection('Appointments').doc(req.aptId).set({labWorkflowStatus:'fulfilled',status:'in-progress'},{merge:true}).catch(function(){});}
     toast('Home visit sample received — sent to lab processing','ok');
     renderDashboard();renderWorklist();renderHomeQueues();
 }
@@ -1758,6 +1796,7 @@ window.onload = function(){
     updateChatBadges();
     var ci=document.getElementById('chatInput');
     if(ci)ci.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMessage();}});
+    syncLabRequestsFromAppointments();
     syncLabOrdersFromAppointments();
     renderDashboard();
     renderPatients();

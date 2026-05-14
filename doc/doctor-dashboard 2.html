@@ -1236,6 +1236,7 @@
         var apts = readApts();
         if (!window.HOC_DOCTOR_ID) return [];
         var docApts = apts.filter(function(a) {
+            if (typeof hocIsLabAppointment === 'function' && hocIsLabAppointment(a)) return false;
             if (typeof hocApptBelongsToDoctor === 'function' && !hocApptBelongsToDoctor(a, window.HOC_DOCTOR_ID)) return false;
             return a.status === 'staff-approved' || a.status === 'confirmed' || a.status === 'in-progress' || a.status === 'completed';
         });

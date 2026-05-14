@@ -354,7 +354,7 @@ body.dark-mode .symptom-chip{background:#1e293b;border-color:var(--border)}
       <span class="step-num">1</span> Choose Service
     </div>
     <div class="step-item" id="step-btn-2" onclick="goStep(2)">
-      <span class="step-num">2</span> Find Doctor
+      <span class="step-num">2</span> <span id="step2Label">Find Doctor</span>
     </div>
     <div class="step-item" id="step-btn-3" onclick="goStep(3)">
       <span class="step-num">3</span> Book Appointment
@@ -375,6 +375,23 @@ body.dark-mode .symptom-chip{background:#1e293b;border-color:var(--border)}
 
   <!-- STEP 2: Find Doctor + Map -->
   <div class="step-panel" id="panel-2">
+    <div id="labCollectionPanel" style="display:none;margin-bottom:20px;">
+      <h3 style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px;"><i class="fas fa-flask" style="color:#0ea5e9;margin-right:6px;"></i> How will you give your sample?</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Choose home collection or visit our partner lab. After staff confirms, a lab technician will handle your booking.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="svc-card lab-col-opt" id="labOptHome" onclick="selectLabCollection('home')" style="cursor:pointer;padding:20px;border:2px solid var(--accent);border-radius:16px;text-align:center;">
+          <div class="svc-icon" style="background:#e0f2fe;color:#0ea5e9;margin:0 auto 10px;"><i class="fas fa-house-medical"></i></div>
+          <h3 style="font-size:15px;font-weight:700;margin:8px 0 4px;">Home Collection</h3>
+          <p style="font-size:12px;color:var(--text-muted);margin:0;">Lab technician visits your home to collect samples.</p>
+        </div>
+        <div class="svc-card lab-col-opt" id="labOptClinic" onclick="selectLabCollection('clinic')" style="cursor:pointer;padding:20px;border:2px solid var(--card-border);border-radius:16px;text-align:center;">
+          <div class="svc-icon" style="background:#ede9fe;color:#8b5cf6;margin:0 auto 10px;"><i class="fas fa-hospital"></i></div>
+          <h3 style="font-size:15px;font-weight:700;margin:8px 0 4px;">Visit Lab</h3>
+          <p style="font-size:12px;color:var(--text-muted);margin:0;">You go to the lab / collection point yourself.</p>
+        </div>
+      </div>
+    </div>
+    <div id="doctorStepSection">
     <!-- Map Section -->
     <div class="map-section">
       <div class="map-header">
@@ -407,6 +424,7 @@ body.dark-mode .symptom-chip{background:#1e293b;border-color:var(--border)}
       </div>
     </div>
     <div class="doc-grid" id="docGrid"></div>
+    </div>
 
     <div class="nav-btns">
       <button class="btn-back" onclick="goStep(1)"><i class="fas fa-arrow-left"></i> Back</button>
@@ -489,7 +507,7 @@ body.dark-mode .symptom-chip{background:#1e293b;border-color:var(--border)}
       <!-- Visit Type -->
       <div style="margin-bottom:16px;">
         <label style="display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Visit Type</label>
-        <div class="visit-toggle">
+        <div class="visit-toggle" id="visitToggle">
           <div class="visit-opt active-online" data-type="Online" onclick="setVisitType('Online')"><i class="fas fa-video"></i> Online</div>
           <div class="visit-opt" data-type="Physical" onclick="setVisitType('Physical')"><i class="fas fa-hospital"></i> Physical Visit</div>
         </div>
@@ -563,7 +581,7 @@ body.dark-mode .symptom-chip{background:#1e293b;border-color:var(--border)}
         <div class="flow-arrow"><i class="fas fa-chevron-right"></i></div>
         <div class="flow-step"><div class="fs-dot" style="background:#e2e8f0;color:#94a3b8;"><i class="fas fa-user-check" style="font-size:10px;"></i></div><div class="fs-lbl">Staff</div></div>
         <div class="flow-arrow"><i class="fas fa-chevron-right"></i></div>
-        <div class="flow-step"><div class="fs-dot" style="background:#e2e8f0;color:#94a3b8;"><i class="fas fa-stethoscope" style="font-size:10px;"></i></div><div class="fs-lbl">Doctor</div></div>
+        <div class="flow-step"><div class="fs-dot" style="background:#e2e8f0;color:#94a3b8;"><i class="fas fa-stethoscope" style="font-size:10px;" id="successFlowMidIcon"></i></div><div class="fs-lbl" id="successFlowMidLbl">Doctor</div></div>
         <div class="flow-arrow"><i class="fas fa-chevron-right"></i></div>
         <div class="flow-step"><div class="fs-dot" style="background:#e2e8f0;color:#94a3b8;"><i class="fas fa-file-medical" style="font-size:10px;"></i></div><div class="fs-lbl">Done</div></div>
       </div>
@@ -609,7 +627,7 @@ var AppStorage={
     var pn=d.patientName||(typeof HOC_getPatientName==='function'?HOC_getPatientName():'Patient');
     var aptId='APT-'+Date.now();
     var uid=(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth().currentUser)?firebase.auth().currentUser.uid:(d.patientUid||'');
-    var a={id:aptId,appointmentId:aptId,patientName:pn,patientId:pid,patientUid:uid||d.patientUid||'',doctorId:d.doctorId||'',doctorName:d.doctorName||'',doctorSpec:d.doctorSpec||'',service:d.service||'',date:d.date||'',time:d.time||'',symptoms:d.symptoms||'',visitType:d.visitType||'Online',address:d.address||'',fee:d.fee||0,notes:d.notes||'',paymentMethod:d.paymentMethod||'Cash',paymentRef:d.paymentRef||'',paymentStatus:d.paymentStatus||'Pending',status:'requested',rejectReason:'',prescription:null,labTests:[],labResults:[],createdAt:new Date().toISOString()};
+    var a={id:aptId,appointmentId:aptId,patientName:pn,patientId:pid,patientUid:uid||d.patientUid||'',doctorId:d.doctorId||'',doctorName:d.doctorName||'',doctorSpec:d.doctorSpec||'',service:d.service||'',routedTo:d.routedTo||'',date:d.date||'',time:d.time||'',symptoms:d.symptoms||'',visitType:d.visitType||'Online',address:d.address||'',city:d.city||'',fee:d.fee||0,notes:d.notes||'',paymentMethod:d.paymentMethod||'Cash',paymentRef:d.paymentRef||'',paymentStatus:d.paymentStatus||'Pending',labWorkflowStatus:d.labWorkflowStatus||'',status:'requested',rejectReason:'',prescription:null,labTests:[],labResults:[],createdAt:new Date().toISOString()};
     if(!window._hocDb||typeof firebase==='undefined'||!firebase.auth||!firebase.auth().currentUser){
       return Promise.reject(new Error('Sign in required — open index.html, log in as patient, then book again.'));
     }
@@ -683,6 +701,8 @@ var currentStep=1;
 var selectedService=null;
 var selectedDoc=null;
 var selectedVisitType='Online';
+var selectedLabCollection='home';
+function isLabBooking(){return typeof hocIsLabService==='function'&&hocIsLabService(selectedService);}
 var userLat=null,userLng=null;
 var map=null,userMarker=null,docMarkers=[],googleMap=null,gMarkers=[],mapsScriptRequested=false;
 
@@ -938,9 +958,57 @@ function renderServices(){
   }).join('');
 }
 
+
+function updateStep2UI(){
+  var lab=isLabBooking();
+  var labPanel=document.getElementById('labCollectionPanel');
+  var docSec=document.getElementById('doctorStepSection');
+  var s2=document.getElementById('step2Label');
+  var nextBtn=document.querySelector('#panel-2 .btn-next');
+  if(labPanel)labPanel.style.display=lab?'block':'none';
+  if(docSec)docSec.style.display=lab?'none':'block';
+  if(s2)s2.textContent=lab?'Collection Method':'Find Doctor';
+  if(nextBtn)nextBtn.innerHTML=lab?'Next — Book Lab Test <i class="fas fa-arrow-right"></i>':'Next — Book <i class="fas fa-arrow-right"></i>';
+}
+function selectLabCollection(mode){
+  selectedLabCollection=mode==='clinic'?'clinic':'home';
+  selectedVisitType=selectedLabCollection;
+  var home=document.getElementById('labOptHome');
+  var clinic=document.getElementById('labOptClinic');
+  if(home){home.style.borderColor=selectedLabCollection==='home'?'var(--accent)':'var(--card-border)';}
+  if(clinic){clinic.style.borderColor=selectedLabCollection==='clinic'?'var(--accent)':'var(--card-border)';}
+  selectedDoc={id:'LAB-POOL',name:'HealthOnCall Lab Team',specialty:'Sample Collection',area:'Faisalabad',fee:500,service:'Lab Tests'};
+  showToast(selectedLabCollection==='home'?'Home collection selected':'Visit lab selected','success');
+}
+function updateVisitTypeUIForService(){
+  var lab=isLabBooking();
+  var label=document.getElementById('visitTypeLabel');
+  var toggle=document.getElementById('visitToggle');
+  if(!toggle)return;
+  if(lab){
+    if(label)label.textContent='Collection (confirm)';
+    toggle.innerHTML='<div class="visit-opt active-online" data-type="home" onclick="setVisitType(\'home\')"><i class="fas fa-house-medical"></i> Home Collection</div><div class="visit-opt" data-type="clinic" onclick="setVisitType(\'clinic\')"><i class="fas fa-hospital"></i> Visit Lab</div>';
+    setVisitType(selectedLabCollection||'home');
+  }else{
+    if(label)label.textContent='Visit Type';
+    toggle.innerHTML='<div class="visit-opt active-online" data-type="Online" onclick="setVisitType(\'Online\')"><i class="fas fa-video"></i> Online</div><div class="visit-opt" data-type="Physical" onclick="setVisitType(\'Physical\')"><i class="fas fa-hospital"></i> Physical Visit</div>';
+    setVisitType('Online');
+  }
+}
+function updateSuccessFlowForService(){
+  var lab=isLabBooking();
+  var icon=document.getElementById('successFlowMidIcon');
+  var lbl=document.getElementById('successFlowMidLbl');
+  if(!lbl)return;
+  if(lab){lbl.textContent='Lab Tech';if(icon){icon.className='fas fa-flask-vial';icon.style.fontSize='10px';}}
+  else{lbl.textContent='Doctor';if(icon){icon.className='fas fa-stethoscope';icon.style.fontSize='10px';}}
+}
+
 function selectService(id){
   selectedService=id;
   renderServices();
+  updateStep2UI();
+  if(isLabBooking()){selectLabCollection(selectedLabCollection||'home');}
   refreshDoctorList();
   if(currentStep===2) addDocMarkers();
   refreshSymptomSuggestions();
@@ -949,7 +1017,8 @@ function selectService(id){
 // Steps
 function goStep(n){
   if(n===2&&!selectedService){showToast('Please select a service first','err');return;}
-  if(n===3&&!selectedDoc){showToast('Please select a doctor first','err');return;}
+  if(n===3&&!isLabBooking()&&!selectedDoc){showToast('Please select a doctor first','err');return;}
+  if(n===3&&isLabBooking()&&!selectedDoc){selectLabCollection(selectedLabCollection||'home');}
   currentStep=n;
   document.querySelectorAll('.step-panel').forEach(function(p){p.classList.remove('active');});
   document.getElementById('panel-'+n).classList.add('active');
@@ -958,14 +1027,14 @@ function goStep(n){
     if(i+1===n) s.classList.add('active');
     else if(i+1<n) s.classList.add('done');
   });
-  if(n===2){refreshDoctorList();renderDoctors();initMap();showAiSuggestion();}
-  if(n===3){updateBookingBanner();refreshSymptomSuggestions();initTimeSlots();}
+  if(n===2){updateStep2UI();if(isLabBooking()){selectLabCollection(selectedLabCollection||'home');}else{refreshDoctorList();renderDoctors();initMap();showAiSuggestion();}}
+  if(n===3){if(isLabBooking()&&!selectedDoc)selectLabCollection(selectedLabCollection||'home');updateBookingBanner();updateVisitTypeUIForService();refreshSymptomSuggestions();initTimeSlots();}
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function nextStep(from){
   if(from===1){if(!selectedService){showToast('Please select a service','err');return;}goStep(2);}
-  else if(from===2){if(!selectedDoc){showToast('Please select a doctor','err');return;}goStep(3);}
+  else if(from===2){if(isLabBooking()){if(!selectedLabCollection)selectedLabCollection='home';selectLabCollection(selectedLabCollection);goStep(3);return;}if(!selectedDoc){showToast('Please select a doctor','err');return;}goStep(3);}
 }
 
 function showAiSuggestion(){
@@ -1079,13 +1148,17 @@ function selectPayment(method){
 
 function setVisitType(t){
   selectedVisitType=t;
-  document.querySelectorAll('.visit-opt').forEach(function(o){o.classList.remove('active-online','active-physical');if(o.dataset.type===t)o.classList.add(t==='Online'?'active-online':'active-physical');});
+  if(isLabBooking())selectedLabCollection=t==='clinic'?'clinic':'home';
+  document.querySelectorAll('.visit-opt').forEach(function(o){o.classList.remove('active-online','active-physical');if(o.dataset.type===t)o.classList.add((t==='Online'||t==='home')?'active-online':'active-physical');});
   var af=document.getElementById('addrField');
-  if(t==='Physical') af.classList.add('show');
-  else af.classList.remove('show');
+  var addrLbl=document.querySelector('#addrGroup label');
+  var needsAddr=(isLabBooking()&&t==='home')||(!isLabBooking()&&t==='Physical');
+  if(needsAddr){af.classList.add('show');if(addrLbl)addrLbl.innerHTML=isLabBooking()?'Home Address <span style="color:var(--rose);">*</span>':'Your Address <span style="color:var(--rose);">*</span>';}
+  else{af.classList.remove('show');}
 }
 
 function updateBookingBanner(){
+  if(isLabBooking()&&!selectedDoc)selectLabCollection(selectedLabCollection||'home');
   if(!selectedDoc) return;
   var colors=['#10b981','#0ea5e9','#f59e0b','#8b5cf6','#f43f5e','#06b6d4'];
   var initials=selectedDoc.name.replace('Dr. ','').split(' ').map(function(w){return w[0];}).join('').slice(0,2);
@@ -1099,7 +1172,9 @@ function updateBookingBanner(){
 }
 
 function confirmBooking(){
-  if(!selectedDoc){showToast('No doctor selected','err');return;}
+  var isLab=isLabBooking();
+  if(isLab&&!selectedDoc)selectLabCollection(selectedLabCollection||'home');
+  if(!isLab&&!selectedDoc){showToast('No doctor selected','err');return;}
   var ok=true;
   var dt=document.getElementById('dateInput').value;
   var tm=document.getElementById('timeInput').value;
@@ -1108,7 +1183,8 @@ function confirmBooking(){
   if(!dt){document.getElementById('dateGroup').classList.add('error');ok=false;}else document.getElementById('dateGroup').classList.remove('error');
   if(!tm){document.getElementById('timeGroup').classList.add('error');ok=false;}else document.getElementById('timeGroup').classList.remove('error');
   if(!rs){document.getElementById('reasonGroup').classList.add('error');ok=false;}else document.getElementById('reasonGroup').classList.remove('error');
-  if(selectedVisitType==='Physical'&&!ad){document.getElementById('addrGroup').classList.add('error');ok=false;}else document.getElementById('addrGroup').classList.remove('error');
+  var needsAddr=(isLab&&selectedVisitType==='home')||(!isLab&&selectedVisitType==='Physical');
+  if(needsAddr&&!ad){document.getElementById('addrGroup').classList.add('error');ok=false;}else document.getElementById('addrGroup').classList.remove('error');
   if(!ok){showToast('Please fill all required fields','err');return;}
   if(typeof hocValidateFutureDate==='function'){var dv=hocValidateFutureDate(dt);if(!dv.ok){document.getElementById('dateGroup').classList.add('error');showToast(dv.msg,'err');return;}}
   var reasonCheck=validateReasonForService(selectedService,rs);
@@ -1118,8 +1194,13 @@ function confirmBooking(){
     return;
   }
   var btn=document.getElementById('confirmBtn');btn.classList.add('saving');
-  var doctorId=(typeof hocDoctorIdForBooking==='function'?hocDoctorIdForBooking(selectedDoc):String(selectedDoc.id));
-  var bookPayload={doctorId:doctorId,doctorName:selectedDoc.name,doctorSpec:selectedDoc.specialty,service:selectedService||selectedDoc.service||'',date:dt,time:tm,symptoms:rs,visitType:selectedVisitType,address:ad,fee:selectedDoc.fee,notes:document.getElementById('notesInput').value.trim(),paymentMethod:selectedPayment,paymentRef:document.getElementById('payAccountInput')?document.getElementById('payAccountInput').value.trim():'',paymentStatus:selectedPayment==='Cash'?'Pending':'Paid'};
+  var bookPayload;
+  if(isLab){
+    bookPayload={service:'Lab Tests',routedTo:'lab',doctorId:'',doctorName:'Lab Team',doctorSpec:'Sample Collection',date:dt,time:tm,symptoms:rs,visitType:selectedVisitType==='clinic'?'clinic':'home',address:ad,fee:500,notes:document.getElementById('notesInput').value.trim(),paymentMethod:selectedPayment,paymentRef:document.getElementById('payAccountInput')?document.getElementById('payAccountInput').value.trim():'',paymentStatus:selectedPayment==='Cash'?'Pending':'Paid',labWorkflowStatus:'patient_confirmed',city:'Faisalabad'};
+  }else{
+    var doctorId=(typeof hocDoctorIdForBooking==='function'?hocDoctorIdForBooking(selectedDoc):String(selectedDoc.id));
+    bookPayload={doctorId:doctorId,doctorName:selectedDoc.name,doctorSpec:selectedDoc.specialty,service:selectedService||selectedDoc.service||'',date:dt,time:tm,symptoms:rs,visitType:selectedVisitType,address:ad,fee:selectedDoc.fee,notes:document.getElementById('notesInput').value.trim(),paymentMethod:selectedPayment,paymentRef:document.getElementById('payAccountInput')?document.getElementById('payAccountInput').value.trim():'',paymentStatus:selectedPayment==='Cash'?'Pending':'Paid'};
+  }
   (typeof HOC_resolvePatientContext==='function'?HOC_resolvePatientContext():Promise.resolve({patientName:(typeof HOC_getPatientName==='function'?HOC_getPatientName():'Patient'),patientId:(typeof HOC_getPatientId==='function'?HOC_getPatientId():''),patientUid:''})).then(function(ctx){
     if(ctx.needsLogin){btn.classList.remove('saving');showToast('Please sign in first','err');setTimeout(function(){window.location.href='../index.html';},900);return null;}
     if(ctx.needsProfile){btn.classList.remove('saving');showToast('Patient profile missing — sign in with a registered patient account','err');return null;}
@@ -1138,6 +1219,7 @@ function confirmBooking(){
     aptIdEl.textContent=r.id;
     aptIdEl.title='Your Appointment ID — save this for reference';
     document.getElementById('successAptIdCopy').textContent=r.id;
+    updateSuccessFlowForService();
     document.querySelectorAll('.step-panel').forEach(function(p){p.classList.remove('active');});
     document.getElementById('panel-4').classList.add('active');
     document.querySelectorAll('.step-item').forEach(function(s){s.classList.remove('active');s.classList.add('done');});
