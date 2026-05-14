@@ -117,10 +117,16 @@ window.hocApptServiceMatches = function (apt, profile) {
 
 window.hocApptBelongsToDoctor = function (apt, doctorId) {
   if (!apt || !doctorId) return false;
+  try {
+    if (apt.doctorUid && typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser
+      && apt.doctorUid === firebase.auth().currentUser.uid) return true;
+  } catch (e0) {}
   var profile = {};
   try { profile = JSON.parse(localStorage.getItem('hoc_user') || '{}'); } catch (e) { profile = {}; }
   var did = String(doctorId);
   var profileDid = String(profile.doctorId || did);
+  var profileDocId = '';
+  try { profileDocId = String(localStorage.getItem('hoc_doctor_id') || ''); } catch (e2) {}
   var aid = String(apt.doctorId || '');
 
   function normName(s) {
@@ -128,7 +134,8 @@ window.hocApptBelongsToDoctor = function (apt, doctorId) {
   }
 
   if (aid) {
-    var idMatch = aid === did || aid === profileDid
+    var idMatch = aid === did || aid === profileDid || aid === profileDocId
+      || profileDocId === aid
       || aid.replace(/^doc_/, '') === did.replace(/^doc_/, '')
       || aid.replace(/^doc_/, '') === profileDid.replace(/^doc_/, '');
     if (idMatch) return true;

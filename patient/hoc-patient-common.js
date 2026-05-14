@@ -249,8 +249,13 @@
     return (ctx ? Promise.resolve(ctx) : window.HOC_resolvePatientContext()).then(function (c) {
       var row = window.HOC_normalizeAppointmentRow(apt, c);
       if (!row) return Promise.reject(new Error('Invalid appointment'));
-      return window._hocDb.collection(window.HOC_COLLECTIONS.appointments || 'Appointments').doc(row.id).set(row, { merge: true }).then(function () {
-        return row;
+      var enrich = (typeof window.hocEnrichAppointmentForCloud === 'function')
+        ? window.hocEnrichAppointmentForCloud(window._hocDb, row)
+        : Promise.resolve(row);
+      return enrich.then(function (enriched) {
+        return window._hocDb.collection(window.HOC_COLLECTIONS.appointments || 'Appointments').doc(enriched.id).set(enriched, { merge: true }).then(function () {
+          return enriched;
+        });
       });
     });
   };

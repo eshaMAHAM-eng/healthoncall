@@ -88,10 +88,39 @@
   global.hocResolveProfileUid = function (db, role, id) {
     if (!db || !id) return Promise.resolve(null);
     var col = role === 'doctor' ? 'Doctors' : role === 'lab' ? 'LabTechnicians' : 'Patients';
-    return db.collection(col).doc(id).get().then(function (snap) {
+    var sid = String(id);
+    return db.collection(col).doc(sid).get().then(function (snap) {
       if (snap.exists && snap.data().uid) return snap.data().uid;
-      return null;
+      var field = role === 'doctor' ? 'doctorId' : role === 'lab' ? 'labTechId' : 'patientId';
+      return db.collection(col).where(field, '==', sid).limit(1).get().then(function (q) {
+        if (!q.empty && q.docs[0].data().uid) return q.docs[0].data().uid;
+        return null;
+      });
     }).catch(function () { return null; });
+  };
+
+  /** Attach doctorUid / patientUid before Appointments write (rules + doctor queue). */
+  global.hocEnrichAppointmentForCloud = function (db, row) {
+    if (!db || !row) return Promise.resolve(row);
+    row = Object.assign({}, row);
+    if (!row.status || row.status === 'Pending') row.status = 'requested';
+    if (!row.patientUid && typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
+      row.patientUid = firebase.auth().currentUser.uid;
+    }
+    var chain = Promise.resolve();
+    if (row.doctorId && !row.doctorUid) {
+      chain = global.hocResolveProfileUid(db, 'doctor', row.doctorId).then(function (uid) {
+        if (uid) row.doctorUid = uid;
+      });
+    }
+    if (row.patientId && !row.patientUid) {
+      chain = chain.then(function () {
+        return global.hocResolveProfileUid(db, 'patient', row.patientId).then(function (uid) {
+          if (uid) row.patientUid = uid;
+        });
+      });
+    }
+    return chain.then(function () { return row; });
   };
 
   /** Bump unread counter on Chats doc + optional push notification */

@@ -39,9 +39,10 @@
             });
         }
 
-        function hocPushDoctorApts(apts) {
+        function hocPushDoctorApts(apts, opts) {
+            opts = opts || {};
             if (!window.HOC_DOCTOR_ID) return;
-            var mine = hocDoctorFilterApts(apts);
+            var mine = opts.trustSource ? apts.slice() : hocDoctorFilterApts(apts);
             var local = [];
             try { local = JSON.parse(localStorage.getItem('hoc_appointments') || '[]'); } catch (e) { local = []; }
             mine.forEach(function (remote) {
@@ -114,9 +115,13 @@
         }
 
         var _docApptUnsub = null;
+        var _docApptUnsubUid = null;
+        var _docApptCache = {};
         function startDoctorApptListener() {
             if (!window._hocDb || !window.HOC_DOCTOR_ID) return;
             if (_docApptUnsub) { try { _docApptUnsub(); } catch (e) {} _docApptUnsub = null; }
+            if (_docApptUnsubUid) { try { _docApptUnsubUid(); } catch (e1) {} _docApptUnsubUid = null; }
+            _docApptCache = {};
             var profile = {};
             try { profile = JSON.parse(localStorage.getItem('hoc_user') || '{}'); } catch (e0) { profile = {}; }
             var ids = [];
@@ -126,22 +131,27 @@
             }
             addId(window.HOC_DOCTOR_ID);
             addId(profile.doctorId);
-            function mergeSnap(snap) {
-                var apts = [];
+            function publishDoctorApts() {
+                var apts = Object.keys(_docApptCache).map(function (k) { return _docApptCache[k]; });
+                hocPushDoctorApts(apts, { trustSource: true });
+            }
+            function ingestSnap(snap) {
                 snap.forEach(function (d) {
                     var data = d.data();
                     data.id = d.id;
-                    apts.push(data);
+                    _docApptCache[d.id] = data;
                 });
-                hocPushDoctorApts(apts);
+                publishDoctorApts();
             }
             function onErr(err) { console.warn('Doctor Firestore listener error:', err); }
             if (ids.length === 1) {
-                _docApptUnsub = window._hocDb.collection('Appointments').where('doctorId', '==', ids[0]).onSnapshot(mergeSnap, onErr);
+                _docApptUnsub = window._hocDb.collection('Appointments').where('doctorId', '==', ids[0]).onSnapshot(ingestSnap, onErr);
             } else if (ids.length > 1) {
-                _docApptUnsub = window._hocDb.collection('Appointments').where('doctorId', 'in', ids.slice(0, 10)).onSnapshot(mergeSnap, onErr);
-            } else {
-                _docApptUnsub = window._hocDb.collection('Appointments').onSnapshot(mergeSnap, onErr);
+                _docApptUnsub = window._hocDb.collection('Appointments').where('doctorId', 'in', ids.slice(0, 10)).onSnapshot(ingestSnap, onErr);
+            }
+            var authUser = firebase.auth && firebase.auth().currentUser;
+            if (authUser && authUser.uid) {
+                _docApptUnsubUid = window._hocDb.collection('Appointments').where('doctorUid', '==', authUser.uid).onSnapshot(ingestSnap, onErr);
             }
         }
     })();
