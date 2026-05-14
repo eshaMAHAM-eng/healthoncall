@@ -1103,40 +1103,22 @@
 
 <!-- CHAT MODAL (HealthOnCall in-app) -->
 <div class="modal-overlay" id="chatModal">
-    <div class="chat-modal-box">
-        <div class="chat-header">
-            <div class="chat-user-info">
-                <div class="chat-avatar" id="chatAvatar">PA</div>
-                <div class="chat-status">
-                    <div class="chat-name" id="chatName">Patient Name</div>
-                    <!-- Display Patient Phone Number as requested -->
-                    <div class="chat-phone-display" id="chatPhoneDisplay">
-                        <i class="fas fa-phone-alt"></i> Fetching...
-                    </div>
-                    <div class="chat-active-status">Chat on app · secured</div>
-                </div>
+    <div class="hoc-chat-modal-wrap">
+        <div class="hoc-chat-header">
+            <div class="hoc-chat-peer-info">
+                <h4 id="chatName">Patient Name</h4>
+                <p id="chatPhoneDisplay"><span class="hoc-online-dot"></span> Online · Chat on app</p>
             </div>
-            <div class="chat-header-right">
-                <div class="chat-header-actions">
-                    <button type="button" class="hoc-call-pill" onclick="docStartVideoCall()" aria-label="Video call"><i class="fas fa-video"></i> Video</button>
-                </div>
-                <button class="btn-icon-action" onclick="closeChatModal()" aria-label="Close"><i class="fas fa-times"></i></button>
+            <div class="hoc-chat-header-actions">
+                <button type="button" class="hoc-call-pill" onclick="docStartVideoCall()" aria-label="Video call"><i class="fas fa-video"></i> Video</button>
             </div>
+            <button type="button" class="hoc-chat-close" onclick="closeChatModal()" aria-label="Close"><i class="fas fa-times"></i></button>
         </div>
-        <div id="chatRegSnapshot" class="chat-reg-snapshot" style="display:none !important;" aria-hidden="true">
-            <div class="chat-reg-snapshot-title"><i class="fas fa-heart-pulse"></i> Registration vitals (review before call)</div>
-            <div id="chatRegSnapshotBody" class="chat-reg-snapshot-body">—</div>
-            <label class="chat-reg-ack"><input type="checkbox" id="regSnapAck"> I have reviewed the patient’s registration details — OK to start video / audio</label>
-        </div>
-        <div class="chat-body hoc-chat-messages" id="chatBody">
-            <!-- Messages will be injected here -->
-        </div>
-        <div class="chat-input-area">
-            <div class="chat-input-wrapper">
-                <i class="fas fa-paperclip chat-attach-btn"></i>
-                <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." onkeypress="handleChatKey(event)">
-            </div>
-            <button class="btn-send" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+        <div id="chatRegSnapshot" style="display:none !important;" aria-hidden="true"></div>
+        <div class="hoc-chat-messages" id="chatBody"></div>
+        <div class="hoc-chat-footer">
+            <input type="text" id="chatInput" placeholder="Type a message..." onkeypress="handleChatKey(event)">
+            <button type="button" onclick="sendMessage()" aria-label="Send"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
 </div>
@@ -1658,14 +1640,10 @@
         currentChatPatientId = patients[idx].aptId;
         var p = patients[idx];
         document.getElementById('chatName').textContent = p.name;
-        document.getElementById('chatAvatar').textContent = p.name.split(' ').map(function(w){return w[0];}).join('').substring(0,2);
-        
-        // PATIENT KA NUMBER FETCHY HO
-        // Logic to display patient number in the modal header
         if (p.phone) {
-            document.getElementById('chatPhoneDisplay').innerHTML = '<i class="fas fa-mobile-screen" style="color:var(--accent);"></i> ' + p.phone + ' <span style="opacity:.75;font-size:11px;">· on file</span>';
+            document.getElementById('chatPhoneDisplay').innerHTML = '<span class="hoc-online-dot"></span> Online · ' + p.phone;
         } else {
-            document.getElementById('chatPhoneDisplay').innerHTML = '<i class="fas fa-comments" style="color:var(--accent);"></i> In-app only <span style="opacity:.75;font-size:11px;">· no phone on file</span>';
+            document.getElementById('chatPhoneDisplay').innerHTML = '<span class="hoc-online-dot"></span> Online · In-app only';
         }
 
         var apt = readApts().find(function(a) { return a.id === currentChatPatientId; });

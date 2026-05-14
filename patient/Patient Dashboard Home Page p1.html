@@ -262,31 +262,31 @@
     </main>
 
     <!-- CHAT WINDOW WITH VIDEO BUTTONS -->
-    <div class="chat-window" id="patientChatWindow">
+    <div class="chat-window hoc-chat-window" id="patientChatWindow">
         <!-- Chat Header (Hidden initially) -->
-        <div class="chat-header" id="chatHeaderMain" style="display:none;">
-            <button class="back-btn" onclick="showChatDoctorList()"><i class="fas fa-arrow-left"></i></button>
-            <div class="doc-info"><h4 id="chatDoctorName">Doctor</h4><p><span class="online-dot"></span> Online</p></div>
+        <div class="chat-header hoc-chat-header" id="chatHeaderMain" style="display:none;">
+            <button class="back-btn hoc-chat-back" onclick="showChatDoctorList()"><i class="fas fa-arrow-left"></i></button>
+            <div class="doc-info hoc-chat-peer-info"><h4 id="chatDoctorName">Doctor</h4><p><span class="online-dot hoc-online-dot"></span> Online</p></div>
             
             <!-- Call Actions -->
             <div class="chat-header-actions">
                 <button type="button" class="hoc-call-pill" onclick="startVideoCall()" aria-label="Video call"><i class="fas fa-video"></i> Video</button>
             </div>
             
-            <button class="chat-close" onclick="closeChatWindow()"><i class="fas fa-times"></i></button>
+            <button class="chat-close hoc-chat-close" onclick="closeChatWindow()"><i class="fas fa-times"></i></button>
         </div>
         
         <!-- Step 1: Doctor Selection List -->
-        <div id="chatDoctorList" class="chat-list">
+        <div id="chatDoctorList" class="chat-list hoc-chat-list">
             <div class="chat-list-header"><h3>Select Doctor</h3><p>Who do you want to chat with?</p></div>
             <div id="doctorListItems"></div>
         </div>
 
         <!-- Step 2: Chat Messages Area -->
-        <div class="chat-body hoc-chat-messages" id="chatMessages" style="display:none;"></div>
+        <div class="hoc-chat-messages" id="chatMessages" style="display:none;"></div>
         
         <!-- Step 3: Chat Input -->
-        <div class="chat-footer" id="chatFooter" style="display:none;">
+        <div class="chat-footer hoc-chat-footer" id="chatFooter" style="display:none;">
             <input type="text" id="chatInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter')sendChatMessage()">
             <button onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
         </div>

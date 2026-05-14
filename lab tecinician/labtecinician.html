@@ -894,36 +894,33 @@ h1,h2,h3,h4,h5{font-family:'Sora',sans-serif;font-weight:800;}
     <div class="logout-box"><h3>Sign Out</h3><p>Are you sure?</p><div style="display:flex;gap:10px;justify-content:center;"><button class="btn btn-outline" onclick="cancelLogout()">Cancel</button><button class="btn btn-danger" onclick="location.reload()">Sign Out</button></div></div>
 </div>
 
-<!-- In-app chat -->
-<div class="chat-panel" id="chatPanel">
-    <div class="chat-window" id="chatWindow">
-        <div class="chat-header">
-            <div class="chat-header-left">
-                <div class="chat-header-ic"><i class="fas fa-shield-heart"></i></div>
-                <div>
-                    <h3>Patient messages</h3>
-                    <div class="chat-header-sub">HealthOnCall LabOS · patient messaging</div>
-                </div>
+<!-- In-app chat (unified patient-style UI) -->
+<div class="hoc-chat-panel" id="chatPanel">
+    <div class="hoc-chat-window hoc-chat-panel-inner" id="chatWindow">
+        <div class="hoc-chat-header">
+            <div class="hoc-chat-peer-info">
+                <h3 id="labChatPeerName">Patient messages</h3>
+                <p class="hoc-chat-peer-sub"><span class="hoc-online-dot"></span> Lab team · secured</p>
             </div>
-            <button type="button" class="modal-close" onclick="closeChatWindow()" aria-label="Close"><i class="fas fa-times"></i></button>
+            <button type="button" class="hoc-chat-close" onclick="closeChatWindow()" aria-label="Close"><i class="fas fa-times"></i></button>
         </div>
-        <div class="chat-toolbar">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
-                <label for="chatPatientSelect" style="margin:0;">Conversation</label>
-                <span id="chatBackendPill" class="chat-firebase-pill" style="display:none;">Firebase</span>
+        <div class="hoc-chat-toolbar">
+            <div class="hoc-chat-toolbar-row">
+                <label for="chatPatientSelect">Conversation</label>
+                <span id="chatBackendPill" class="hoc-chat-firebase-pill" style="display:none;">Firebase</span>
             </div>
             <select id="chatPatientSelect" onchange="onChatPatientSelectChange()"><option value="">Select patient…</option></select>
         </div>
-        <div class="chat-messages hoc-chat-messages" id="chatMessages"></div>
-        <p class="chat-hint" id="chatHintLine"><i class="fas fa-cloud" style="opacity:.65;"></i> <span id="chatHintText">Loading chat backend…</span></p>
-        <div class="chat-input-area">
-            <textarea class="chat-input" id="chatInput" rows="1" placeholder="Write to patient…"></textarea>
-            <button type="button" class="chat-send-btn" onclick="sendChatMessage()" title="Send"><i class="fas fa-paper-plane"></i></button>
+        <div class="hoc-chat-messages" id="chatMessages"></div>
+        <p class="hoc-chat-hint" id="chatHintLine"><i class="fas fa-cloud" style="opacity:.65;"></i> <span id="chatHintText">Loading chat backend…</span></p>
+        <div class="hoc-chat-footer hoc-chat-footer-textarea">
+            <textarea id="chatInput" rows="1" placeholder="Type a message..."></textarea>
+            <button type="button" onclick="sendChatMessage()" aria-label="Send"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
-    <button type="button" class="chat-fab" id="chatFab" onclick="toggleChatWindow()" title="Open messages">
+    <button type="button" class="hoc-chat-fab" id="chatFab" onclick="toggleChatWindow()" title="Open messages">
         <i class="fas fa-comments"></i>
-        <span class="chat-badge" id="chatFabBadge">0</span>
+        <span class="hoc-chat-fab-badge" id="chatFabBadge">0</span>
     </button>
 </div>
 
@@ -1605,16 +1602,18 @@ function formatChatTime(ts){
 }
 function renderChatThread(pid){
     var box=document.getElementById('chatMessages');if(!box)return;
-    if(!pid){box.innerHTML='<div class="chat-day">No conversation</div><div class="chat-row system"><div class="chat-bubble">Choose a patient to view messages.</div></div>';return;}
+    if(!pid){box.innerHTML='<div class="hoc-chat-day">No conversation</div><div class="hoc-chat-row system"><div class="hoc-chat-bubble">Choose a patient to view messages.</div></div>';return;}
     var rows=ensureThread(pid);
-    var html='<div class="chat-day">'+new Date().toLocaleDateString('en-PK',{weekday:'long',day:'numeric',month:'short'})+'</div>';
+    var html='<div class="hoc-chat-day">'+new Date().toLocaleDateString('en-PK',{weekday:'long',day:'numeric',month:'short'})+'</div>';
     if(!rows.length){
-        html+='<div class="chat-row system"><div class="chat-bubble">No messages in this thread yet.</div></div>';
+        html+='<div class="hoc-chat-row system"><div class="hoc-chat-bubble">No messages in this thread yet.</div></div>';
     }else{
         rows.forEach(function(m){
-            if(m.role==='system'){html+='<div class="chat-row system"><div class="chat-bubble">'+escChat(m.text)+'</div></div>';return;}
+            if(m.role==='system'){html+='<div class="hoc-chat-row system"><div class="hoc-chat-bubble">'+escChat(m.text)+'</div></div>';return;}
             var isTech=m.role==='tech';
-            html+='<div class="chat-row '+(isTech?'tech':'patient')+'"><div class="chat-meta '+(isTech?'tech':'patient')+'"><span class="dot"></span>'+(isTech?'You (lab tech)':'Patient')+'</div><div class="chat-bubble">'+escChat(m.text)+'</div><div class="chat-time">'+formatChatTime(m.ts)+'</div></div>';
+            html+='<div class="hoc-chat-row '+(isTech?'me':'them')+'">';
+            if(!isTech)html+='<div class="hoc-chat-meta"><span class="dot"></span>Patient</div>';
+            html+='<div class="hoc-chat-bubble">'+escChat(m.text)+'<div class="hoc-chat-time">'+formatChatTime(m.ts)+'</div></div></div>';
         });
     }
     box.innerHTML=html;
@@ -1623,6 +1622,14 @@ function renderChatThread(pid){
 function escChat(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function onChatPatientSelectChange(){
     var pid=document.getElementById('chatPatientSelect').value;
+    var peerEl=document.getElementById('labChatPeerName');
+    if(peerEl){
+        if(!pid){peerEl.textContent='Patient messages';}
+        else{
+            var p=patients.find(function(x){return x.id===pid;});
+            peerEl.textContent=p?p.name:pid;
+        }
+    }
     if(pid&&chatUnreadByPatient[pid]){delete chatUnreadByPatient[pid];persistChatStore();updateChatBadges();}
     if(window._hocDb&&typeof hocClearChatUnread==='function')hocClearChatUnread(window._hocDb,labChatDocId(pid),'lab');
     subscribeFirestoreLabChat(pid);
