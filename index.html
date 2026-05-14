@@ -1331,7 +1331,7 @@ footer p { font-size: 11.5px; opacity: 0.55; }
           <div class="auth-section-title"><i class="fa-solid fa-stethoscope"></i> Doctor Profile</div>
           <div class="form-grid"><div class="form-group"><label>Specialization *</label><input type="text" id="rDocSpec" placeholder="Cardiologist"></div><div class="form-group"><label>License No *</label><input type="text" id="rDocLic" placeholder="PMDC-12345"></div></div>
           <div class="form-grid"><div class="form-group"><label>Qualification</label><input type="text" id="rDocQual" placeholder="MBBS, FCPS"></div><div class="form-group"><label>Experience</label><input type="text" id="rDocExp" placeholder="5 Years"></div></div>
-          <div class="form-grid"><div class="form-group"><label>Fee (PKR) *</label><input type="number" id="rDocFee" placeholder="1500"></div><div class="form-group"><label>Service *</label><select id="rDocService"><option value="">Select</option><option>Home Nursing</option><option>Physiotherapy</option><option>Lab Tests</option><option>Speech Therapy</option><option>General Physician</option><option>Psychologist</option></select></div></div>
+          <div class="form-grid"><div class="form-group"><label>Fee (PKR) *</label><input type="number" id="rDocFee" placeholder="1500"></div><div class="form-group"><label>Service *</label><select id="rDocService"><option value="">Select</option><option>Home Nursing</option><option>Physiotherapy</option><option>Speech Therapy</option><option>General Physician</option><option>Psychologist</option></select></div></div>
           <div class="form-group" style="margin-bottom:0"><label>Department</label><input type="text" id="rDocDept" placeholder="Cardiology"></div>
         </div>
       </div>
@@ -1739,6 +1739,18 @@ async function doLogin() {
       return;
     }
 
+    if (found.data.role === 'Doctor' && typeof hocIsMisclassifiedLabDoctor === 'function' && hocIsMisclassifiedLabDoctor(found.data)) {
+      try {
+        var labQ = await db.collection('LabTechnicians').where('uid', '==', uid).limit(1).get();
+        if (!labQ.empty) {
+          found = { data: labQ.docs[0].data(), docId: labQ.docs[0].id };
+        } else if (found.data.email) {
+          var labQ2 = await db.collection('LabTechnicians').where('email', '==', found.data.email).limit(1).get();
+          if (!labQ2.empty) found = { data: labQ2.docs[0].data(), docId: labQ2.docs[0].id };
+        }
+      } catch (eLab) { console.warn('Lab profile redirect', eLab); }
+    }
+
     if ((found.data.role === 'Doctor' || found.data.role === 'Lab Technician') && typeof hocRoleCanAccessDashboard === 'function' && !hocRoleCanAccessDashboard(found.data)) {
       await auth.signOut();
       showErr('loginErr', found.data.status === 'rejected' ? 'Your registration was rejected by admin. Contact support.' : 'Account pending admin verification. You cannot access the dashboard yet.');
@@ -1757,6 +1769,9 @@ async function doLogin() {
     localStorage.setItem('hoc_user', JSON.stringify(found.data));
     if (found.data.role === 'Patient' && typeof hocSyncPatientSession === 'function') {
       hocSyncPatientSession(found.data, found.docId);
+    }
+    if (found.data.role === 'Lab Technician' && typeof hocSyncLabSession === 'function') {
+      hocSyncLabSession(found.data, found.docId);
     }
     window.location.href = url;
     
@@ -1826,6 +1841,10 @@ async function doRegister() {
     }
     if (!document.getElementById('rDocService').value) {
       showErr('regErr', 'Select your app service type.');
+      return;
+    }
+    if (document.getElementById('rDocService').value === 'Lab Tests') {
+      showErr('regErr', 'Lab Tests providers must register as Lab Technician, not Doctor.');
       return;
     }
     if (!document.getElementById('rDocFee').value) {

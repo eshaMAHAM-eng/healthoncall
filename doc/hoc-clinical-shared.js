@@ -508,6 +508,26 @@ window.hocGetDoctorChatRoomId = function (patientId, doctorId) {
   return 'pt_' + pid + '_doc_' + (did || 'unknown');
 };
 
+window.hocIsMisclassifiedLabDoctor = function (profile) {
+  if (!profile || profile.role !== 'Doctor') return false;
+  var svc = '';
+  if (typeof window.hocNormalizeBookingService === 'function') {
+    svc = window.hocNormalizeBookingService(profile);
+  } else {
+    svc = String(profile.service || profile.specialization || profile.department || '').trim();
+  }
+  if (svc === 'Lab Tests') return true;
+  var did = String(profile.doctorId || '').toUpperCase();
+  return did.indexOf('DOC-LB') === 0 || did.indexOf('-LB-') >= 0;
+};
+
+window.hocDoctorDirectoryScore = function (profile, docId) {
+  var did = String((profile && profile.doctorId) || docId || '');
+  if (/^DOC-[A-Z]{2}-\d+$/i.test(did)) return 100;
+  if (/^DOC-\d{10,}$/.test(did)) return 5;
+  return 50;
+};
+
 window.hocGetLabChatRoomId = function (patientId) {
   return 'lab_' + window.hocNormalizePatientChatKey(patientId);
 };
