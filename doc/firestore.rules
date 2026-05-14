@@ -24,10 +24,19 @@ service cloud.firestore {
       );
     }
 
+    function isLinkedStaffProfile() {
+      return hasUserIndex()
+        && userRole() == 'Staff'
+        && userIndexData().profileCollection == 'Staff'
+        && exists(/databases/$(database)/documents/Staff/$(userProfileId()))
+        && get(/databases/$(database)/documents/Staff/$(userProfileId())).data.uid == request.auth.uid;
+    }
+
     function isStaff() {
       return signedIn() && (
         request.auth.token.staff == true ||
-        exists(/databases/$(database)/documents/_hoc_staff/$(request.auth.uid))
+        exists(/databases/$(database)/documents/_hoc_staff/$(request.auth.uid)) ||
+        isLinkedStaffProfile()
       );
     }
 
@@ -145,8 +154,13 @@ service cloud.firestore {
     }
 
     function isAppointmentDoctor() {
-      return hasUserIndex() && userRole() == 'Doctor' && (
-        resource.data.doctorId == userProfileId()
+      return signedIn() && (
+        resource.data.doctorUid == request.auth.uid
+        || (hasUserIndex() && userRole() == 'Doctor' && (
+          resource.data.doctorId == userProfileId()
+          || (exists(/databases/$(database)/documents/Doctors/$(userProfileId()))
+            && get(/databases/$(database)/documents/Doctors/$(userProfileId())).data.doctorId == resource.data.doctorId)
+        ))
         || (resource.data.doctorId != null
           && exists(/databases/$(database)/documents/Doctors/$(resource.data.doctorId))
           && get(/databases/$(database)/documents/Doctors/$(resource.data.doctorId)).data.uid == request.auth.uid)

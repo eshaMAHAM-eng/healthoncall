@@ -89,6 +89,17 @@
                         window.HOC_DOCTOR_SERVICE = d.service || (typeof hocMapToService === 'function' ? hocMapToService(d.specialization || d.department) : '');
                         localStorage.setItem('hoc_doctor_id', window.HOC_DOCTOR_ID);
                         localStorage.setItem('hoc_user', JSON.stringify(d));
+                        if (typeof window.hocSaveUserIndexShared === 'function') {
+                            window.hocSaveUserIndexShared(window._hocDb, user.uid, {
+                                role: 'Doctor',
+                                profileCollection: 'Doctors',
+                                profileId: doc.id,
+                                email: d.email || user.email || ''
+                            }).catch(function (eUi) { console.warn('Doctor UserIndex sync', eUi); });
+                        }
+                        if (typeof window.hocEnsureFirestoreAuthReady === 'function') {
+                            window.hocEnsureFirestoreAuthReady(window._hocDb, user).catch(function (eAr) { console.warn('Doctor Firestore auth ready', eAr); });
+                        }
                         if (typeof hocApplyDoctorSidebarProfile === 'function') hocApplyDoctorSidebarProfile(d);
                         if (typeof HOCAppointmentReminders !== 'undefined') {
                             HOCAppointmentReminders.runForDoctor(window._hocDb, window.HOC_DOCTOR_ID, user.uid);
@@ -106,7 +117,16 @@
         function startDoctorApptListener() {
             if (!window._hocDb || !window.HOC_DOCTOR_ID) return;
             if (_docApptUnsub) { try { _docApptUnsub(); } catch (e) {} _docApptUnsub = null; }
-            _docApptUnsub = window._hocDb.collection('Appointments').onSnapshot(function (snap) {
+            var profile = {};
+            try { profile = JSON.parse(localStorage.getItem('hoc_user') || '{}'); } catch (e0) { profile = {}; }
+            var ids = [];
+            function addId(v) {
+                v = String(v || '').trim();
+                if (v && ids.indexOf(v) < 0) ids.push(v);
+            }
+            addId(window.HOC_DOCTOR_ID);
+            addId(profile.doctorId);
+            function mergeSnap(snap) {
                 var apts = [];
                 snap.forEach(function (d) {
                     var data = d.data();
@@ -114,9 +134,15 @@
                     apts.push(data);
                 });
                 hocPushDoctorApts(apts);
-            }, function (err) {
-                console.warn('Doctor Firestore listener error:', err);
-            });
+            }
+            function onErr(err) { console.warn('Doctor Firestore listener error:', err); }
+            if (ids.length === 1) {
+                _docApptUnsub = window._hocDb.collection('Appointments').where('doctorId', '==', ids[0]).onSnapshot(mergeSnap, onErr);
+            } else if (ids.length > 1) {
+                _docApptUnsub = window._hocDb.collection('Appointments').where('doctorId', 'in', ids.slice(0, 10)).onSnapshot(mergeSnap, onErr);
+            } else {
+                _docApptUnsub = window._hocDb.collection('Appointments').onSnapshot(mergeSnap, onErr);
+            }
         }
     })();
     </script>
@@ -2454,6 +2480,7 @@
 
     // Real-time update listener for Firebase
     window.addEventListener('storage-updated', function() {
+        patients = loadPatientsFromStorage();
         renderTable();
     });
 
