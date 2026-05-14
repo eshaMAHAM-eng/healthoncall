@@ -1,0 +1,232 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ── HealthOnCall data model (FYP) ───────────────────
+       UserIndex/{authUid}  → login pointer ONLY (role, profileCollection, profileId, email)
+       Patients/{id}        → full patient profile
+       Doctors/{id}         → full doctor profile
+       Staff/{id}           → staff / admin profile
+       LabTechnicians/{id}  → lab tech profile
+       Appointments/{id}    → bookings (auto-created on first book)
+       Notifications/{id}   → alerts only (not profiles)
+       Feedback, Chats, MedicalReports → separate features
+       Do NOT store profile fields in UserIndex.
+    ──────────────────────────────────────────────────── */
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userIndexKeysOk() {
+      return request.resource.data.keys().hasOnly(
+        ['role', 'profileCollection', 'profileId', 'email', 'updatedAt']
+      );
+    }
+
+    function isStaff() {
+      return signedIn() && (
+        request.auth.token.staff == true ||
+        exists(/databases/$(database)/documents/_hoc_staff/$(request.auth.uid))
+      );
+    }
+
+    function ownsProfile() {
+      return signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    function createsOwnProfile() {
+      return signedIn() && request.resource.data.uid == request.auth.uid;
+    }
+
+    /** Login repair: user may claim orphan profile by setting uid to own auth uid */
+    function claimsOwnProfile() {
+      return signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && (!('uid' in resource.data)
+          || resource.data.uid == null
+          || resource.data.uid == ''
+          || resource.data.uid == request.auth.uid);
+    }
+
+    /* Fast login lookup: /UserIndex/{authUid} → pointer to profile doc only */
+    match /UserIndex/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && userIndexKeysOk();
+      allow delete: if isStaff();
+    }
+
+    /* Legacy / unused — block app writes */
+    match /users/{id} {
+      allow read, write: if false;
+    }
+
+    /* Staff roster marker — write only via Firebase Console / Admin SDK */
+    match /_hoc_staff/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /Patients/{id} {
+      /* FYP: any signed-in user can read (staff dashboard + login uid lookup) */
+      allow read: if signedIn();
+      allow create: if createsOwnProfile() || isStaff();
+      allow update, delete: if signedIn() && (
+        isStaff()
+        || resource.data.uid == request.auth.uid
+        || claimsOwnProfile()
+      );
+    }
+
+    match /Doctors/{id} {
+      allow read: if signedIn();
+      allow create: if createsOwnProfile() || isStaff();
+      allow update, delete: if signedIn() && (
+        isStaff()
+        || resource.data.uid == request.auth.uid
+        || claimsOwnProfile()
+      );
+    }
+
+    match /LabTechnicians/{id} {
+      allow read: if signedIn();
+      allow create: if createsOwnProfile() || isStaff();
+      allow update, delete: if signedIn() && (
+        isStaff()
+        || resource.data.uid == request.auth.uid
+        || claimsOwnProfile()
+      );
+    }
+
+    match /Staff/{id} {
+      /* FYP: signed-in read for login profile lookup + admin portal */
+      allow read: if signedIn();
+      allow create: if createsOwnProfile() || isStaff();
+      allow update, delete: if signedIn() && (
+        isStaff()
+        || resource.data.uid == request.auth.uid
+        || claimsOwnProfile()
+      );
+    }
+
+    function hasUserIndex() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/UserIndex/$(request.auth.uid));
+    }
+
+    function userIndexData() {
+      return get(/databases/$(database)/documents/UserIndex/$(request.auth.uid)).data;
+    }
+
+    function userProfileId() {
+      return hasUserIndex() ? userIndexData().profileId : '';
+    }
+
+    function userRole() {
+      return hasUserIndex() ? userIndexData().role : '';
+    }
+
+    function isLabTech() {
+      return hasUserIndex() && userRole() == 'Lab Technician';
+    }
+
+    function isAppointmentPatient() {
+      return signedIn() && (
+        resource.data.patientUid == request.auth.uid
+        || (hasUserIndex() && resource.data.patientId == userProfileId())
+      );
+    }
+
+    function createsAsPatient() {
+      return signedIn()
+        && request.resource.data.patientUid == request.auth.uid;
+    }
+
+    function isAppointmentDoctor() {
+      return hasUserIndex() && userRole() == 'Doctor' && (
+        resource.data.doctorId == userProfileId()
+        || (resource.data.doctorId != null
+          && exists(/databases/$(database)/documents/Doctors/$(resource.data.doctorId))
+          && get(/databases/$(database)/documents/Doctors/$(resource.data.doctorId)).data.uid == request.auth.uid)
+      );
+    }
+
+    function canReadAppointment() {
+      return isStaff() || isAppointmentPatient() || isAppointmentDoctor() || isLabTech();
+    }
+
+    function canWriteAppointment() {
+      return isStaff() || isAppointmentPatient() || isAppointmentDoctor() || isLabTech();
+    }
+
+    function canAccessChatRoom(roomId) {
+      return isStaff()
+        || isLabTech()
+        || (hasUserIndex() && roomId == 'lab_' + userProfileId())
+        || (hasUserIndex() && roomId.matches('lab_' + userProfileId() + '.*'))
+        || (hasUserIndex() && roomId.matches('pt_' + userProfileId() + '_doc_.*'))
+        || (hasUserIndex() && userRole() == 'Doctor' && roomId.matches('pt_.*_doc_' + userProfileId()));
+    }
+
+    function patientSharesRecords(patientId) {
+      return !exists(/databases/$(database)/documents/Patients/$(patientId))
+        || get(/databases/$(database)/documents/Patients/$(patientId)).data.shareRecords != false;
+    }
+
+    match /Appointments/{id} {
+      allow read: if canReadAppointment();
+      allow create: if createsAsPatient() || isStaff();
+      allow update, delete: if canWriteAppointment();
+    }
+
+    match /MedicalReports/{id} {
+      allow create: if signedIn()
+        && request.resource.data.patientUid == request.auth.uid;
+      allow read: if signedIn() && (
+        isStaff()
+        || resource.data.patientUid == request.auth.uid
+        || patientSharesRecords(resource.data.patientId)
+      );
+      allow delete: if signedIn() && (
+        resource.data.patientUid == request.auth.uid || isStaff()
+      );
+      allow update: if isStaff();
+    }
+
+    match /Feedback/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if isStaff();
+    }
+
+    match /StaffNotes/{id} {
+      allow read, write: if isStaff();
+    }
+
+    /* Same idea as doc/FIRESTORE-CHATS-EASY.txt — tighten per-room for production */
+    match /Chats/{roomId} {
+      allow read, write: if canAccessChatRoom(roomId);
+      match /Messages/{msgId} {
+        allow read, write: if canAccessChatRoom(roomId);
+      }
+    }
+
+    match /Notifications/{id} {
+      allow read: if signedIn() && (
+        isStaff() ||
+        resource.data.targetUid == request.auth.uid ||
+        (resource.data.targetRole == 'staff' && isStaff()) ||
+        (resource.data.targetRole == 'lab' && signedIn())
+      );
+      allow create: if signedIn();
+      allow update: if signedIn() && (
+        request.auth.uid == resource.data.targetUid ||
+        (resource.data.targetRole == 'staff' && isStaff()) ||
+        (resource.data.targetRole == 'lab' && signedIn())
+      );
+      allow delete: if isStaff();
+    }
+  }
+}

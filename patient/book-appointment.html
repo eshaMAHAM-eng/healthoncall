@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book Appointment | HealthOnCall</title>
+<script src="../doc/hoc-firebase-config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="../doc/hoc-theme-init.js"></script>
+<script src="../doc/hoc-clinical-shared.js"></script>
+<script src="../doc/hoc-validation.js"></script>
+<script src="../doc/hoc-booking-doctors-seed.js"></script>
+<script src="../doc/hoc-feedback-ratings.js"></script>
+<script src="../doc/hoc-notifications.js"></script>
+<script src="hoc-patient-common.js"></script>
+<link rel="stylesheet" href="../doc/hoc-global-theme.css">
+
+<style>
+:root{
+  --sidebar-bg:#0b1120;--sidebar-hover:rgba(16,185,129,.08);--sidebar-active-bg:rgba(16,185,129,.15);
+  --accent:#10b981;--accent-glow:rgba(16,185,129,.25);--accent-soft:#d1fae5;--accent-dark:#059669;
+  --gold:#f59e0b;--gold-soft:#fef3c7;--rose:#f43f5e;--rose-soft:#ffe4e6;
+  --sky:#0ea5e9;--sky-soft:#e0f2fe;--sky-dark:#0284c7;--indigo:#6366f1;--indigo-soft:#e0e7ff;
+  --violet:#8b5cf6;--violet-soft:#ede9fe;--slate:#64748b;--slate-soft:#f1f5f9;
+  --bg:#f0f4f8;--bg-gradient:linear-gradient(135deg,#f0f4f8 0%,#e8eef5 50%,#f0f4f8 100%);
+  --card:#fff;--card-border:rgba(0,0,0,.04);
+  --text:#0f172a;--text-secondary:#475569;--text-muted:#94a3b8;--border:#e2e8f0;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.04);--shadow-md:0 8px 30px rgba(0,0,0,.06);--shadow-lg:0 20px 60px rgba(0,0,0,.1);
+  --radius:18px;--radius-lg:24px;--tr:all .35s cubic-bezier(.4,0,.2,1);
+  --sidebar-width:280px;
+}
+body.dark-mode{
+  --bg:#020617;--bg-gradient:linear-gradient(135deg,#020617 0%,#0a0f1e 50%,#020617 100%);
+  --card:#0f172a;--card-border:rgba(255,255,255,.06);
+  --text:#f1f5f9;--text-secondary:#cbd5e1;--text-muted:#64748b;--border:#1e293b;
+  --slate-soft:#1e293b;--shadow-md:0 8px 30px rgba(0,0,0,.35);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg-gradient);color:var(--text);min-height:100vh;display:flex;overflow-x:hidden}
+h1,h2,h3,h4,h5,h6{font-family:'Sora',sans-serif}
+
+/* ===== BG BLOBS (match dashboard) ===== */
+.bg-blobs{position:fixed;top:0;left:var(--sidebar-width);right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;transition:left .35s cubic-bezier(.4,0,.2,1)}
+.bg-blobs .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.22;animation:blobFloat 20s ease-in-out infinite}
+body.dark-mode .bg-blobs .blob{opacity:.08}
+.blob-1{width:350px;height:350px;background:#10b981;top:-80px;right:5%}
+.blob-2{width:280px;height:280px;background:#0ea5e9;bottom:15%;left:8%;animation-delay:-7s}
+.blob-3{width:220px;height:220px;background:#f59e0b;top:50%;right:25%;animation-delay:-14s}
+@keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(30px,-40px) scale(1.1)}50%{transform:translate(-20px,20px) scale(.95)}75%{transform:translate(15px,35px) scale(1.05)}}
+
+/* ===== SIDEBAR (match Patient Dashboard) ===== */
+.sidebar{width:var(--sidebar-width);height:100vh;position:fixed;left:0;top:0;background:var(--sidebar-bg);z-index:1000;display:flex;flex-direction:column;overflow:hidden;transition:transform .35s cubic-bezier(.4,0,.2,1)}
+.sidebar::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,185,129,.06) 0%,transparent 40%);pointer-events:none}
+.sidebar-brand{padding:28px 24px 24px;position:relative;z-index:1}
+.sidebar-brand .logo-icon{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;margin-bottom:14px;box-shadow:0 8px 24px rgba(16,185,129,.3)}
+.sidebar-brand h2{font-size:20px;font-weight:800;color:#f1f5f9;letter-spacing:-.4px}
+.sidebar-brand h2 span{color:var(--accent)}
+.sidebar-brand p{font-size:10px;color:#64748b;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;margin-top:2px}
+.sidebar-nav{flex:1;padding:0 14px;display:flex;flex-direction:column;gap:3px;overflow-y:auto;-webkit-overflow-scrolling:touch;position:relative;z-index:1}
+.sidebar-nav::-webkit-scrollbar{width:3px}
+.sidebar-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px}
+.nav-label{font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.5px;padding:18px 14px 8px}
+.sidebar-nav a{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;text-decoration:none;color:#94a3b8;font-weight:500;font-size:14px;transition:var(--tr);position:relative}
+.sidebar-nav a i{width:20px;text-align:center;font-size:15px;transition:var(--tr)}
+.sidebar-nav a:hover{color:#e2e8f0;background:rgba(255,255,255,.04)}
+.sidebar-nav a:hover i{color:var(--accent)}
+.sidebar-nav a.active{color:#f1f5f9;background:rgba(16,185,129,.1);font-weight:600}
+.sidebar-nav a.active i{color:var(--accent)}
+.sidebar-nav a.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:22px;background:var(--accent);border-radius:0 4px 4px 0}
+.sidebar-nav a.nav-danger:hover{color:#f43f5e;background:rgba(244,63,94,.08)}
+.sidebar-nav a.nav-danger:hover i{color:#f43f5e}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.05);position:relative;z-index:1}
+.sidebar-footer .user-card{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,.03);transition:var(--tr)}
+.sidebar-footer .user-card:hover{background:rgba(255,255,255,.06)}
+.user-avatar{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--sky),var(--indigo));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;overflow:hidden;flex-shrink:0}
+.user-avatar img{width:100%;height:100%;object-fit:cover}
+.user-info .user-name{color:#e2e8f0;font-weight:600;font-size:13px}
+.user-info .user-role{color:#64748b;font-size:11px;margin-top:1px}
+
+/* ===== SIDEBAR OVERLAY ===== */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);z-index:999;opacity:0;transition:opacity .3s ease}
+.sidebar-overlay.active{display:block;opacity:1}
+
+/* ===== MOBILE TOP BAR ===== */
+.mobile-topbar{display:none;position:fixed;top:0;left:0;right:0;z-index:900;background:var(--card);border-bottom:1px solid var(--border);padding:12px 16px;align-items:center;gap:12px;backdrop-filter:blur(12px)}
+.hamburger{width:42px;height:42px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);font-size:18px;transition:var(--tr);flex-shrink:0}
+.hamburger:hover{border-color:var(--accent);color:var(--accent)}
+.m-logo{display:flex;align-items:center;gap:10px}
+.m-logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:white;flex-shrink:0}
+.m-logo-text{font-family:'Sora',sans-serif;font-weight:800;font-size:17px;color:var(--text)}
+.m-logo-text span{color:var(--accent)}
+.m-notif{margin-left:auto;width:42px;height:42px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);font-size:16px;transition:var(--tr);flex-shrink:0}
+.m-notif:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ===== MAIN ===== */
+.main{margin-left:var(--sidebar-width);flex:1;padding:28px 32px;position:relative;z-index:1;min-height:100vh;transition:margin-left .35s cubic-bezier(.4,0,.2,1)}
+
+/* ===== STEPS BAR ===== */
+.steps-bar{display:flex;align-items:center;gap:0;margin-bottom:28px;background:var(--card);border-radius:var(--radius);padding:6px;border:1px solid var(--card-border);box-shadow:var(--shadow-sm)}
+.step-item{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:14px;font-size:13px;font-weight:600;color:var(--text-muted);transition:var(--tr);cursor:pointer}
+.step-item.active{background:var(--accent);color:white;box-shadow:0 4px 14px rgba(16,185,129,.3)}
+.step-item.done{color:var(--accent-dark);background:var(--accent-soft)}
+.step-item .step-num{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+.step-item.active .step-num{background:rgba(255,255,255,.25)}
+.step-item.done .step-num{background:var(--accent);color:white}
+
+/* ===== STEP PANELS ===== */
+.step-panel{display:none}
+.step-panel.active{display:block;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== SERVICE CARDS ===== */
+.services-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+.svc-card{background:var(--card);border-radius:var(--radius);padding:28px 20px;border:2px solid var(--card-border);box-shadow:var(--shadow-sm);cursor:pointer;transition:var(--tr);text-align:center;position:relative;overflow:hidden}
+.svc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;border-radius:var(--radius) var(--radius) 0 0;opacity:0;transition:var(--tr)}
+.svc-card:hover{transform:translateY(-5px);box-shadow:var(--shadow-lg)}
+.svc-card:hover::before{opacity:1}
+.svc-card.selected{border-color:var(--accent);box-shadow:0 8px 30px rgba(16,185,129,.2)}
+.svc-card.selected::before{opacity:1;background:var(--accent)}
+.svc-card .svc-icon{width:60px;height:60px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 16px;transition:var(--tr)}
+.svc-card:hover .svc-icon,.svc-card.selected .svc-icon{transform:scale(1.1) rotate(-5deg)}
+.svc-card h3{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px}
+.svc-card p{font-size:12px;color:var(--text-muted);line-height:1.5}
+.svc-card .svc-check{position:absolute;top:14px;right:14px;width:24px;height:24px;border-radius:50%;background:var(--accent);color:white;display:none;align-items:center;justify-content:center;font-size:11px;box-shadow:0 2px 8px rgba(16,185,129,.3)}
+.svc-card.selected .svc-check{display:flex}
+.svc-card .svc-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;margin-top:8px;text-transform:uppercase;letter-spacing:.5px}
+
+/* ===== MAP ===== */
+.map-section{background:var(--card);border-radius:var(--radius);border:1px solid var(--card-border);box-shadow:var(--shadow-sm);overflow:hidden;margin-bottom:24px}
+.map-header{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.map-header h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+#map{height:320px;width:100%}
+.map-status{padding:12px 22px;font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:8px;background:var(--slate-soft);border-top:1px solid var(--border)}
+.map-status i{color:var(--accent)}
+body.dark-mode .map-status{background:#0f172a}
+.success-map-wrap{margin-top:20px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--card-border);min-height:220px}
+.success-map-wrap iframe{width:100%;height:220px;border:0;display:block}
+
+/* ===== AI SUGGESTION ===== */
+.ai-suggest{background:linear-gradient(135deg,#0b1120,#1e293b);border-radius:var(--radius);padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;gap:18px;border:1px solid rgba(16,185,129,.15)}
+.ai-suggest .ai-icon{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:20px;color:white;flex-shrink:0;box-shadow:0 6px 18px rgba(16,185,129,.3)}
+.ai-suggest .ai-text{flex:1}
+.ai-suggest .ai-text .ai-lbl{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.ai-suggest .ai-text .ai-name{font-size:16px;font-weight:800;color:#f1f5f9}
+.ai-suggest .ai-text .ai-meta{font-size:12px;color:#64748b;margin-top:3px}
+.ai-suggest .ai-btn{padding:10px 20px;background:var(--accent);color:white;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:var(--tr);white-space:nowrap}
+.ai-suggest .ai-btn:hover{background:var(--accent-dark);transform:translateY(-1px)}
+
+/* ===== DOCTOR CARDS ===== */
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.doc-card{background:var(--card);border-radius:var(--radius);border:2px solid var(--card-border);box-shadow:var(--shadow-sm);overflow:hidden;transition:var(--tr);cursor:pointer}
+.doc-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:rgba(16,185,129,.2)}
+.doc-card.selected{border-color:var(--accent);box-shadow:0 8px 30px rgba(16,185,129,.2)}
+.doc-card-top{padding:18px 18px 0;display:flex;gap:14px;align-items:flex-start}
+.doc-av{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:white;font-family:'Sora',sans-serif;flex-shrink:0}
+.doc-info .dn{font-size:15px;font-weight:800;color:var(--text)}
+.doc-info .ds{font-size:12px;font-weight:700;color:var(--accent-dark);margin-top:2px}
+.doc-info .dm{font-size:11px;color:var(--text-muted);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap}
+.doc-info .dm span{display:inline-flex;align-items:center;gap:3px}
+.doc-badge{margin-left:auto;flex-shrink:0}
+.badge-avail{background:var(--accent-soft);color:#065f46;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:4px}
+.badge-avail::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.5)}}
+.doc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 18px}
+.doc-stat{background:var(--slate-soft);border-radius:10px;padding:8px;text-align:center}
+.doc-stat .sv{font-family:'Sora';font-size:13px;font-weight:800;color:var(--text)}
+.doc-stat .sl{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+.doc-nearest{background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(14,165,233,.06));border-top:1px solid rgba(16,185,129,.1);padding:8px 18px;font-size:11px;font-weight:700;color:var(--accent-dark);display:flex;align-items:center;gap:6px}
+.doc-actions{padding:0 18px 18px;display:flex;gap:8px}
+.btn-select{flex:1;padding:10px;background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:white;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:var(--tr);display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-select:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(16,185,129,.35)}
+.btn-msg{padding:10px 14px;background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;border-radius:12px;cursor:pointer;transition:var(--tr);font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif}
+.btn-msg:hover{transform:translateY(-1px)}
+
+/* ===== BOOKING FORM ===== */
+.booking-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--card-border);box-shadow:var(--shadow-sm);padding:28px;margin-bottom:20px}
+.booking-card h3{font-size:16px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px;color:var(--text)}
+.selected-doc-banner{background:linear-gradient(135deg,var(--accent-soft),var(--sky-soft));border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px;border:1px solid rgba(16,185,129,.15);flex-wrap:wrap}
+.sdb-av{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:white;flex-shrink:0}
+.sdb-info .sdb-name{font-size:15px;font-weight:800;color:var(--text)}
+.sdb-info .sdb-spec{font-size:12px;color:var(--accent-dark);font-weight:600;margin-top:2px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.form-group{margin-bottom:14px}
+.form-group.full{grid-column:1/-1}
+.form-group label{display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:12px 15px;border:1.5px solid var(--border);border-radius:12px;background:var(--slate-soft);font-family:'DM Sans',sans-serif;font-size:13.5px;color:var(--text);outline:none;transition:var(--tr);resize:vertical}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--accent);background:var(--card);box-shadow:0 0 0 4px var(--accent-glow)}
+.time-slots{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.time-slot{padding:8px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:var(--text-secondary);cursor:pointer;transition:var(--tr)}
+.time-slot:hover,.time-slot.active{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-dark)}
+.doc-card .btn-select,.doc-card .btn-msg{position:relative;z-index:2}
+.form-group textarea{height:80px}
+.form-group.error input,.form-group.error textarea{border-color:var(--rose);box-shadow:0 0 0 4px rgba(244,63,94,.15)}
+.field-error{font-size:11px;color:var(--rose);margin-top:4px;font-weight:600;display:none}
+.form-group.error .field-error{display:block}
+.reason-hint{font-size:11px;color:var(--text-muted);line-height:1.45;margin:6px 0 10px}
+.symptom-chips-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;max-height:140px;overflow-y:auto;padding:2px 0}
+.symptom-chip{font-size:11px;padding:6px 10px;border-radius:999px;border:1.5px solid var(--border);background:var(--slate-soft);color:var(--text-secondary);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;transition:var(--tr)}
+.symptom-chip:hover{border-color:var(--accent);color:var(--accent-dark);background:var(--accent-soft)}
+body.dark-mode .symptom-chip{background:#1e293b;border-color:var(--border)}
+.map-google-note{font-size:11px;color:var(--text-muted);margin-top:4px;display:flex;align-items:center;gap:6px}
+.visit-toggle{display:flex;border-radius:12px;overflow:hidden;border:1.5px solid var(--border);margin-bottom:16px}
+.visit-opt{flex:1;padding:12px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;color:var(--text-muted);transition:var(--tr);display:flex;align-items:center;justify-content:center;gap:7px;background:var(--slate-soft)}
+.visit-opt.active-online{background:var(--accent-soft);color:var(--accent-dark)}
+.visit-opt.active-physical{background:var(--sky-soft);color:var(--sky-dark)}
+.addr-field{display:none;margin-bottom:14px}
+.addr-field.show{display:block}
+.cash-note{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-left:4px solid var(--gold);border-radius:0 12px 12px 0;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#92400e;font-weight:600;display:flex;align-items:center;gap:10px}
+.btn-confirm{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:white;border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:var(--tr);display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(16,185,129,.3)}
+.btn-confirm:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(16,185,129,.4)}
+.btn-confirm.saving{pointer-events:none;opacity:.85}
+.spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite}
+.btn-confirm.saving .spinner{display:inline-block}
+.btn-confirm.saving .btn-txt{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===== SUCCESS ===== */
+.success-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--card-border);box-shadow:var(--shadow-lg);padding:48px 32px;text-align:center;max-width:500px;margin:0 auto}
+.success-icon{width:80px;height:80px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--accent);margin:0 auto 20px;animation:popIn .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.success-card h2{font-size:24px;font-weight:800;color:var(--text);margin-bottom:8px}
+.success-card p{font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:24px}
+.apt-id-badge{background:var(--accent-soft);color:var(--accent-dark);padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700;display:inline-block;margin-bottom:24px;font-family:'Sora',sans-serif}
+.flow-steps{display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:28px;flex-wrap:wrap}
+.flow-step{display:flex;flex-direction:column;align-items:center;gap:4px}
+.flow-step .fs-dot{width:32px;height:32px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:12px}
+.flow-step .fs-lbl{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.flow-arrow{color:var(--border);font-size:12px}
+.btn-home{padding:12px 28px;background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:white;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:var(--tr)}
+.btn-home:hover{transform:translateY(-1px)}
+
+/* ===== NAV BUTTONS ===== */
+.nav-btns{display:flex;gap:12px;margin-top:20px}
+.btn-back{padding:12px 24px;background:var(--slate-soft);color:var(--text-secondary);border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:var(--tr);display:flex;align-items:center;gap:6px}
+.btn-back:hover{background:var(--border)}
+.btn-next{padding:12px 28px;background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:white;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:var(--tr);display:flex;align-items:center;gap:6px;box-shadow:0 4px 14px rgba(16,185,129,.25)}
+.btn-next:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(16,185,129,.35)}
+
+/* ===== TOAST ===== */
+.toast-container{position:fixed;top:24px;right:24px;z-index:5000;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.toast{background:var(--card);border-radius:14px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.12);border-left:4px solid var(--accent);font-size:14px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);min-width:300px;pointer-events:auto}
+.toast.show{transform:translateX(0)}
+
+/* ===== EMPTY ===== */
+.empty{text-align:center;padding:60px 20px;color:var(--text-muted)}
+.empty i{font-size:48px;opacity:.2;display:block;margin-bottom:14px}
+.empty p{font-size:15px;font-weight:500}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:1024px){
+  .services-grid{grid-template-columns:repeat(2,1fr)}
+  .main{padding:24px 20px}
+}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay.active{display:block;opacity:1}
+  .mobile-topbar{display:flex!important}
+  .bg-blobs{left:0}
+  .main{margin-left:0;padding:76px 16px 16px}
+  .doc-grid{grid-template-columns:1fr}
+  .services-grid{grid-template-columns:1fr 1fr}
+  .form-grid{grid-template-columns:1fr}
+  .steps-bar{flex-wrap:wrap;gap:4px}
+  .step-item{flex:1 1 calc(50% - 4px);font-size:12px;padding:10px 12px;gap:6px}
+  .step-item .step-num{width:20px;height:20px;font-size:10px}
+  .map-header{flex-direction:column;align-items:flex-start}
+  .ai-suggest{flex-direction:column;text-align:center}
+  .ai-suggest .ai-btn{width:100%}
+  .selected-doc-banner{flex-direction:column;text-align:center}
+  .toast-container{right:8px;left:8px;top:8px}
+  .toast{min-width:0;font-size:12px;padding:10px 14px}
+}
+
+@media(max-width:480px){
+  .services-grid{grid-template-columns:1fr}
+  .step-item{flex:1 1 100%}
+  .booking-card{padding:20px}
+  .doc-card-top{flex-direction:column;align-items:center;text-align:center}
+  .doc-badge{margin-left:0;margin-top:8px}
+  .doc-info .dm{justify-content:center}
+  .doc-stats{grid-template-columns:repeat(3,1fr)}
+}
+
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+<link rel="stylesheet" href="../doc/SIDEBAR.CSS">
+<link rel="stylesheet" href="../doc/shared sidebar footer.css">
+<script src="../doc/hoc-sidebar.js" defer></script>
+</head>
+<body>
+<script>try{HOC_applyThemeFromStorage();}catch(e){}</script>
+
+<div class="bg-blobs"><div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div></div>
+
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay" id="hocSbOverlay"></div>
+
+<!-- Mobile Top Bar -->
+<div class="mobile-topbar" id="mobTopbar">
+  <button class="hamburger" id="hocHamburger" aria-label="Open menu"><i class="fas fa-bars"></i></button>
+  <div class="m-logo">
+    <div class="m-logo-icon"><i class="fas fa-heartbeat"></i></div>
+    <span class="m-logo-text">Health<span>OnCall</span></span>
+  </div>
+  <button class="m-notif" aria-label="Notifications"><i class="fas fa-bell"></i></button>
+</div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="hocSidebar">
+  <div class="sidebar-brand">
+    <div class="logo-icon"><i class="fas fa-heartbeat"></i></div>
+    <h2>Health<span>OnCall</span></h2>
+    <p>Patient Portal</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">Menu</div>
+    <a href="Patient Dashboard Home Page p1.html"><i class="fas fa-th-large"></i> Home</a>
+    <a href="book-appointment.html" class="active"><i class="fas fa-calendar-plus"></i> Book Appointment</a>
+    <a href="Patient Dashboard Home Page p1.html#messages" onclick="try{setTimeout(function(){var m=document.getElementById('messages');if(m)m.scrollIntoView({behavior:'smooth'});},200);}catch(e){}"><i class="fas fa-comments"></i> Messages</a>
+    <a href="assistant 1.html"><i class="fas fa-robot"></i> AI Assistant</a>
+    <a href="feedback 1.html"><i class="fas fa-star"></i> Feedback</a>
+    <div class="nav-label">Account</div>
+    <a href="setting 1.html"><i class="fas fa-cog"></i> Settings</a>
+    <a href="logout 1.html" class="nav-danger"><i class="fas fa-sign-out-alt"></i> Logout</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="user-avatar"><img id="sidebarAvatarImg" src="https://ui-avatars.com/api/?name=Esha+Maham&background=0ea5e9&color=fff&bold=true&size=80" alt=""></div>
+      <div class="user-info">
+        <div class="user-name" id="sidebarName">Esha Maham</div>
+        <div class="user-role">Patient</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+  <div style="margin-bottom:24px;">
+    <h1 style="font-size:26px;font-weight:800;letter-spacing:-.6px;color:var(--text);">Book <span style="color:var(--accent-dark);">Appointment</span></h1>
+    <div style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:13px;margin-top:6px;"><i class="fas fa-calendar-alt" style="color:var(--accent);"></i><span id="todayDate"></span></div>
+  </div>
+
+  <!-- Steps Bar -->
+  <div class="steps-bar">
+    <div class="step-item active" id="step-btn-1" onclick="goStep(1)">
+      <span class="step-num">1</span> Choose Service
+    </div>
+    <div class="step-item" id="step-btn-2" onclick="goStep(2)">
+      <span class="step-num">2</span> Find Doctor
+    </div>
+    <div class="step-item" id="step-btn-3" onclick="goStep(3)">
+      <span class="step-num">3</span> Book Appointment
+    </div>
+  </div>
+
+  <!-- STEP 1: Services -->
+  <div class="step-panel active" id="panel-1">
+    <div style="margin-bottom:20px;">
+      <h3 style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px;">What service do you need?</h3>
+      <p style="font-size:13px;color:var(--text-muted);">Select a medical service — we'll find the best available specialist near you and suggest the nearest one based on your location.</p>
+    </div>
+    <div class="services-grid" id="servicesGrid"></div>
+    <div class="nav-btns" style="justify-content:flex-end;">
+      <button class="btn-next" onclick="nextStep(1)">Next — Find Doctor <i class="fas fa-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Find Doctor + Map -->
+  <div class="step-panel" id="panel-2">
+    <!-- Map Section -->
+    <div class="map-section">
+      <div class="map-header">
+        <div>
+          <h3><i class="fas fa-map-marker-alt" style="color:var(--rose);"></i> Your Location & Nearby Doctors</h3>
+          <div class="map-google-note"><i class="fab fa-google" style="color:#4285F4;"></i> Map powered by Google Maps</div>
+        </div>
+        <button onclick="detectLocation()" style="padding:8px 16px;background:var(--accent-soft);color:var(--accent-dark);border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;"><i class="fas fa-crosshairs"></i> Detect My Location</button>
+      </div>
+      <div id="map"></div>
+      <div class="map-status" id="mapStatus"><i class="fas fa-info-circle"></i> <span id="mapStatusText">Google Maps — click Detect My Location to find nearest doctors</span></div>
+    </div>
+
+    <!-- AI Suggestion -->
+    <div class="ai-suggest" id="aiSuggest" style="display:none;">
+      <div class="ai-icon"><i class="fas fa-robot"></i></div>
+      <div class="ai-text">
+        <div class="ai-lbl"><i class="fas fa-bolt"></i> AI Recommended — Nearest & Best</div>
+        <div class="ai-name" id="aiDocName">—</div>
+        <div class="ai-meta" id="aiDocMeta">—</div>
+      </div>
+      <button class="ai-btn" onclick="selectAiDoc()"><i class="fas fa-check"></i> Select This Doctor</button>
+    </div>
+
+    <!-- Doctor List -->
+    <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <h3 style="font-size:16px;font-weight:700;color:var(--text);" id="docListTitle">Available Doctors</h3>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="docSearch" placeholder="Search doctor..." oninput="renderDoctors()" style="padding:9px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--card);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;width:200px;">
+      </div>
+    </div>
+    <div class="doc-grid" id="docGrid"></div>
+
+    <div class="nav-btns">
+      <button class="btn-back" onclick="goStep(1)"><i class="fas fa-arrow-left"></i> Back</button>
+      <button class="btn-next" onclick="nextStep(2)">Next — Book <i class="fas fa-arrow-right"></i></button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Booking Form -->
+  <div class="step-panel" id="panel-3">
+    <div class="booking-card">
+      <h3><i class="fas fa-calendar-check" style="color:var(--accent);"></i> Appointment Details</h3>
+
+      <!-- Selected Doctor Banner -->
+      <div class="selected-doc-banner" id="selectedDocBanner">
+        <div class="sdb-av" id="sdbAv">?</div>
+        <div class="sdb-info">
+          <div class="sdb-name" id="sdbName">No doctor selected</div>
+          <div class="sdb-spec" id="sdbSpec">—</div>
+        </div>
+        <div style="margin-left:auto;font-size:13px;font-weight:700;color:var(--accent-dark);" id="sdbFee">—</div>
+      </div>
+
+      <div class="cash-note"><i class="fas fa-info-circle"></i> Cash on delivery — Pay after service is completed</div>
+
+      <!-- Lab Test Special Note -->
+      <div id="labTestNote" style="display:none;background:linear-gradient(135deg,#e0f2fe,#f0f9ff);border-left:4px solid #0ea5e9;border-radius:0 12px 12px 0;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#075985;font-weight:600;align-items:center;gap:10px;">
+        <i class="fas fa-flask"></i>
+        <div><strong>Lab Test at Home:</strong> Our lab technician will visit your home to collect samples. Results will be available in your portal within 24-48 hours.</div>
+      </div>
+
+      <!-- Payment Method -->
+      <div style="margin-bottom:18px;" id="paymentSection">
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">Payment Method</label>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;" id="paymentGrid">
+          <div class="pay-opt selected" data-pay="Cash" onclick="selectPayment('Cash')" style="background:var(--accent-soft);border:2px solid var(--accent);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .3s;">
+            <i class="fas fa-money-bill-wave" style="font-size:18px;color:var(--accent);display:block;margin-bottom:6px;"></i>
+            <div style="font-size:11px;font-weight:700;color:var(--accent-dark);">Cash</div>
+            <div style="font-size:9px;color:var(--text-muted);">On Delivery</div>
+          </div>
+          <div class="pay-opt" data-pay="JazzCash" onclick="selectPayment('JazzCash')" style="background:var(--slate-soft);border:2px solid var(--card-border);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .3s;">
+            <i class="fas fa-mobile-alt" style="font-size:18px;color:#e11d48;display:block;margin-bottom:6px;"></i>
+            <div style="font-size:11px;font-weight:700;color:var(--text);">JazzCash</div>
+            <div style="font-size:9px;color:var(--text-muted);">Mobile Wallet</div>
+          </div>
+          <div class="pay-opt" data-pay="EasyPaisa" onclick="selectPayment('EasyPaisa')" style="background:var(--slate-soft);border:2px solid var(--card-border);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .3s;">
+            <i class="fas fa-wallet" style="font-size:18px;color:#059669;display:block;margin-bottom:6px;"></i>
+            <div style="font-size:11px;font-weight:700;color:var(--text);">EasyPaisa</div>
+            <div style="font-size:9px;color:var(--text-muted);">Mobile Wallet</div>
+          </div>
+          <div class="pay-opt" data-pay="Card" onclick="selectPayment('Card')" style="background:var(--slate-soft);border:2px solid var(--card-border);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .3s;">
+            <i class="fas fa-credit-card" style="font-size:18px;color:#6366f1;display:block;margin-bottom:6px;"></i>
+            <div style="font-size:11px;font-weight:700;color:var(--text);">Debit/Credit</div>
+            <div style="font-size:9px;color:var(--text-muted);">Visa / Mastercard</div>
+          </div>
+          <div class="pay-opt" data-pay="Insurance" onclick="selectPayment('Insurance')" style="background:var(--slate-soft);border:2px solid var(--card-border);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .3s;">
+            <i class="fas fa-shield-alt" style="font-size:18px;color:#0ea5e9;display:block;margin-bottom:6px;"></i>
+            <div style="font-size:11px;font-weight:700;color:var(--text);">Insurance</div>
+            <div style="font-size:9px;color:var(--text-muted);">Health Cover</div>
+          </div>
+          <div class="pay-opt" data-pay="BankTransfer" onclick="selectPayment('BankTransfer')" style="background:var(--slate-soft);border:2px solid var(--card-border);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .3s;">
+            <i class="fas fa-university" style="font-size:18px;color:#8b5cf6;display:block;margin-bottom:6px;"></i>
+            <div style="font-size:11px;font-weight:700;color:var(--text);">Bank Transfer</div>
+            <div style="font-size:9px;color:var(--text-muted);">IBFT / Online</div>
+          </div>
+        </div>
+        
+        <!-- Online payment fields UPDATED -->
+        <div id="onlinePayFields" style="display:none;margin-top:12px;background:var(--slate-soft);border-radius:12px;padding:14px; text-align:center;">
+          <p style="margin-bottom:10px; font-size:13px; color:var(--text-secondary);">Click the button below to pay securely</p>
+          <a id="payNowLink" href="#" target="_blank" style="display:inline-block; padding:12px 30px; background:#e11d48; color:white; text-decoration:none; border-radius:10px; font-weight:700; font-size:14px; box-shadow: 0 4px 10px rgba(225,29,72,0.3);">
+            <i class="fas fa-external-link-alt"></i> Pay via <span id="payMethodLabel">JazzCash</span>
+          </a>
+          <div class="form-group" style="margin-top:14px; margin-bottom:0; text-align:left;">
+            <label>Transaction ID (After Payment)</label>
+            <input type="text" id="payAccountInput" placeholder="e.g TXN-123456789">
+          </div>
+        </div>
+      </div>
+
+      <!-- Visit Type -->
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Visit Type</label>
+        <div class="visit-toggle">
+          <div class="visit-opt active-online" data-type="Online" onclick="setVisitType('Online')"><i class="fas fa-video"></i> Online</div>
+          <div class="visit-opt" data-type="Physical" onclick="setVisitType('Physical')"><i class="fas fa-hospital"></i> Physical Visit</div>
+        </div>
+      </div>
+
+      <div class="addr-field" id="addrField">
+        <div class="form-group" id="addrGroup">
+          <label>Your Address <span style="color:var(--rose);">*</span></label>
+          <input type="text" id="addrInput" placeholder="House #, Street, Area, City">
+          <div class="field-error">Address is required for physical visit</div>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group" id="dateGroup">
+          <label>Appointment Date <span style="color:var(--rose);">*</span></label>
+          <input type="date" id="dateInput">
+          <div class="field-error">Please select a date</div>
+        </div>
+        <div class="form-group" id="timeGroup">
+          <label>Preferred Time <span style="color:var(--rose);">*</span></label>
+          <input type="time" id="timeInput" min="08:00" max="20:00" step="900">
+          <div class="time-slots" id="timeSlots" aria-label="Quick time slots"></div>
+          <div class="field-error">Please select a time</div>
+        </div>
+      </div>
+
+      <div class="form-group" id="reasonGroup">
+        <label>Symptoms / Reason for Visit <span style="color:var(--rose);">*</span></label>
+        <p class="reason-hint" id="reasonHint">Select your service first, then pick a <strong>common reason</strong> from the chips or list — or type text that matches one of them so staff see the correct problem (random / wrong words are not accepted).</p>
+        <input type="text" id="reasonInput" list="hocSymptomDatalist" maxlength="500" autocomplete="off" placeholder="Type or pick from suggestions below…" style="min-height:44px;">
+        <datalist id="hocSymptomDatalist"></datalist>
+        <div class="symptom-chips-wrap" id="reasonChips" aria-label="Quick symptom choices"></div>
+        <div class="field-error">Choose a valid reason from your service list, or type the same wording as a suggestion.</div>
+      </div>
+
+      <div class="form-group">
+        <label>Additional Notes (Optional)</label>
+        <input type="text" id="notesInput" placeholder="Any special requirements or notes...">
+      </div>
+
+      <button class="btn-confirm" id="confirmBtn" onclick="confirmBooking()">
+        <span class="btn-txt"><i class="fas fa-paper-plane"></i> Confirm & Send to Staff</span>
+        <span class="spinner"></span>
+      </button>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn-back" onclick="goStep(2)"><i class="fas fa-arrow-left"></i> Back to Doctors</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: Success -->
+  <div class="step-panel" id="panel-4">
+    <div class="success-card">
+      <div class="success-icon"><i class="fas fa-check"></i></div>
+      <h2>Appointment Booked!</h2>
+      <p>Your appointment has been sent to our staff for review. You'll be notified once it's confirmed.</p>
+      <div style="margin-bottom:20px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">Your Appointment ID</div>
+        <div style="background:linear-gradient(135deg,var(--accent-soft),#e0f2fe);border:2px solid var(--accent);border-radius:16px;padding:16px 24px;display:inline-flex;align-items:center;gap:12px;cursor:pointer;" onclick="copyAptId()" title="Click to copy">
+          <i class="fas fa-hashtag" style="color:var(--accent);font-size:18px;"></i>
+          <span id="successAptId" style="font-family:'Sora',sans-serif;font-size:20px;font-weight:800;color:var(--accent-dark);letter-spacing:1px;">APT-XXXXXXXX</span>
+          <i class="fas fa-copy" style="color:var(--accent);font-size:14px;opacity:.7;"></i>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Save this ID — you'll need it to track your appointment</div>
+        <div id="successAptIdCopy" style="display:none;"></div>
+      </div>
+      <div class="flow-steps">
+        <div class="flow-step"><div class="fs-dot" style="background:var(--accent);"><i class="fas fa-check" style="font-size:10px;"></i></div><div class="fs-lbl">Booked</div></div>
+        <div class="flow-arrow"><i class="fas fa-chevron-right"></i></div>
+        <div class="flow-step"><div class="fs-dot" style="background:#e2e8f0;color:#94a3b8;"><i class="fas fa-user-check" style="font-size:10px;"></i></div><div class="fs-lbl">Staff</div></div>
+        <div class="flow-arrow"><i class="fas fa-chevron-right"></i></div>
+        <div class="flow-step"><div class="fs-dot" style="background:#e2e8f0;color:#94a3b8;"><i class="fas fa-stethoscope" style="font-size:10px;"></i></div><div class="fs-lbl">Doctor</div></div>
+        <div class="flow-arrow"><i class="fas fa-chevron-right"></i></div>
+        <div class="flow-step"><div class="fs-dot" style="background:#e2e8f0;color:#94a3b8;"><i class="fas fa-file-medical" style="font-size:10px;"></i></div><div class="fs-lbl">Done</div></div>
+      </div>
+      <div class="success-map-wrap" id="successMapWrap">
+        <iframe id="successMapFrame" title="Visit location" src="https://www.google.com/maps?q=31.4504,73.1350&z=13&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin:12px 0 8px;">Map shows the clinic area. Add a Google Maps API key in Settings for an interactive map when booking.</p>
+      <button class="btn-home" onclick="window.location.href='Patient Dashboard Home Page p1.html'"><i class="fas fa-home"></i> Go to Dashboard</button>
+    </div>
+  </div>
+</main>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ===== SIDEBAR TOGGLE — FIXED & WORKING =====
+var sidebar = document.getElementById('hocSidebar');
+var overlay = document.getElementById('hocSbOverlay');
+var hamburger = document.getElementById('hocHamburger');
+
+function hocToggleSidebar(){
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('active');
+  document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+}
+function hocCloseSidebar(){
+  sidebar.classList.remove('open');
+  overlay.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+hamburger.addEventListener('click', hocToggleSidebar);
+overlay.addEventListener('click', hocCloseSidebar);
+document.addEventListener('keydown', function(e){ if(e.key === 'Escape') hocCloseSidebar(); });
+window.addEventListener('resize', function(){ if(window.innerWidth > 768) hocCloseSidebar(); });
+
+// Firebase init
+(function(){
+  try {
+    var cfg=window.HOC_FIREBASE_CONFIG||{};
+    if(typeof firebase!=='undefined'){
+      if(!firebase.apps.length) firebase.initializeApp(cfg);
+      window._hocDb=firebase.firestore();
+      window._hocFirebaseInit=true;
+    }
+  } catch(e){ console.warn('Firebase init failed:',e); }
+})();
+
+// Require patient sign-in (Firestore rules need auth)
+(function hocBookAuthGate(){
+  if(typeof firebase==='undefined'||!firebase.auth)return;
+  firebase.auth().onAuthStateChanged(function(user){
+    if(!user)window.location.replace('../index.html');
+  });
+})();
+
+// AppStorage
+var AppStorage={
+  appointments:[],
+  loadFromStorage:function(){try{var s=localStorage.getItem('hoc_appointments');if(s)this.appointments=JSON.parse(s);}catch(e){this.appointments=[];}},
+  saveToStorage:function(){localStorage.setItem('hoc_appointments',JSON.stringify(this.appointments));},
+  bookAppointment:function(d){
+    var pid=d.patientId||(typeof HOC_getPatientId==='function'?HOC_getPatientId():'');
+    var pn=d.patientName||(typeof HOC_getPatientName==='function'?HOC_getPatientName():'Patient');
+    var aptId='APT-'+Date.now();
+    var uid=(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth().currentUser)?firebase.auth().currentUser.uid:(d.patientUid||'');
+    var a={id:aptId,appointmentId:aptId,patientName:pn,patientId:pid,patientUid:uid||d.patientUid||'',doctorId:d.doctorId||'',doctorName:d.doctorName||'',doctorSpec:d.doctorSpec||'',service:d.service||'',date:d.date||'',time:d.time||'',symptoms:d.symptoms||'',visitType:d.visitType||'Online',address:d.address||'',fee:d.fee||0,notes:d.notes||'',paymentMethod:d.paymentMethod||'Cash',paymentRef:d.paymentRef||'',paymentStatus:d.paymentStatus||'Pending',status:'requested',rejectReason:'',prescription:null,labTests:[],labResults:[],createdAt:new Date().toISOString()};
+    if(!window._hocDb||typeof firebase==='undefined'||!firebase.auth||!firebase.auth().currentUser){
+      return Promise.reject(new Error('Sign in required — open index.html, log in as patient, then book again.'));
+    }
+    var ctx={patientId:pid,patientUid:uid,patientName:pn};
+    var push=typeof HOC_pushAppointmentToCloud==='function'
+      ?HOC_pushAppointmentToCloud(a,ctx)
+      :window._hocDb.collection('Appointments').doc(a.id).set(a).then(function(){return a});
+    return push.then(function(row){
+      row=row||a;
+      this.appointments.push(row);this.saveToStorage();
+      localStorage.setItem('hoc_new_booking_signal',JSON.stringify({id:row.id,ts:Date.now()}));
+      setTimeout(function(){localStorage.removeItem('hoc_new_booking_signal');},3000);
+      return row;
+    }.bind(this)).catch(function(e){
+      var msg=(e&&e.code==='permission-denied')?'Firestore permission denied — use Live Server http://127.0.0.1:5500 and sign in again.':((e&&e.message)||'Could not save to cloud');
+      return Promise.reject(new Error(msg));
+    });
+  }
+};
+AppStorage.loadFromStorage();
+
+(function hocApplySidebarProfile(){
+  try{
+    var s=JSON.parse(localStorage.getItem('hoc-patient-settings')||'{}');
+    var nm=document.getElementById('sidebarName');
+    if(nm&&(s.name||typeof HOC_getPatientName==='function'))nm.textContent=(s.name&&s.name.trim())?s.name.trim():(typeof HOC_getPatientName==='function'?HOC_getPatientName():'Patient');
+    var av=document.getElementById('sidebarAvatarImg');
+    if(av&&s.avatar)av.src=s.avatar;
+  }catch(e){}
+})();
+
+function hocLogout(){if(typeof hocLogoutAndGoHome==='function'){hocLogoutAndGoHome();return}localStorage.removeItem('hoc_current_role');localStorage.setItem('hoc_manual_logout','1');window.location.href='../index.html?signedout=1';}
+
+// Date — local timezone (avoid UTC min-date bug)
+function hocLocalDateStr(d){
+  var y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+document.getElementById('todayDate').innerText=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+var tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+document.getElementById('dateInput').min=hocLocalDateStr(tomorrow);
+
+var BOOKING_TIME_SLOTS=['09:00','10:00','11:00','12:00','14:00','15:00','16:00','17:00','18:00'];
+function initTimeSlots(){
+  var wrap=document.getElementById('timeSlots');
+  var ti=document.getElementById('timeInput');
+  if(!wrap||!ti)return;
+  if(!wrap._hocSlotsBuilt){
+    wrap._hocSlotsBuilt=true;
+    wrap.innerHTML=BOOKING_TIME_SLOTS.map(function(t){
+      return '<button type="button" class="time-slot" data-time="'+t+'">'+t+'</button>';
+    }).join('');
+    wrap.addEventListener('click',function(e){
+      var btn=e.target.closest('.time-slot');
+      if(!btn)return;
+      ti.value=btn.getAttribute('data-time');
+      wrap.querySelectorAll('.time-slot').forEach(function(b){b.classList.toggle('active',b===btn);});
+      document.getElementById('timeGroup').classList.remove('error');
+    });
+    ti.addEventListener('change',function(){
+      document.getElementById('timeGroup').classList.remove('error');
+      wrap.querySelectorAll('.time-slot').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-time')===ti.value);});
+    });
+  }
+  wrap.querySelectorAll('.time-slot').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-time')===ti.value);});
+}
+initTimeSlots();
+
+// State
+var currentStep=1;
+var selectedService=null;
+var selectedDoc=null;
+var selectedVisitType='Online';
+var userLat=null,userLng=null;
+var map=null,userMarker=null,docMarkers=[],googleMap=null,gMarkers=[],mapsScriptRequested=false;
+
+function renderMapFallback(center){
+  var el=document.getElementById('map');
+  if(!el)return;
+  el.innerHTML='<iframe title="Nearby map" style="width:100%;height:320px;border:0;display:block" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q='+center.lat+','+center.lng+'&z=13&output=embed"></iframe>';
+}
+
+function addGoogleMarkers(){
+  if(!googleMap||!window.google)return;
+  gMarkers.forEach(function(m){m.setMap(null);});
+  gMarkers=[];
+  var filtered=DOCTORS.filter(function(d){return d.available!==false&&(!selectedService||d.service===selectedService);});
+  filtered.forEach(function(d){
+    var m=new google.maps.Marker({position:{lat:d.lat,lng:d.lng},map:googleMap,title:d.name});
+    var iw=new google.maps.InfoWindow({content:'<div style="font-family:DM Sans,sans-serif;min-width:160px;padding:4px;"><div style="font-weight:800;font-size:14px;margin-bottom:4px;">'+d.name+'</div><div style="font-size:12px;color:#10b981;font-weight:600;">'+d.specialty+'</div><div style="font-size:11px;color:#64748b;margin-top:4px;">Rs.'+d.fee+'</div><button type="button" id="gm_sel_'+String(d.id).replace(/[^a-zA-Z0-9_-]/g,'_')+'" style="margin-top:8px;width:100%;padding:6px;background:#10b981;color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Select</button></div>'});
+    m.addListener('click',function(){iw.open(googleMap,m);google.maps.event.addListenerOnce(iw,'domready',function(){
+      var bid='gm_sel_'+String(d.id).replace(/[^a-zA-Z0-9_-]/g,'_');
+      var b=document.getElementById(bid);
+      if(b)b.addEventListener('click',function(){selectDocAndBook(d.id);iw.close();});
+    });});
+    gMarkers.push(m);
+  });
+}
+
+function initGoogleMapInstance(){
+  var el=document.getElementById('map');
+  if(!el)return;
+  var c={lat:31.4504,lng:73.1350};
+  if(userLat&&userLng)c={lat:userLat,lng:userLng};
+  el.innerHTML='';
+  googleMap=new google.maps.Map(el,{center:c,zoom:13,mapTypeControl:false,streetViewControl:false});
+  if(userLat&&userLng){
+    userMarker=new google.maps.Marker({position:{lat:userLat,lng:userLng},map:googleMap,title:'You',icon:{path:google.maps.SymbolPath.CIRCLE,scale:9,fillColor:'#f43f5e',fillOpacity:1,strokeWeight:2,strokeColor:'#fff'}});
+  }
+  addGoogleMarkers();
+}
+
+function loadGoogleMapsAndInit(){
+  var key=typeof HOC_getGoogleMapsKey==='function'?HOC_getGoogleMapsKey():(localStorage.getItem('hoc_google_maps_key')||'');
+  if(!key){renderMapFallback({lat:31.4504,lng:73.1350});return;}
+  if(window.google&&google.maps){initGoogleMapInstance();return;}
+  if(mapsScriptRequested)return;
+  mapsScriptRequested=true;
+  window.__hocBookMapInit=function(){mapsScriptRequested=false;try{initGoogleMapInstance();}catch(e){renderMapFallback({lat:31.4504,lng:73.1350});}};
+  var s=document.createElement('script');
+  s.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&callback=__hocBookMapInit';
+  s.async=true;
+  s.onerror=function(){mapsScriptRequested=false;renderMapFallback({lat:31.4504,lng:73.1350});};
+  document.head.appendChild(s);
+}
+
+function initMap(){
+  if(map)return;
+  map=true;
+  loadGoogleMapsAndInit();
+}
+
+function addDocMarkers(){
+  if(googleMap&&window.google){addGoogleMarkers();return;}
+}
+
+function detectLocation(){
+  document.getElementById('mapStatusText').textContent='Detecting your location...';
+  if(!navigator.geolocation){document.getElementById('mapStatusText').textContent='Geolocation not supported';return;}
+  navigator.geolocation.getCurrentPosition(function(pos){
+    userLat=pos.coords.latitude;userLng=pos.coords.longitude;
+    if(googleMap&&window.google){
+      googleMap.setCenter({lat:userLat,lng:userLng});
+      if(userMarker)userMarker.setMap(null);
+      userMarker=new google.maps.Marker({position:{lat:userLat,lng:userLng},map:googleMap,title:'You',icon:{path:google.maps.SymbolPath.CIRCLE,scale:9,fillColor:'#f43f5e',fillOpacity:1,strokeWeight:2,strokeColor:'#fff'}});
+    }else{
+      renderMapFallback({lat:userLat,lng:userLng});
+    }
+    document.getElementById('mapStatusText').textContent='Location detected! Showing nearest doctors.';
+    DOCTORS.forEach(function(d){
+      var R=6371;var dLat=(d.lat-userLat)*Math.PI/180;var dLng=(d.lng-userLng)*Math.PI/180;
+      var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(userLat*Math.PI/180)*Math.cos(d.lat*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+      d.distance=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    });
+    DOCTORS.sort(function(a,b){return (a.distance||999)-(b.distance||999);});
+    renderDoctors();
+    showAiSuggestion();
+    addDocMarkers();
+  },function(){document.getElementById('mapStatusText').textContent='Could not detect location. Please allow location access.';});
+}
+
+// Services
+var SERVICES=[
+  {id:'Home Nursing',name:'Home Nursing',icon:'fa-heart',color:'#f43f5e',bg:'#ffe4e6',desc:'Post-surgical care, wound dressing, IV therapy at home'},
+  {id:'Physiotherapy',name:'Physiotherapy',icon:'fa-running',color:'#8b5cf6',bg:'#ede9fe',desc:'Rehabilitation, pain management, mobility improvement'},
+  {id:'Lab Tests',name:'Lab Tests',icon:'fa-vials',color:'#0ea5e9',bg:'#e0f2fe',desc:'Blood tests, urine analysis, pathology reports at home'},
+  {id:'Speech Therapy',name:'Speech Therapy',icon:'fa-comment-medical',color:'#f59e0b',bg:'#fef3c7',desc:'Speech disorders, language development, voice therapy'},
+  {id:'General Physician',name:'General Physician',icon:'fa-user-md',color:'#10b981',bg:'#d1fae5',desc:'General checkup, fever, infections, chronic conditions'},
+  {id:'Psychologist',name:'Psychologist',icon:'fa-brain',color:'#6366f1',bg:'#e0e7ff',desc:'Mental health, anxiety, depression, counseling sessions'}
+];
+
+/** ~20 common reasons per service — patient must match one (chips / datalist / typed same wording) */
+var SERVICE_SYMPTOMS={
+  'Home Nursing':[
+    'Post-operative wound care','Surgical wound dressing','IV drip / cannula at home','Bed sore (pressure ulcer) care',
+    'Injection administration at home','Urinary catheter care','Tracheostomy care & suction','Post C-section nursing care',
+    'Newborn & mother support at home','Elderly bedridden care','Vital signs monitoring','Medication administration help',
+    'Diabetic foot wound dressing','NG tube feeding support','Palliative comfort nursing','Post-fracture immobilization care',
+    'Dehydration & oral rehydration support','DVT prevention mobility help','Home SpO2 / oxygen monitoring','Post-hospital discharge nursing'
+  ],
+  'Physiotherapy':[
+    'Lower back pain physiotherapy','Neck pain & stiffness','Knee osteoarthritis exercises','Post-ACL / knee surgery rehab',
+    'Shoulder rotator cuff strain','Sports injury rehabilitation','Stroke rehabilitation physiotherapy','Sciatica pain management',
+    'Ankle sprain recovery','Post-fracture joint stiffness','Cervical spondylosis exercises','Plantar fasciitis treatment',
+    'Frozen shoulder (adhesive capsulitis)','Balance & fall prevention program','Postural correction therapy','Arthritis joint mobility',
+    'Post-stroke gait training','Work-related RSI / ergonomic strain','Postnatal core & pelvic floor','General mobility strengthening'
+  ],
+  'Lab Tests':[
+    'Complete Blood Count (CBC)','Lipid profile / cholesterol panel','Liver function tests (LFT)','Kidney function (urea, creatinine)',
+    'Thyroid profile (TSH, T3, T4)','HbA1c / diabetes screening','Urine routine examination','Vitamin D level',
+    'Vitamin B12 & folate','Iron studies / ferritin','Hepatitis B & C screening','Dengue fever panel',
+    'Typhoid (Widal / blood culture)','Urine culture & sensitivity','Stool routine examination','Beta-hCG / pregnancy test',
+    'PT / INR (warfarin monitoring)','Electrolytes (Na, K, Cl)','Fasting & random blood sugar','General health screening package'
+  ],
+  'Speech Therapy':[
+    'Child speech delay','Articulation / pronunciation difficulty','Stammering / stuttering therapy','Voice hoarseness / strain',
+    'Post-stroke aphasia support','Toddler language delay','Childhood apraxia of speech','Cleft palate speech therapy',
+    'Autism communication skills','Social communication difficulty','Adult fluency disorder','Lisp correction support',
+    'Parkinson disease voice exercises','Post hearing-aid speech clarity','Developmental language disorder','Word-finding difficulty',
+    'Reading & literacy support','Professional voice care','Accent clarity training (non-medical)','Swallowing difficulty screening referral'
+  ],
+  'General Physician':[
+    'Fever / high temperature','Common cold & flu symptoms','Cough & sore throat','General weakness & fatigue',
+    'Headache evaluation','Abdominal pain & gastric upset','Diarrhea & vomiting','Hypertension follow-up',
+    'Diabetes follow-up & sugar check','Chest discomfort (non-emergency)','Allergy & skin rash','Vitamin deficiency symptoms',
+    'Chronic cough evaluation','Unexplained weight loss','Urinary tract infection symptoms','Sleep disturbance',
+    'Travel vaccination advice','Preventive health checkup','Medication review & dose adjustment','Post-hospital discharge follow-up'
+  ],
+  'Psychologist':[
+    'Anxiety & excessive worry','Depression / low mood','Panic attack support','Work or exam stress',
+    'Sleep problems due to stress','Grief & bereavement','Relationship conflict counselling','Social anxiety',
+    'Specific phobia / fear','Anger management','Obsessive worry (non-diagnosis)','ADHD coping strategies',
+    'Post-trauma stress coping','Low self-esteem','Burnout & exhaustion','Mood swings',
+    'Emotional regulation skills','Workplace bullying stress','Family conflict counselling','CBT for negative thoughts'
+  ]
+};
+var GENERAL_SYMPTOMS=[
+  'General checkup','Routine follow-up visit','Fever','Cough and cold','Body weakness','Headache',
+  'Chest discomfort (non-emergency)','Abdominal pain','Blood pressure follow-up','Diabetes follow-up',
+  'Allergy or rash','Joint or muscle pain','Back pain','Anxiety or stress','Sleep disturbance',
+  'Digestive upset','Vaccination question','Prescription refill request','Lab test discussion','Post-hospital follow-up'
+];
+
+function refreshSymptomSuggestions(){
+  var svc=selectedService;
+  var list=(svc&&SERVICE_SYMPTOMS[svc]&&SERVICE_SYMPTOMS[svc].length)?SERVICE_SYMPTOMS[svc]:GENERAL_SYMPTOMS;
+  var dl=document.getElementById('hocSymptomDatalist');
+  var chips=document.getElementById('reasonChips');
+  var hint=document.getElementById('reasonHint');
+  if(hint){
+    hint.innerHTML=svc
+      ? 'For <strong>'+svc+'</strong>: tap a chip or choose from suggestions — your text must match one of these reasons (no random / wrong words).'
+      : 'Select a <strong>service</strong> in step 1 first, then pick a reason from the list for that service.';
+  }
+  if(dl){
+    dl.innerHTML='';
+    list.forEach(function(t){
+      var o=document.createElement('option');
+      o.value=t;
+      dl.appendChild(o);
+    });
+  }
+  if(chips){
+    chips.innerHTML='';
+    list.forEach(function(t){
+      var b=document.createElement('button');
+      b.type='button';
+      b.className='symptom-chip';
+      b.textContent=t;
+      b.onclick=function(){
+        document.getElementById('reasonInput').value=t;
+        document.getElementById('reasonGroup').classList.remove('error');
+      };
+      chips.appendChild(b);
+    });
+  }
+}
+
+function validateReasonForService(serviceId,text){
+  var t=(text||'').trim();
+  if(!t)return {ok:false,msg:'Please enter symptoms / reason for visit.'};
+  if(t.length<4)return {ok:false,msg:'Reason is too short — pick a suggestion or type the full phrase.'};
+  if(t.length>500)return {ok:false,msg:'Please shorten your reason (max 500 characters).'};
+  var compact=t.replace(/\s/g,'');
+  if(/^(.)\1{5,}$/.test(compact))return {ok:false,msg:'Please do not enter random repeated characters.'};
+  var digits=(t.match(/\d/g)||[]).length;
+  if(digits>t.length*0.45)return {ok:false,msg:'Reason should describe a health problem, not mostly numbers.'};
+  var list=(serviceId&&SERVICE_SYMPTOMS[serviceId]&&SERVICE_SYMPTOMS[serviceId].length)?SERVICE_SYMPTOMS[serviceId]:GENERAL_SYMPTOMS;
+  var low=t.toLowerCase();
+  var ok=list.some(function(opt){
+    var o=opt.toLowerCase();
+    if(low===o)return true;
+    if(o.indexOf(low)>=0&&t.length>=5)return true;
+    if(low.indexOf(o)>=0)return true;
+    var words=o.split(/[^a-z0-9]+/).filter(function(w){return w.length>2;});
+    for(var i=0;i<words.length;i++){
+      if(low.indexOf(words[i])>=0)return true;
+    }
+    return false;
+  });
+  if(!ok)return {ok:false,msg:'Please pick a chip or type text that matches one of the suggested reasons for this service.'};
+  return {ok:true};
+}
+
+// Doctors — loaded from Firestore (2 per service); local list is offline fallback only
+var DOCTORS=[];
+
+function refreshDoctorList(){
+  if(!window._hocDb){
+    DOCTORS=(typeof HOC_BOOKING_DOCTOR_PROFILES!=='undefined'?HOC_BOOKING_DOCTOR_PROFILES:[]).map(function(p){return typeof hocProfileToCard==='function'?hocProfileToCard(p):p;});
+    if(typeof renderDoctors==='function'&&currentStep===2)renderDoctors();
+    return;
+  }
+  var seedChain=typeof hocEnsureBookingDoctors==='function'?hocEnsureBookingDoctors(window._hocDb):Promise.resolve();
+  seedChain.then(function(){
+    return typeof hocLoadBookingDoctors==='function'?hocLoadBookingDoctors(window._hocDb):Promise.resolve([]);
+  }).then(function(list){
+    DOCTORS=list||[];
+    if(typeof HOCFeedbackRatings!=='undefined'&&window._hocDb){
+      return HOCFeedbackRatings.loadMap(window._hocDb).then(function(map){
+        DOCTORS.forEach(function(d){ d.rating=HOCFeedbackRatings.ratingForDoctor(map,d); });
+      }).then(function(){ return DOCTORS; });
+    }
+    return DOCTORS;
+  }).then(function(){
+    if(typeof renderDoctors==='function'&&currentStep===2)renderDoctors();
+    if(currentStep===2&&typeof showAiSuggestion==='function')showAiSuggestion();
+    if(currentStep===2&&typeof addDocMarkers==='function')addDocMarkers();
+  }).catch(function(e){console.warn('refreshDoctorList',e);});
+}
+
+refreshDoctorList();
+
+// Render Services
+function renderServices(){
+  document.getElementById('servicesGrid').innerHTML=SERVICES.map(function(s){
+    var isSelected=selectedService===s.id;
+    return '<div class="svc-card'+(isSelected?' selected':'')+'" onclick="selectService(\''+s.id+'\')" style="border-color:'+(isSelected?'var(--accent)':s.color+'22')+';--svc-color:'+s.color+'">'+
+      '<div style="position:absolute;top:0;left:0;right:0;height:4px;background:'+s.color+';border-radius:var(--radius) var(--radius) 0 0;opacity:'+(isSelected?'1':'0.4')+';transition:var(--tr);"></div>'+
+      '<div class="svc-icon" style="background:'+s.bg+';color:'+s.color+'"><i class="fas '+s.icon+'"></i></div>'+
+      '<h3>'+s.name+'</h3>'+
+      '<p>'+s.desc+'</p>'+
+      (s.id==='Lab Tests'?'<span class="svc-tag" style="background:'+s.bg+';color:'+s.color+'"><i class="fas fa-home" style="margin-right:3px;"></i>Home Collection</span>':'')+
+      '<div class="svc-check"><i class="fas fa-check" style="font-size:10px;"></i></div>'+
+    '</div>';
+  }).join('');
+}
+
+function selectService(id){
+  selectedService=id;
+  renderServices();
+  refreshDoctorList();
+  if(currentStep===2) addDocMarkers();
+  refreshSymptomSuggestions();
+}
+
+// Steps
+function goStep(n){
+  if(n===2&&!selectedService){showToast('Please select a service first','err');return;}
+  if(n===3&&!selectedDoc){showToast('Please select a doctor first','err');return;}
+  currentStep=n;
+  document.querySelectorAll('.step-panel').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('panel-'+n).classList.add('active');
+  document.querySelectorAll('.step-item').forEach(function(s,i){
+    s.classList.remove('active','done');
+    if(i+1===n) s.classList.add('active');
+    else if(i+1<n) s.classList.add('done');
+  });
+  if(n===2){refreshDoctorList();renderDoctors();initMap();showAiSuggestion();}
+  if(n===3){updateBookingBanner();refreshSymptomSuggestions();initTimeSlots();}
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function nextStep(from){
+  if(from===1){if(!selectedService){showToast('Please select a service','err');return;}goStep(2);}
+  else if(from===2){if(!selectedDoc){showToast('Please select a doctor','err');return;}goStep(3);}
+}
+
+function showAiSuggestion(){
+  var filtered=DOCTORS.filter(function(d){return d.available&&(!selectedService||d.service===selectedService);});
+  if(!filtered.length) return;
+  var best=filtered[0];
+  document.getElementById('aiDocName').textContent=best.name;
+  document.getElementById('aiDocMeta').textContent=best.specialty+' • Rs.'+best.fee+' • ⭐ '+best.rating+(best.distance?' • '+best.distance.toFixed(1)+' km away':'');
+  document.getElementById('aiSuggest').style.display='flex';
+  window._aiDoc=best;
+}
+
+function findDoctorById(id){
+  var sid=String(id);
+  return DOCTORS.find(function(x){return String(x.id)===sid||String(x.doctorId)===sid;});
+}
+
+function selectDocById(id){
+  var d=findDoctorById(id);
+  if(!d){showToast('Doctor not available — pick another or refresh the list','err');return false;}
+  selectedDoc=d;
+  renderDoctors();
+  showToast(d.name+' selected!','success');
+  return true;
+}
+
+function selectDocAndBook(id){
+  if(selectDocById(id))goStep(3);
+}
+
+function selectAiDoc(){
+  if(window._aiDoc)selectDocAndBook(window._aiDoc.id);
+}
+
+// Render Doctors
+function renderDoctors(){
+  var search=(document.getElementById('docSearch')?document.getElementById('docSearch').value:'').toLowerCase();
+  var filtered=DOCTORS.filter(function(d){
+    if(d.available===false) return false;
+    if(selectedService&&d.service!==selectedService) return false;
+    if(search&&!(d.name+d.specialty).toLowerCase().includes(search)) return false;
+    return true;
+  });
+  document.getElementById('docListTitle').textContent=(selectedService||'All')+' Specialists ('+filtered.length+')';
+  if(!filtered.length){
+    document.getElementById('docGrid').innerHTML='<div class="empty" style="grid-column:1/-1"><i class="fas fa-user-md"></i><p>No doctors found for this service</p></div>';
+    return;
+  }
+  var colors=['#10b981','#0ea5e9','#f59e0b','#8b5cf6','#f43f5e','#06b6d4','#ec4899','#84cc16'];
+  document.getElementById('docGrid').innerHTML=filtered.map(function(d,i){
+    var initials=d.name.replace('Dr. ','').split(' ').map(function(w){return w[0];}).join('').slice(0,2);
+    var color=colors[i%colors.length];
+    var docKey=String(d.doctorId||d.id);
+    var isSelected=selectedDoc&&(String(selectedDoc.id)===String(d.id)||String(selectedDoc.doctorId)===docKey);
+    var distText=d.distance?'<span><i class="fas fa-map-marker-alt"></i> '+d.distance.toFixed(1)+' km</span>':'';
+    return '<div class="doc-card'+(isSelected?' selected':'')+'" data-doc-id="'+docKey.replace(/"/g,'&quot;')+'" style="border-color:'+(isSelected?'var(--accent)':'var(--card-border)')+'">'+
+      '<div class="doc-card-top">'+
+        '<div class="doc-av" style="background:linear-gradient(135deg,'+color+','+color+'99)">'+initials+'</div>'+
+        '<div class="doc-info" style="flex:1;">'+
+          '<div class="dn">'+d.name+'</div>'+
+          '<div class="ds">'+d.specialty+'</div>'+
+          '<div class="dm"><span><i class="fas fa-briefcase"></i> '+d.experience+'</span><span><i class="fas fa-map-marker-alt"></i> '+d.area+'</span>'+distText+'</div>'+
+        '</div>'+
+        '<div class="doc-badge"><span class="badge-avail"><i class="fas fa-circle" style="font-size:6px;"></i> Available</span></div>'+
+      '</div>'+
+      '<div class="doc-stats">'+
+        '<div class="doc-stat"><div class="sv">Rs.'+d.fee+'</div><div class="sl">Fee</div></div>'+
+        '<div class="doc-stat"><div class="sv">⭐ '+d.rating+'</div><div class="sl">Rating</div></div>'+
+        '<div class="doc-stat"><div class="sv">'+d.patients+'</div><div class="sl">Patients</div></div>'+
+      '</div>'+
+      (d.distance&&i===0?'<div class="doc-nearest"><i class="fas fa-location-arrow"></i> Nearest to you</div>':'')+
+      '<div class="doc-actions">'+
+        '<button type="button" class="btn-select" data-doc-id="'+docKey.replace(/"/g,'&quot;')+'"><i class="fas fa-calendar-check"></i> '+(isSelected?'Selected ✓':'Book This Doctor')+'</button>'+
+        '<button type="button" class="btn-msg" onclick="event.stopPropagation();window.location.href=\'Patient Dashboard Home Page p1.html#openChat\'" title="Message after staff approves"><i class="fas fa-comment-medical"></i></button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+// removed external WhatsApp — use in-app Messages on dashboard
+var selectedPayment='Cash';
+
+function selectPayment(method){
+  selectedPayment=method;
+  document.querySelectorAll('.pay-opt').forEach(function(o){
+    var isSelected=o.dataset.pay===method;
+    o.style.background=isSelected?'var(--accent-soft)':'var(--slate-soft)';
+    o.style.borderColor=isSelected?'var(--accent)':'var(--card-border)';
+  });
+  var onlineFields=document.getElementById('onlinePayFields');
+  var label=document.getElementById('payFieldLabel');
+  
+  if(method==='JazzCash'){
+    onlineFields.style.display='block';
+    document.getElementById('payNowLink').href='https://jazzcash.com.pk/pay'; 
+    document.getElementById('payNowLink').style.background='#e11d48';
+    document.getElementById('payMethodLabel').textContent='JazzCash';
+    document.getElementById('payAccountInput').placeholder='e.g TXN-123456789';
+  } else if(method==='EasyPaisa'){
+    onlineFields.style.display='block';
+    document.getElementById('payNowLink').href='https://easypaisa.com.pk/pay'; 
+    document.getElementById('payNowLink').style.background='#059669';
+    document.getElementById('payMethodLabel').textContent='EasyPaisa';
+    document.getElementById('payAccountInput').placeholder='e.g TXN-123456789';
+  }
+  else if(method==='Card'){onlineFields.style.display='block';if(label)label.textContent='Card Number (last 4 digits)';document.getElementById('payAccountInput').placeholder='XXXX';}
+  else if(method==='Insurance'){onlineFields.style.display='block';if(label)label.textContent='Insurance Policy Number';document.getElementById('payAccountInput').placeholder='Policy ID';}
+  else if(method==='BankTransfer'){onlineFields.style.display='block';if(label)label.textContent='Transaction Reference Number';document.getElementById('payAccountInput').placeholder='TXN-XXXXXXXX';}
+  else{onlineFields.style.display='none';}
+}
+
+function setVisitType(t){
+  selectedVisitType=t;
+  document.querySelectorAll('.visit-opt').forEach(function(o){o.classList.remove('active-online','active-physical');if(o.dataset.type===t)o.classList.add(t==='Online'?'active-online':'active-physical');});
+  var af=document.getElementById('addrField');
+  if(t==='Physical') af.classList.add('show');
+  else af.classList.remove('show');
+}
+
+function updateBookingBanner(){
+  if(!selectedDoc) return;
+  var colors=['#10b981','#0ea5e9','#f59e0b','#8b5cf6','#f43f5e','#06b6d4'];
+  var initials=selectedDoc.name.replace('Dr. ','').split(' ').map(function(w){return w[0];}).join('').slice(0,2);
+  document.getElementById('sdbAv').textContent=initials;
+  document.getElementById('sdbAv').style.background='linear-gradient(135deg,'+colors[0]+','+colors[1]+')';
+  document.getElementById('sdbName').textContent=selectedDoc.name;
+  document.getElementById('sdbSpec').textContent=selectedDoc.specialty+' • '+selectedDoc.area;
+  document.getElementById('sdbFee').textContent='Rs. '+selectedDoc.fee;
+  var labNote=document.getElementById('labTestNote');
+  if(labNote) labNote.style.display=selectedService==='Lab Tests'?'flex':'none';
+}
+
+function confirmBooking(){
+  if(!selectedDoc){showToast('No doctor selected','err');return;}
+  var ok=true;
+  var dt=document.getElementById('dateInput').value;
+  var tm=document.getElementById('timeInput').value;
+  var rs=document.getElementById('reasonInput').value.trim();
+  var ad=document.getElementById('addrInput').value.trim();
+  if(!dt){document.getElementById('dateGroup').classList.add('error');ok=false;}else document.getElementById('dateGroup').classList.remove('error');
+  if(!tm){document.getElementById('timeGroup').classList.add('error');ok=false;}else document.getElementById('timeGroup').classList.remove('error');
+  if(!rs){document.getElementById('reasonGroup').classList.add('error');ok=false;}else document.getElementById('reasonGroup').classList.remove('error');
+  if(selectedVisitType==='Physical'&&!ad){document.getElementById('addrGroup').classList.add('error');ok=false;}else document.getElementById('addrGroup').classList.remove('error');
+  if(!ok){showToast('Please fill all required fields','err');return;}
+  if(typeof hocValidateFutureDate==='function'){var dv=hocValidateFutureDate(dt);if(!dv.ok){document.getElementById('dateGroup').classList.add('error');showToast(dv.msg,'err');return;}}
+  var reasonCheck=validateReasonForService(selectedService,rs);
+  if(!reasonCheck.ok){
+    document.getElementById('reasonGroup').classList.add('error');
+    showToast(reasonCheck.msg,'err');
+    return;
+  }
+  var btn=document.getElementById('confirmBtn');btn.classList.add('saving');
+  var doctorId=(typeof hocDoctorIdForBooking==='function'?hocDoctorIdForBooking(selectedDoc):String(selectedDoc.id));
+  var bookPayload={doctorId:doctorId,doctorName:selectedDoc.name,doctorSpec:selectedDoc.specialty,service:selectedService||selectedDoc.service||'',date:dt,time:tm,symptoms:rs,visitType:selectedVisitType,address:ad,fee:selectedDoc.fee,notes:document.getElementById('notesInput').value.trim(),paymentMethod:selectedPayment,paymentRef:document.getElementById('payAccountInput')?document.getElementById('payAccountInput').value.trim():'',paymentStatus:selectedPayment==='Cash'?'Pending':'Paid'};
+  (typeof HOC_resolvePatientContext==='function'?HOC_resolvePatientContext():Promise.resolve({patientName:(typeof HOC_getPatientName==='function'?HOC_getPatientName():'Patient'),patientId:(typeof HOC_getPatientId==='function'?HOC_getPatientId():''),patientUid:''})).then(function(ctx){
+    if(ctx.needsLogin){btn.classList.remove('saving');showToast('Please sign in first','err');setTimeout(function(){window.location.href='../index.html';},900);return null;}
+    if(ctx.needsProfile){btn.classList.remove('saving');showToast('Patient profile missing — sign in with a registered patient account','err');return null;}
+    bookPayload.patientName=ctx.patientName;bookPayload.patientId=ctx.patientId;bookPayload.patientUid=ctx.patientUid||(firebase.auth().currentUser&&firebase.auth().currentUser.uid)||'';
+    return AppStorage.bookAppointment(bookPayload);
+  }).then(function(r){
+    if(!r)return;
+    if(typeof HOC_syncLocalAppointmentsToFirestore==='function'){
+      HOC_syncLocalAppointmentsToFirestore().catch(function(){});
+    }
+    btn.classList.remove('saving');
+    var lat=selectedDoc.lat||31.4504,lng=selectedDoc.lng||73.1350;
+    var sf=document.getElementById('successMapFrame');
+    if(sf)sf.src='https://www.google.com/maps?q='+lat+','+lng+'&z=14&output=embed';
+    var aptIdEl=document.getElementById('successAptId');
+    aptIdEl.textContent=r.id;
+    aptIdEl.title='Your Appointment ID — save this for reference';
+    document.getElementById('successAptIdCopy').textContent=r.id;
+    document.querySelectorAll('.step-panel').forEach(function(p){p.classList.remove('active');});
+    document.getElementById('panel-4').classList.add('active');
+    document.querySelectorAll('.step-item').forEach(function(s){s.classList.remove('active');s.classList.add('done');});
+    showToast('Appointment booked! ID: '+r.id,'success');
+  }).catch(function(e){
+    btn.classList.remove('saving');
+    showToast((e&&e.message)?e.message:'Could not save appointment','err');
+  });
+}
+
+function copyAptId(){
+  var id=document.getElementById('successAptId').textContent;
+  if(navigator.clipboard){navigator.clipboard.writeText(id).then(function(){showToast('Appointment ID copied!','success');}).catch(function(){});}
+  else{var t=document.createElement('textarea');t.value=id;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);showToast('Appointment ID copied!','success');}
+}
+
+function showToast(m,t){
+  t=t||'success';
+  var c=document.getElementById('toastContainer'),to=document.createElement('div');
+  to.className='toast';
+  var ic={success:'<i class="fas fa-check-circle" style="color:var(--accent);font-size:18px;"></i>',err:'<i class="fas fa-times-circle" style="color:var(--rose);font-size:18px;"></i>'};
+  to.style.borderLeftColor=t==='err'?'var(--rose)':'var(--accent)';
+  to.innerHTML=(ic[t]||ic.success)+' '+m;
+  c.appendChild(to);
+  requestAnimationFrame(function(){requestAnimationFrame(function(){to.classList.add('show');});});
+  setTimeout(function(){to.classList.remove('show');setTimeout(function(){to.remove();},500);},4000);
+}
+
+try { renderServices(); } catch(e) { console.warn('renderServices error:', e); }
+(function(){
+  var ri=document.getElementById('reasonInput');
+  if(ri)ri.addEventListener('input',function(){document.getElementById('reasonGroup').classList.remove('error');});
+})();
+refreshSymptomSuggestions();
+setTimeout(function(){
+  var grid = document.getElementById('servicesGrid');
+  if(grid && !grid.innerHTML.trim()) { try { renderServices(); } catch(e){} }
+}, 500);
+
+(function bindDocGridClicks(){
+  var grid=document.getElementById('docGrid');
+  if(!grid||grid._hocDocClickBound)return;
+  grid._hocDocClickBound=true;
+  grid.addEventListener('click',function(e){
+    if(e.target.closest('.btn-msg'))return;
+    var btn=e.target.closest('.btn-select');
+    var card=e.target.closest('.doc-card');
+    var id=btn?btn.getAttribute('data-doc-id'):(card?card.getAttribute('data-doc-id'):'');
+    if(id)selectDocAndBook(id);
+  });
+})();
+</script>
+</body>
+</html>

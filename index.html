@@ -1,0 +1,2033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#10b981">
+<meta name="description" content="HealthOnCall — book appointments, talk to doctors, and manage care online. Patients sign up here; clinical staff use admin-activated accounts.">
+<title>HealthOnCall — Premium Healthcare Platform</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700,1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="doc/hoc-global-theme.css">
+<script src="doc/hoc-clinical-shared.js"></script>
+<script src="doc/hoc-validation.js"></script>
+<script src="doc/hoc-notifications.js"></script>
+<script src="doc/hoc-firebase-config.js"></script>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+/* =========================================
+   1. DESIGN TOKENS & VARIABLES
+   ========================================= */
+:root {
+  /* Emerald Green Palette */
+  --pri: #10b981; --pri-l: #34d399; --pri-xl: #6ee7b7;
+  --pri-50: #ecfdf5; --pri-100: #d1fae5; --pri-200: #a7f3d0;
+  --pri-dk: #059669; --pri-dd: #064e3b;
+  --accent: #10b981;
+  --accent-glow: rgba(16, 185, 129, 0.25);
+
+  /* Gold Accent */
+  --gold: #f59e0b; --gold-l: #fbbf24; --gold-50: #fffbeb;
+  --gold-100: #fef3c7; --gold-dark: #92400e;
+
+  /* Coral Accent */
+  --coral: #f43f5e; --coral-l: #fb7185; --coral-50: #ffe4e6;
+
+  /* Indigo & Sky */
+  --indigo: #6366f1; --indigo-l: #a5b4fc; --indigo-50: #e0e7ff;
+  --sky: #0ea5e9; --sky-l: #38bdf8; --sky-50: #e0f2fe;
+  --violet: #8b5cf6; --violet-l: #a78bfa; --violet-50: #ede9fe;
+
+  /* Text & Backgrounds */
+  --txt: #0f172a; --txt2: #475569; --txt3: #94a3b8;
+  --bg: #f0f4f8;
+  --bg-gradient: linear-gradient(135deg, #f0f4f8 0%, #e8eef5 50%, #f0f4f8 100%);
+  --card: #ffffff;
+  
+  /* Borders & Shadows */
+  --border: rgba(0,0,0, 0.06);
+  --border-s: rgba(0,0,0, 0.1);
+  --radius: 18px; --radius-sm: 14px; --radius-xs: 10px;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow-card: 0 1px 3px rgba(0,0,0, 0.04), 0 8px 32px rgba(0,0,0, 0.06);
+  --shadow-hover: 0 2px 4px rgba(0,0,0, 0.04), 0 20px 50px rgba(0,0,0, 0.1);
+  --shadow-xl: 0 20px 60px rgba(0,0,0, 0.1);
+
+  /* Layout */
+  --container: 1200px;
+  --pad-x: clamp(16px, 4vw, 32px);
+}
+
+/* =========================================
+   2. RESET & BASE STYLES
+   ========================================= */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; scroll-padding-top: 88px; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+  color: var(--txt);
+  overflow-x: hidden;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  min-width: 320px;
+}
+img { max-width: 100%; display: block; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+h1, h2, h3, h4, h5, h6 { font-family: 'Sora', sans-serif; }
+a { text-decoration: none; color: inherit; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+/* Grain Overlay */
+body::after {
+  content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+  opacity: 0.015;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+/* =========================================
+   3. HEADER & NAVIGATION
+   ========================================= */
+header {
+  position: fixed; top: 12px; left: 12px; right: 12px; z-index: 100;
+  transition: 0.5s var(--ease);
+}
+header.glass {
+  background: rgba(255,255,255, 0.78);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid rgba(255,255,255, 0.6);
+  border-radius: 18px;
+  box-shadow: 0 8px 40px rgba(0,0,0, 0.07);
+}
+.hdr {
+  max-width: var(--container); margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 58px; padding: 0 14px; gap: 12px;
+}
+.logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.logo-icon {
+  width: 38px; height: 38px; border-radius: 11px;
+  background: linear-gradient(135deg, var(--pri-dk), var(--sky));
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 16px;
+  box-shadow: 0 4px 14px rgba(16,185,129, 0.3);
+}
+.logo-text {
+  font-family: 'Sora'; font-size: 20px; font-weight: 800;
+  letter-spacing: -0.03em; color: var(--txt);
+}
+.logo-text span { color: var(--pri-dk); }
+
+nav { display: flex; align-items: center; gap: 4px; }
+nav a {
+  text-decoration: none; font-size: 13px; font-weight: 600; color: var(--txt2);
+  padding: 8px 14px; border-radius: var(--radius-xs);
+  transition: 0.25s var(--ease); letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+nav a:hover { color: var(--pri); background: var(--pri-50); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; border-radius: var(--radius-xs);
+  font-size: 13px; font-weight: 700; transition: 0.3s var(--ease);
+  letter-spacing: -0.01em; white-space: nowrap; line-height: 1;
+}
+.btn-pri {
+  background: linear-gradient(145deg, var(--pri-dk), var(--pri));
+  color: #fff; box-shadow: 0 4px 18px rgba(16,185,129, 0.3);
+}
+.btn-pri:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(16,185,129, 0.4); }
+.btn-w {
+  background: rgba(255,255,255, 0.85); color: var(--txt);
+  border: 1px solid var(--border-s); backdrop-filter: blur(8px);
+}
+.btn-w:hover { border-color: var(--pri-200); color: var(--pri); transform: translateY(-1px); }
+
+.mob-btn { display: none; font-size: 22px; color: var(--txt); padding: 8px; border-radius: 8px; }
+.mob-btn:hover { background: var(--pri-50); color: var(--pri); }
+
+/* =========================================
+   4. HERO SECTION
+   ========================================= */
+.hero {
+  min-height: 100vh; display: flex; align-items: center;
+  padding: clamp(100px, 14vw, 130px) var(--pad-x) clamp(60px, 8vw, 90px);
+  position: relative; overflow: hidden;
+}
+.hero-bg { position: absolute; inset: 0; z-index: 0; }
+.hero-bg .mesh {
+  position: absolute; inset: 0;
+  background: 
+    radial-gradient(ellipse 90% 70% at 65% 15%, rgba(16,185,129, 0.07), transparent),
+    radial-gradient(ellipse 60% 55% at 15% 85%, rgba(245,158,11, 0.04), transparent),
+    radial-gradient(ellipse 50% 45% at 55% 55%, rgba(14,165,233, 0.03), transparent);
+}
+/* Floating Orbs */
+.orb { position: absolute; border-radius: 50%; filter: blur(90px); will-change: transform; opacity: 0.5; }
+.o1 { width: clamp(280px, 45vw, 520px); height: clamp(280px, 45vw, 520px); background: var(--pri-100); top: -10%; right: -5%; animation: orbFloat 11s ease-in-out infinite; }
+.o2 { width: clamp(220px, 35vw, 360px); height: clamp(220px, 35vw, 360px); background: var(--gold-50); bottom: -6%; left: -4%; animation: orbFloat 14s ease-in-out 3s infinite; }
+.o3 { width: 240px; height: 240px; background: var(--sky-50); top: 42%; left: 32%; animation: orbFloat 16s ease-in-out 7s infinite; }
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(28px,-18px) scale(1.05); }
+  66% { transform: translate(-18px,14px) scale(0.95); }
+}
+
+.hero-glow {
+  position: absolute; width: 500px; height: 500px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(16,185,129, 0.07), transparent 70%);
+  left: var(--mx, 50%); top: var(--my, 50%);
+  transform: translate(-50%, -50%); pointer-events: none; z-index: 0;
+  transition: left 0.3s ease-out, top 0.3s ease-out; will-change: left, top;
+}
+.hero-grid {
+  position: absolute; inset: 0; z-index: 0;
+  background-image: 
+    linear-gradient(rgba(0,0,0, 0.016) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0, 0.016) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: radial-gradient(ellipse 65% 55% at 50% 50%, #000, transparent);
+  -webkit-mask-image: radial-gradient(ellipse 65% 55% at 50% 50%, #000, transparent);
+}
+.hero-ring {
+  position: absolute; width: 440px; height: 440px; border-radius: 50%;
+  border: 1px solid rgba(16,185,129, 0.08);
+  right: -40px; top: 50%; transform: translateY(-50%); z-index: 0;
+}
+.hero-ring::after {
+  content: ''; position: absolute; inset: 30px; border-radius: 50%;
+  border: 1px dashed rgba(16,185,129, 0.06);
+}
+
+.hero-inner {
+  max-width: var(--container); margin: 0 auto; width: 100%;
+  display: grid; grid-template-columns: 1.15fr .85fr;
+  gap: clamp(32px, 5vw, 56px); align-items: center;
+  position: relative; z-index: 1;
+}
+
+/* Hero Text */
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255, 0.78); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255, 0.6);
+  padding: 7px 16px 7px 11px; border-radius: 50px;
+  font-size: 12px; font-weight: 600; color: var(--txt2);
+  margin-bottom: 24px; animation: fadeUp 0.7s var(--ease) both;
+  box-shadow: 0 2px 12px rgba(0,0,0, 0.04);
+}
+.hero-badge .dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--pri);
+  box-shadow: 0 0 10px rgba(16,185,129, 0.5);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
+
+.hero h1 {
+  font-family: 'Sora'; font-size: clamp(34px, 5.4vw, 64px); font-weight: 800;
+  line-height: 1.05; margin-bottom: 20px; letter-spacing: -0.035em;
+  animation: fadeUp 0.7s 0.06s var(--ease) both; word-break: break-word;
+}
+.hero h1 .grad {
+  background: linear-gradient(145deg, var(--pri-dd) 0%, var(--pri) 25%, var(--pri-xl) 50%, var(--pri) 75%, var(--pri-dd) 100%);
+  background-size: 250% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  animation: textShimmer 5s ease-in-out infinite;
+}
+@keyframes textShimmer { 0%, 100% { background-position: 0% center; } 50% { background-position: 100% center; } }
+
+.hero .desc {
+  font-size: clamp(14.5px, 1.6vw, 16.5px); color: var(--txt2);
+  line-height: 1.8; margin-bottom: 32px; max-width: 500px;
+  animation: fadeUp 0.7s 0.14s var(--ease) both;
+}
+.hero-actions {
+  display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 36px;
+  animation: fadeUp 0.7s 0.22s var(--ease) both;
+}
+.hero-trust {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  animation: fadeUp 0.7s 0.3s var(--ease) both;
+}
+.trust-avatars { display: flex; }
+.trust-avatars img {
+  width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid var(--card);
+  margin-left: -8px; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0, 0.08);
+}
+.trust-avatars img:first-child { margin-left: 0; }
+.trust-text { font-size: 12.5px; color: var(--txt3); line-height: 1.5; }
+.trust-text strong { color: var(--txt); display: block; font-size: 13px; }
+
+/* Hero Visual (Mockup) */
+.hero-visual { position: relative; display: flex; justify-content: center; animation: fadeUp 0.9s 0.18s var(--ease) both; min-width: 0; }
+.mockup {
+  width: 100%; max-width: 380px; background: var(--card);
+  border-radius: 24px; box-shadow: var(--shadow-xl), 0 0 0 1px rgba(0,0,0, 0.04);
+  overflow: hidden; position: relative; z-index: 2; transition: transform 0.6s var(--ease);
+}
+.mockup:hover { transform: perspective(800px) rotateY(-2deg) rotateX(1deg) translateY(-4px); }
+.mockup-bar {
+  display: flex; align-items: center; gap: 7px; padding: 13px 16px;
+  background: linear-gradient(180deg, rgba(0,0,0, 0.02), transparent);
+  border-bottom: 1px solid var(--border);
+}
+.mockup-dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 -1px 1px rgba(0,0,0, 0.1); }
+.mockup-body { padding: 16px; }
+.mockup-card {
+  padding: 12px; border-radius: var(--radius-xs); border: 1px solid var(--border);
+  margin-bottom: 8px; display: flex; align-items: center; gap: 11px;
+  transition: 0.3s var(--ease);
+}
+.mockup-card:hover { border-color: var(--pri-200); background: var(--pri-50); transform: translateX(3px); }
+.mc-icon {
+  width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center;
+  justify-content: center; font-size: 15px; flex-shrink: 0;
+}
+.mc-text { min-width: 0; flex: 1; }
+.mc-text h4 { font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-text p { font-size: 11px; color: var(--txt3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-badge { margin-left: auto; padding: 3px 9px; border-radius: 20px; font-size: 9.5px; font-weight: 700; flex-shrink: 0; }
+
+/* Floating Cards */
+.float-card {
+  position: absolute; background: rgba(255,255,255, 0.85); backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px); border-radius: 14px; padding: 12px 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0, 0.08), 0 0 0 1px rgba(255,255,255, 0.5);
+  z-index: 3; display: flex; align-items: center; gap: 10px;
+}
+.fc-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.fc-text h4 { font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.fc-text p { font-size: 10px; color: var(--txt3); margin-top: 1px; white-space: nowrap; }
+.fc1 { top: 14px; right: -20px; animation: floatY 5s ease-in-out infinite; }
+.fc2 { bottom: 80px; left: -30px; animation: floatY 6s ease-in-out 1.5s infinite; }
+.fc3 { bottom: 0; right: 40px; animation: floatY 5.5s ease-in-out 3s infinite; }
+@keyframes floatY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+
+/* =========================================
+   5. FEATURES SECTION (BENTO GRID)
+   ========================================= */
+.features { padding: clamp(70px, 10vw, 120px) var(--pad-x) clamp(60px, 8vw, 100px); background: var(--bg); position: relative; }
+.features::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); }
+
+.sec-head { max-width: var(--container); margin: 0 auto; }
+.sec-tag {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 15px;
+  border-radius: 50px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; margin-bottom: 16px;
+}
+.sec-head h2 {
+  font-family: 'Sora'; font-size: clamp(28px, 4.4vw, 46px); font-weight: 800;
+  margin-bottom: 12px; line-height: 1.1; letter-spacing: -0.03em;
+}
+.sec-head p { font-size: clamp(14px, 1.6vw, 15.5px); color: var(--txt2); max-width: 520px; line-height: 1.7; }
+
+.bento { max-width: var(--container); margin: 48px auto 0; display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+.feat {
+  padding: clamp(22px, 3vw, 30px); border-radius: var(--radius); border: 1px solid var(--border);
+  transition: 0.5s var(--ease); position: relative; overflow: hidden;
+  background: var(--card); box-shadow: var(--shadow-card); min-width: 0;
+}
+.feat::before {
+  content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.5s var(--ease);
+  border-radius: inherit; pointer-events: none;
+}
+.feat::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  opacity: 0; transition: 0.5s var(--ease); border-radius: var(--radius) var(--radius) 0 0;
+}
+.feat:hover { border-color: transparent; box-shadow: var(--shadow-hover); transform: translateY(-6px); }
+.feat:hover::after { opacity: 1; }
+.feat:hover::before { opacity: 1; }
+
+/* Feature Themes */
+.feat.c-emerald::after { background: linear-gradient(90deg, var(--pri), var(--pri-xl)); }
+.feat.c-emerald::before { background: linear-gradient(160deg, rgba(16,185,129, 0.04), transparent 60%); }
+.feat.c-emerald .fi { background: var(--pri-50); color: var(--pri); box-shadow: 0 4px 16px rgba(16,185,129, 0.12); }
+
+.feat.c-amber::after { background: linear-gradient(90deg, var(--gold), var(--gold-l)); }
+.feat.c-amber::before { background: linear-gradient(160deg, rgba(245,158,11, 0.04), transparent 60%); }
+.feat.c-amber .fi { background: var(--gold-50); color: var(--gold); box-shadow: 0 4px 16px rgba(245,158,11, 0.12); }
+
+.feat.c-rose::after { background: linear-gradient(90deg, var(--coral), var(--coral-l)); }
+.feat.c-rose::before { background: linear-gradient(160deg, rgba(244,63,94, 0.04), transparent 60%); }
+.feat.c-rose .fi { background: var(--coral-50); color: var(--coral); box-shadow: 0 4px 16px rgba(244,63,94, 0.12); }
+
+.feat.c-indigo::after { background: linear-gradient(90deg, var(--indigo), var(--indigo-l)); }
+.feat.c-indigo::before { background: linear-gradient(160deg, rgba(99,102,241, 0.04), transparent 60%); }
+.feat.c-indigo .fi { background: var(--indigo-50); color: var(--indigo); box-shadow: 0 4px 16px rgba(99,102,241, 0.12); }
+
+.feat.c-sky::after { background: linear-gradient(90deg, var(--sky), var(--sky-l)); }
+.feat.c-sky::before { background: linear-gradient(160deg, rgba(14,165,233, 0.04), transparent 60%); }
+.feat.c-sky .fi { background: var(--sky-50); color: var(--sky); box-shadow: 0 4px 16px rgba(14,165,233, 0.12); }
+
+.feat.c-mixed { border-color: rgba(245,158,11, 0.12); }
+.feat.c-mixed::after { background: linear-gradient(90deg, var(--gold), var(--pri)); opacity: 1; }
+.feat.c-mixed::before { background: linear-gradient(160deg, rgba(245,158,11, 0.05), rgba(16,185,129, 0.04) 60%, transparent); opacity: 1; }
+.feat.c-mixed .fi { background: var(--gold-50); color: var(--gold); box-shadow: 0 4px 16px rgba(245,158,11, 0.14); }
+
+/* Services strip */
+.services-strip {
+  padding: clamp(56px, 8vw, 90px) var(--pad-x);
+  background: linear-gradient(180deg, var(--card) 0%, var(--bg) 100%);
+  position: relative;
+}
+.services-strip::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+.svc-grid {
+  max-width: var(--container); margin: 40px auto 0;
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px;
+}
+.svc-tile {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 22px 14px; text-align: center; transition: 0.35s var(--ease);
+  box-shadow: var(--shadow-card); min-width: 0;
+}
+.svc-tile:hover {
+  transform: translateY(-5px); border-color: var(--pri-200);
+  box-shadow: var(--shadow-hover);
+}
+.svc-tile .si {
+  width: 48px; height: 48px; border-radius: 14px; margin: 0 auto 12px;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.svc-tile h4 { font-size: 12.5px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 4px; }
+.svc-tile p { font-size: 11px; color: var(--txt3); line-height: 1.45; }
+
+/* Role cards */
+.roles {
+  padding: clamp(56px, 8vw, 90px) var(--pad-x); background: var(--bg);
+}
+.roles-grid {
+  max-width: var(--container); margin: 40px auto 0;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+}
+.role-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 26px 20px; text-align: center; transition: 0.35s var(--ease);
+  box-shadow: var(--shadow-card); position: relative; overflow: hidden;
+}
+.role-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--pri-dk), var(--pri));
+  opacity: 0; transition: 0.35s var(--ease);
+}
+.role-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); border-color: var(--pri-100); }
+.role-card:hover::before { opacity: 1; }
+.role-card .ri {
+  width: 52px; height: 52px; border-radius: 14px; margin: 0 auto 14px;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  background: var(--pri-50); color: var(--pri-dk);
+}
+.role-card h4 { font-size: 15px; font-weight: 800; margin-bottom: 6px; }
+.role-card p { font-size: 12.5px; color: var(--txt2); line-height: 1.6; margin-bottom: 14px; }
+.role-card .btn { width: 100%; padding: 10px 14px; font-size: 12px; }
+.role-card[role="button"] { cursor: pointer; }
+
+/* Nav active */
+nav a.nav-active { color: var(--pri-dk); background: var(--pri-50); }
+
+/* Grid Spans */
+.feat:nth-child(1) { grid-column: span 7; }
+.feat:nth-child(2) { grid-column: span 5; }
+.feat:nth-child(3) { grid-column: span 5; }
+.feat:nth-child(4) { grid-column: span 7; }
+.feat:nth-child(5) { grid-column: span 4; }
+.feat:nth-child(6) { grid-column: span 8; }
+
+.feat-tag {
+  display: inline-block; padding: 4px 11px; border-radius: 50px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.6px; margin-bottom: 14px;
+}
+.feat .fi {
+  width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center;
+  justify-content: center; font-size: 20px; margin-bottom: 16px;
+  transition: 0.4s var(--ease); flex-shrink: 0; position: relative;
+}
+.feat:hover .fi { transform: scale(1.1) rotate(-2deg); }
+.feat h3 { font-size: clamp(15px, 1.8vw, 17px); font-weight: 800; margin-bottom: 8px; letter-spacing: -0.018em; }
+.feat p { font-size: 13.5px; color: var(--txt2); line-height: 1.72; }
+
+/* Large Card Layout */
+.feat.lg .feat-inner { display: flex; gap: 20px; align-items: flex-start; }
+.feat.lg .feat-content { flex: 1; min-width: 0; }
+.feat.lg .feat-deco {
+  position: absolute; right: -8px; bottom: -12px; font-size: 110px;
+  opacity: 0.025; pointer-events: none; color: var(--txt); transform: rotate(-12deg);
+}
+
+/* Rating Card Specifics */
+.feat.rating-card { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
+.feat.rating-card .feat-text { padding-right: 12px; min-width: 0; }
+.feat.rating-card .feat-visual { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 140px; }
+.feat.rating-card .rating-num {
+  font-family: 'Sora'; font-size: 52px; font-weight: 800;
+  background: linear-gradient(145deg, var(--gold), var(--gold-l));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; letter-spacing: -0.04em;
+}
+.feat.rating-card .rating-label { font-size: 10px; font-weight: 700; color: var(--txt3); text-transform: uppercase; letter-spacing: 0.8px; }
+.feat.rating-card .rating-stars { display: flex; gap: 2px; color: var(--gold-l); font-size: 13px; margin-top: 4px; }
+.feat.rating-card .rating-bars { display: flex; flex-direction: column; gap: 5px; margin-top: 12px; width: 100%; }
+.feat.rating-card .rbar { display: flex; align-items: center; gap: 8px; font-size: 10.5px; color: var(--txt3); font-weight: 600; }
+.feat.rating-card .rbar-track { flex: 1; height: 5px; border-radius: 3px; background: var(--bg); overflow: hidden; }
+.feat.rating-card .rbar-fill { height: 100%; border-radius: 3px; background: var(--gold-l); transition: width 1.2s var(--ease); width: 0; }
+
+/* =========================================
+   6. HOW IT WORKS & STATS
+   ========================================= */
+.how { padding: clamp(70px, 10vw, 120px) var(--pad-x); background: var(--card); position: relative; overflow: hidden; }
+.how::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); }
+.how-deco {
+  position: absolute; right: -100px; top: 50%; transform: translateY(-50%);
+  width: 400px; height: 400px; border-radius: 50%; background: var(--pri-50);
+  filter: blur(80px); opacity: 0.4; pointer-events: none;
+}
+.how-grid { max-width: 960px; margin: 52px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; position: relative; }
+.step {
+  text-align: center; padding: 28px 18px; border-radius: var(--radius);
+  border: 1px solid transparent; transition: 0.4s var(--ease); position: relative;
+}
+.step:hover { border-color: var(--border); background: var(--bg); transform: translateY(-4px); }
+.step-bg-num {
+  position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+  font-family: 'Sora'; font-size: 80px; font-weight: 800; color: var(--pri-50);
+  line-height: 1; pointer-events: none; letter-spacing: -0.05em; z-index: 0;
+}
+.step-num {
+  width: 54px; height: 54px; border-radius: 16px;
+  background: linear-gradient(145deg, var(--pri-dk), var(--pri-l));
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-family: 'Sora'; font-size: 21px; font-weight: 800; margin: 0 auto 20px;
+  box-shadow: 0 6px 20px rgba(16,185,129, 0.3), inset 0 1px 0 rgba(255,255,255, 0.15);
+  position: relative; z-index: 1; letter-spacing: -0.02em;
+}
+.step h3 { font-size: 16px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.015em; position: relative; z-index: 1; }
+.step p { font-size: 13.5px; color: var(--txt2); line-height: 1.65; max-width: 220px; margin: 0 auto; position: relative; z-index: 1; }
+
+.stats { padding: clamp(70px, 9vw, 100px) var(--pad-x); position: relative; overflow: hidden; }
+.stats-bg {
+  position: absolute; inset: 0;
+  background: linear-gradient(145deg, var(--pri-dd) 0%, var(--pri-dk) 30%, var(--pri) 65%, var(--pri-l) 100%);
+}
+.stats-bg::before {
+  content: ''; position: absolute; inset: 0;
+  background: 
+    radial-gradient(circle at 15% 50%, rgba(255,255,255, 0.06), transparent 55%),
+    radial-gradient(circle at 85% 30%, rgba(255,255,255, 0.05), transparent 45%);
+}
+.stats-bg::after {
+  content: ''; position: absolute; inset: 0;
+  background-image: 
+    linear-gradient(rgba(255,255,255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255, 0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+.stats-inner {
+  max-width: 980px; margin: 0 auto; display: grid;
+  grid-template-columns: repeat(4, 1fr); gap: 16px; position: relative; z-index: 1;
+}
+.stat-item {
+  text-align: center; padding: 24px 14px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255, 0.05); border: 1px solid rgba(255,255,255, 0.08);
+  backdrop-filter: blur(8px); transition: 0.3s var(--ease); color: #fff;
+}
+.stat-item:hover { background: rgba(255,255,255, 0.1); border-color: rgba(255,255,255, 0.16); transform: translateY(-3px); }
+.stat-item .n { font-family: 'Sora'; font-size: clamp(28px, 4vw, 42px); font-weight: 800; margin-bottom: 4px; letter-spacing: -0.04em; }
+.stat-item .l { font-size: 12px; opacity: 0.75; font-weight: 500; letter-spacing: 0.03em; }
+
+/* =========================================
+   7. TESTIMONIALS & CTA
+   ========================================= */
+.testi { padding: clamp(70px, 10vw, 120px) var(--pad-x); background: var(--bg); position: relative; }
+.testi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); }
+.testi-grid { max-width: var(--container); margin: 52px auto 0; display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; align-items: start; }
+.testi-featured {
+  padding: clamp(26px, 3.5vw, 38px); border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--card); box-shadow: var(--shadow-card); position: relative; overflow: hidden;
+  transition: 0.4s var(--ease);
+}
+.testi-featured:hover { box-shadow: var(--shadow-hover); transform: translateY(-4px); }
+.testi-featured::before {
+  content: '\201C'; position: absolute; top: 10px; right: 24px; font-size: 120px;
+  font-family: Georgia, serif; color: var(--pri-50); line-height: 1; pointer-events: none;
+}
+.testi-featured .testi-stars { display: flex; gap: 2px; margin-bottom: 20px; color: var(--gold-l); font-size: 14px; }
+.testi-featured > p {
+  font-size: clamp(14px, 1.7vw, 16px); color: var(--txt2); line-height: 1.75;
+  margin-bottom: 24px; font-style: italic; position: relative; z-index: 1;
+}
+.testi-stack { display: flex; flex-direction: column; gap: 16px; }
+.testi-card {
+  padding: 24px; border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--card); box-shadow: var(--shadow-card); position: relative; overflow: hidden;
+  transition: 0.4s var(--ease);
+}
+.testi-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-3px); }
+.testi-card::before {
+  content: '\201C'; position: absolute; top: 8px; right: 16px; font-size: 80px;
+  font-family: Georgia, serif; color: var(--pri-50); line-height: 1; pointer-events: none;
+}
+.testi-stars { display: flex; gap: 2px; margin-bottom: 14px; color: var(--gold-l); font-size: 13px; }
+.testi-card p { font-size: 13.5px; color: var(--txt2); line-height: 1.7; margin-bottom: 18px; font-style: italic; position: relative; z-index: 1; }
+.testi-author { display: flex; align-items: center; gap: 11px; position: relative; z-index: 1; }
+.testi-author img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0, 0.06); flex-shrink: 0; }
+.testi-author h4 { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
+.testi-author span { font-size: 11.5px; color: var(--txt3); }
+
+.cta { padding: clamp(70px, 10vw, 120px) var(--pad-x); background: var(--bg); text-align: center; position: relative; }
+.cta-wrap {
+  max-width: 680px; margin: 0 auto; padding: 2px; border-radius: 30px;
+  background: linear-gradient(145deg, var(--pri-dk), var(--pri-l), var(--gold-l), var(--pri-xl), var(--pri-dk));
+  background-size: 300% 300%; animation: ctaGrad 6s ease infinite;
+  box-shadow: 0 20px 60px rgba(16,185,129, 0.18);
+}
+@keyframes ctaGrad { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.cta-card {
+  background: var(--card); border-radius: 28px;
+  padding: clamp(36px, 5vw, 58px) clamp(24px, 4vw, 42px); position: relative; overflow: hidden;
+}
+.cta-card::before {
+  content: ''; position: absolute; top: -30%; right: -20%; width: 300px; height: 300px;
+  border-radius: 50%; background: var(--pri-50); filter: blur(70px); opacity: 0.6; pointer-events: none;
+}
+.cta-card h2 {
+  font-family: 'Sora'; font-size: clamp(24px, 3.6vw, 36px); font-weight: 800;
+  margin-bottom: 12px; position: relative; letter-spacing: -0.03em; line-height: 1.15;
+}
+.cta-card p { font-size: clamp(14px, 1.6vw, 15.5px); color: var(--txt2); margin-bottom: 28px; position: relative; line-height: 1.7; }
+.cta-btns { display: flex; gap: 12px; justify-content: center; position: relative; flex-wrap: wrap; }
+.cta-btns .btn { padding: 13px 26px; font-size: 13.5px; }
+
+/* =========================================
+   8. FOOTER
+   ========================================= */
+footer {
+  padding: 42px var(--pad-x) 36px; background: #0b1120; color: #64748b;
+  text-align: center; position: relative;
+}
+footer::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(16,185,129, 0.15), transparent);
+}
+footer .f-logo { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+footer .f-logo-icon {
+  width: 30px; height: 30px; border-radius: 9px;
+  background: linear-gradient(145deg, var(--pri-dk), var(--pri));
+  display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px;
+}
+footer .f-logo-text {
+  font-family: 'Sora'; font-size: 17px; font-weight: 800; color: #f1f5f9;
+  letter-spacing: -0.02em;
+}
+footer .f-logo-text span { color: var(--pri); }
+footer .links { display: flex; gap: 22px; justify-content: center; margin: 14px 0; flex-wrap: wrap; }
+footer .links a { color: #94a3b8; font-size: 12.5px; text-decoration: none; transition: 0.25s; font-weight: 500; }
+footer .links a:hover { color: #10b981; }
+footer p { font-size: 11.5px; opacity: 0.55; }
+
+/* =========================================
+   9. AUTH MODAL — reference-style sign in
+   ========================================= */
+.modal-ov {
+  position: fixed; inset: 0; z-index: 1000; display: none;
+  align-items: center; justify-content: center; padding: 20px; overflow-y: auto;
+  background: linear-gradient(160deg, #ecfdf5 0%, #f0f9ff 45%, #f0f4f8 100%);
+}
+.modal-ov.show { display: flex; }
+
+.auth-wrap {
+  width: 100%; max-width: 440px; margin: auto;
+  display: flex; flex-direction: column; align-items: center;
+  animation: modalIn 0.45s var(--ease);
+}
+.auth-wrap.wide { max-width: 520px; }
+
+.auth-brand {
+  text-align: center; margin-bottom: 22px;
+}
+.auth-brand-logo {
+  width: 56px; height: 56px; border-radius: 16px; margin: 0 auto 14px;
+  background: linear-gradient(135deg, var(--pri-dk), var(--sky));
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 24px;
+  box-shadow: 0 10px 28px rgba(16,185,129, 0.32);
+}
+.auth-brand h2 {
+  font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 800;
+  color: var(--txt); letter-spacing: -0.03em; margin-bottom: 4px;
+}
+.auth-brand h2 span { color: var(--pri-dk); }
+.auth-brand p { font-size: 14px; color: var(--txt3); }
+
+.auth-box {
+  width: 100%; background: #fff; border-radius: 22px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(15, 23, 42, 0.04);
+  overflow: hidden; position: relative;
+  max-height: calc(100vh - 48px); display: flex; flex-direction: column;
+}
+.auth-box::before { display: none; }
+
+.auth-close {
+  position: absolute; top: 14px; right: 14px; z-index: 5;
+  width: 36px; height: 36px; border-radius: 10px;
+  border: 1px solid var(--border); background: #fff;
+  color: var(--txt3); font-size: 14px; display: flex;
+  align-items: center; justify-content: center; transition: 0.25s var(--ease);
+  box-shadow: var(--shadow-sm);
+}
+.auth-close:hover { color: var(--pri); border-color: var(--pri-200); background: var(--pri-50); }
+
+.auth-tabs { display: none; }
+
+.auth-body { padding: 28px 28px 24px; overflow-y: auto; flex: 1; }
+.auth-body h3 {
+  font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 800;
+  margin-bottom: 20px; letter-spacing: -0.02em; color: var(--txt);
+}
+.auth-body > p { font-size: 13px; color: var(--txt3); margin-bottom: 18px; }
+
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block; font-size: 13px; font-weight: 700; color: var(--txt);
+  margin-bottom: 8px; text-transform: none; letter-spacing: 0;
+}
+.input-icon-wrap { position: relative; }
+.input-icon-wrap > i {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--txt3); font-size: 14px; pointer-events: none;
+}
+.form-group input, .form-group select {
+  width: 100%; padding: 13px 14px 13px 42px; border: none;
+  border-radius: 12px; font-family: inherit; font-size: 14px;
+  color: var(--txt); background: #f3f4f6; outline: none; transition: 0.25s var(--ease);
+}
+.form-group select { padding-left: 14px; }
+.form-group input:focus, .form-group select:focus {
+  background: #fff; box-shadow: 0 0 0 2px var(--pri), 0 0 0 5px var(--accent-glow);
+}
+.form-group input::placeholder { color: #9ca3af; }
+
+.auth-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 4px 0 18px; gap: 10px; flex-wrap: wrap;
+}
+.auth-remember {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--txt2); cursor: pointer; user-select: none;
+}
+.auth-remember input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.auth-check-ui {
+  width: 18px; height: 18px; border-radius: 6px; border: 2px solid #d1d5db;
+  background: #fff; display: inline-flex; align-items: center; justify-content: center;
+  transition: 0.2s var(--ease); flex-shrink: 0;
+}
+.auth-remember input:checked + .auth-check-ui {
+  background: linear-gradient(135deg, var(--pri-dk), var(--pri));
+  border-color: var(--pri); color: #fff; box-shadow: 0 2px 8px rgba(16,185,129,.3);
+}
+.auth-check-ui i { font-size: 10px; opacity: 0; transform: scale(0.6); transition: 0.2s var(--ease); }
+.auth-remember input:checked + .auth-check-ui i { opacity: 1; transform: scale(1); }
+.auth-forgot {
+  font-size: 13px; font-weight: 600; color: var(--pri-dk);
+  background: none; border: none; cursor: pointer; padding: 6px 2px;
+  transition: 0.2s var(--ease);
+}
+.auth-forgot:hover { color: var(--pri); text-decoration: underline; }
+
+.auth-success {
+  display: none; align-items: flex-start; gap: 10px;
+  padding: 12px 14px; border-radius: 12px; margin-bottom: 14px;
+  background: var(--pri-50); border: 1px solid var(--pri-100);
+  color: var(--pri-dd); font-size: 12.5px; line-height: 1.55; font-weight: 500;
+}
+.auth-success.show { display: flex; }
+.auth-success i { color: var(--pri-dk); margin-top: 2px; flex-shrink: 0; }
+
+.forgot-panel { animation: fadeUp 0.35s var(--ease); }
+.forgot-panel h3 { margin-bottom: 8px; }
+.forgot-panel .forgot-desc {
+  font-size: 13px; color: var(--txt3); line-height: 1.6; margin-bottom: 18px;
+}
+.forgot-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; color: var(--txt2);
+  background: none; border: none; cursor: pointer; padding: 0; margin-bottom: 14px;
+}
+.forgot-back:hover { color: var(--pri-dk); }
+
+.btn-auth {
+  width: 100%; padding: 14px 20px; border-radius: 12px;
+  font-size: 15px; font-weight: 700; border: none; cursor: pointer;
+  background: linear-gradient(135deg, var(--pri-dk), var(--pri));
+  color: #fff; box-shadow: 0 8px 24px rgba(16,185,129, 0.35);
+  transition: 0.3s var(--ease); display: inline-flex;
+  align-items: center; justify-content: center; gap: 8px;
+}
+.btn-auth:hover { transform: translateY(-1px); box-shadow: 0 12px 30px rgba(16,185,129, 0.42); }
+.btn-auth.loading .auth-loader { display: inline-block; }
+.btn-auth.loading .btn-txt { display: none; }
+
+.auth-switch {
+  text-align: center; margin-top: 18px; font-size: 13.5px; color: var(--txt3);
+}
+.auth-switch a {
+  color: var(--pri-dk); font-weight: 700; text-decoration: none;
+}
+.auth-switch a:hover { text-decoration: underline; }
+
+.auth-legal {
+  text-align: center; margin-top: 18px; font-size: 11.5px; color: var(--txt3);
+  line-height: 1.5; max-width: 360px;
+}
+.auth-legal a { color: var(--pri-dk); font-weight: 600; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.role-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.role-opt {
+  padding: 14px 8px 12px; border: 2px solid var(--border-s); border-radius: 14px;
+  text-align: center; cursor: pointer; transition: 0.25s var(--ease); background: #f9fafb;
+}
+.role-opt:hover { border-color: var(--pri-200); }
+.role-opt.selected { border-color: var(--pri); background: var(--pri-50); box-shadow: 0 6px 18px rgba(16,185,129, 0.14); }
+.role-opt i { font-size: 20px; display: block; margin-bottom: 7px; color: var(--txt3); }
+.role-opt.selected i { color: var(--pri); }
+.role-opt span { font-size: 11px; font-weight: 700; color: var(--txt3); }
+.role-opt.selected span { color: var(--pri-dk); }
+
+.auth-err {
+  background: var(--coral-50); color: var(--coral); border-radius: 12px;
+  padding: 10px 14px; font-size: 12.5px; font-weight: 600; margin-bottom: 14px;
+  display: none; align-items: center; gap: 8px; border: 1px solid rgba(244,63,94, 0.12);
+}
+.auth-err.show { display: flex; }
+.auth-loader {
+  display: none; width: 15px; height: 15px; border: 2px solid rgba(255,255,255, 0.3);
+  border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes modalIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+.role-hint {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 11px 13px; border-radius: 12px; margin-bottom: 16px;
+  background: var(--pri-50); border: 1px solid var(--pri-100);
+  font-size: 12px; color: var(--pri-dd); line-height: 1.5;
+}
+.role-hint i { color: var(--pri-dk); margin-top: 2px; flex-shrink: 0; }
+.role-hint.doctor { background: var(--sky-50); border-color: rgba(14,165,233,.2); color: #075985; }
+.role-hint.doctor i { color: var(--sky); }
+.role-hint.lab { background: var(--indigo-50); border-color: rgba(99,102,241,.15); color: #3730a3; }
+.role-hint.lab i { color: var(--indigo); }
+
+.auth-section {
+  background: #f9fafb; border: 1px solid var(--border); border-radius: 14px;
+  padding: 14px; margin-bottom: 12px;
+}
+.auth-section-title {
+  font-size: 11px; font-weight: 800; color: var(--pri-dk);
+  text-transform: uppercase; letter-spacing: 0.8px;
+  margin-bottom: 12px; display: flex; align-items: center; gap: 7px;
+}
+.password-block {
+  background: #f9fafb; border: 1px solid var(--border); border-radius: 14px;
+  padding: 14px; margin-top: 4px;
+}
+.reg-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; font-family: 'Sora', sans-serif; }
+.reg-sub { font-size: 13px; color: var(--txt3); margin-bottom: 16px; }
+
+@media (max-width: 640px) {
+  .auth-body { padding: 22px 18px 20px; }
+  .auth-brand h2 { font-size: 22px; }
+  .role-grid { gap: 8px; }
+  .form-grid { grid-template-columns: 1fr; }
+}
+
+/* =========================================
+   10. ANIMATION UTILITIES
+   ========================================= */
+.anim { opacity: 0; transform: translateY(26px); transition: opacity 0.85s var(--ease), transform 0.85s var(--ease); }
+.anim.vis { opacity: 1; transform: translateY(0); }
+.anim-d1 { transition-delay: 0.07s; } .anim-d2 { transition-delay: 0.14s; }
+.anim-d3 { transition-delay: 0.21s; } .anim-d4 { transition-delay: 0.28s; }
+.anim-d5 { transition-delay: 0.35s; } .anim-d6 { transition-delay: 0.42s; }
+
+/* =========================================
+   11. RESPONSIVE DESIGN
+   ========================================= */
+@media (max-width: 1180px) {
+  .float-card.fc1 { right: -10px; }
+  .float-card.fc2 { left: -15px; }
+  .hero-ring { width: 380px; height: 380px; right: -60px; }
+}
+@media (max-width: 1024px) {
+  .svc-grid { grid-template-columns: repeat(3, 1fr); }
+  .roles-grid { grid-template-columns: repeat(2, 1fr); }
+  .hero-inner { grid-template-columns: 1fr; text-align: center; }
+  .hero .desc { margin: 0 auto 32px; }
+  .hero-actions { justify-content: center; }
+  .hero-trust { justify-content: center; }
+  .hero-visual { margin-top: 20px; max-width: 420px; margin-left: auto; margin-right: auto; }
+  .hero-ring { display: none; }
+  .bento { grid-template-columns: repeat(2, 1fr); }
+  .feat:nth-child(n) { grid-column: span 1; }
+  .testi-grid { grid-template-columns: 1fr; }
+  .stats-inner { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+}
+@media (max-width: 820px) {
+  nav {
+    display: none; position: absolute; top: 64px; left: 6px; right: 6px;
+    background: var(--card); border-radius: var(--radius-sm); box-shadow: var(--shadow-xl);
+    padding: 14px; flex-direction: column; align-items: stretch; gap: 6px; border: 1px solid var(--border);
+  }
+  nav.open { display: flex; }
+  nav a { padding: 11px 14px; width: 100%; text-align: left; font-size: 14px; }
+  nav .btn { width: 100%; justify-content: center; margin-top: 4px; }
+  .mob-btn { display: flex; align-items: center; justify-content: center; }
+  .how-grid { grid-template-columns: 1fr; gap: 18px; max-width: 420px; }
+  .how-deco { display: none; }
+}
+@media (max-width: 640px) {
+  html { scroll-padding-top: 76px; }
+  .svc-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .roles-grid { grid-template-columns: 1fr; }
+  header { top: 8px; left: 8px; right: 8px; }
+  header.glass { border-radius: 14px; }
+  .hdr { height: 54px; padding: 0 10px; }
+  .logo-text { font-size: 18px; }
+  .logo-icon { width: 34px; height: 34px; font-size: 14px; }
+  .hero { padding-top: 100px; }
+  .hero h1 { font-size: clamp(28px, 9vw, 36px); }
+  .hero .desc { font-size: 14px; margin-bottom: 26px; }
+  .hero-actions { gap: 10px; }
+  .hero-actions .btn { flex: 1; min-width: 140px; padding: 12px 18px; }
+  .bento { grid-template-columns: 1fr; gap: 14px; }
+  .feat.lg .feat-inner { flex-direction: column; gap: 0; }
+  .feat.rating-card { grid-template-columns: 1fr; text-align: center; gap: 18px; }
+  .feat.rating-card .feat-text { padding-right: 0; }
+  .feat.rating-card .feat-visual { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 14px; min-width: 0; }
+  .feat.rating-card .rating-bars { max-width: 240px; margin: 8px auto 0; }
+  .stat-item { padding: 18px 10px; }
+  .cta-btns { flex-direction: column; align-items: stretch; }
+  .cta-btns .btn { width: 100%; }
+  .form-grid { grid-template-columns: 1fr; }
+  .role-grid { grid-template-columns: repeat(2, 1fr); }
+  .auth-body { padding: 22px 20px; }
+  .testi-stack { gap: 14px; }
+  .float-card { padding: 10px 13px; }
+}
+@media (max-width: 380px) {
+  .hdr { padding: 0 6px; gap: 6px; }
+  .logo-text { font-size: 16px; }
+  .hero { padding-left: 14px; padding-right: 14px; }
+  .hero h1 { font-size: 26px; }
+  .hero-actions { flex-direction: column; }
+  .hero-actions .btn { width: 100%; }
+  .role-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .auth-tab { padding: 14px 8px; font-size: 12.5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+  }
+}
+</style>
+</head>
+<body>
+<div id="hocFileProtoBlock" style="display:none;position:fixed;inset:0;z-index:999999;background:#0f172a;color:#f8fafc;font-family:system-ui,sans-serif;padding:24px;overflow:auto">
+  <div style="max-width:560px;margin:40px auto;background:#1e293b;border-radius:16px;padding:28px;border:1px solid #334155">
+    <h2 style="margin:0 0 12px;font-size:22px;color:#fbbf24">Live Server required</h2>
+    <p style="line-height:1.6;color:#cbd5e1;margin:0 0 16px">You opened this app as <code style="background:#0f172a;padding:2px 6px;border-radius:4px">file://</code>. Firebase Auth and Firestore <strong>do not work</strong> from double-clicked HTML files — that causes <em>Missing or insufficient permissions</em> even after login.</p>
+    <ol style="line-height:1.8;color:#e2e8f0;margin:0 0 20px;padding-left:20px">
+      <li>VS Code / Cursor → install <strong>Live Server</strong> extension</li>
+      <li>Right-click <code>index.html</code> → <strong>Open with Live Server</strong></li>
+      <li>URL must start with <code style="color:#34d399">http://127.0.0.1:5500/</code> not <code>file:///</code></li>
+    </ol>
+    <p style="font-size:13px;color:#94a3b8;margin:0">Then login: <code>patient@hoc.com</code> / <code>pat789</code> or <code>staff@hoc.com</code> / <code>pass123</code></p>
+  </div>
+</div>
+<script>
+(function(){
+  if(location.protocol!=='file:')return;
+  document.addEventListener('DOMContentLoaded',function(){
+    var el=document.getElementById('hocFileProtoBlock');
+    if(el)el.style.display='block';
+    document.body.style.overflow='hidden';
+  });
+})();
+</script>
+
+<!-- Header -->
+<header id="hdr">
+  <div class="hdr">
+    <a href="index.html" class="logo">
+      <div class="logo-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+      <span class="logo-text">Health<span>OnCall</span></span>
+    </a>
+    <nav id="navMenu">
+      <a href="#features">Features</a>
+      <a href="#services">Services</a>
+      <a href="#how">How It Works</a>
+      <a href="#testimonials">Reviews</a>
+      <button class="btn btn-w" onclick="openAuth('login')">Sign In</button>
+      <button class="btn btn-pri" onclick="openAuth('register')">Get Started</button>
+    </nav>
+    <button class="mob-btn" aria-label="Menu" onclick="document.getElementById('navMenu').classList.toggle('open')">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+  </div>
+</header>
+
+<main>
+  <!-- Hero Section -->
+  <section class="hero" id="hero">
+    <div class="hero-bg">
+      <div class="mesh"></div>
+      <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+      <div class="hero-grid"></div>
+    </div>
+    <div class="hero-glow"></div>
+    <div class="hero-ring"></div>
+    <div class="hero-inner">
+      <div class="hero-text">
+        <h1>Healthcare That<br><span class="grad">Comes to You</span></h1>
+        <p class="desc">Book appointments with verified doctors, request paramedical care at home, share medical reports securely, and stay connected — all in one unified platform.</p>
+        <div class="hero-actions">
+          <button class="btn btn-pri" onclick="openAuth('register')"><i class="fa-solid fa-arrow-right"></i> Start Free</button>
+          <a href="#how" class="btn btn-w"><i class="fa-solid fa-play"></i> How It Works</a>
+        </div>
+        <div class="hero-trust">
+          <div class="trust-avatars">
+            <img src="https://ui-avatars.com/api/?name=Esha+Maham&background=0ea5e9&color=fff&bold=true&size=80" alt="">
+            <img src="https://ui-avatars.com/api/?name=Ahmed+Raza&background=10b981&color=fff&bold=true&size=80" alt="">
+            <img src="https://ui-avatars.com/api/?name=Sara+Khan&background=8b5cf6&color=fff&bold=true&size=80" alt="">
+            <img src="https://ui-avatars.com/api/?name=Hassan+Ali&background=f59e0b&color=fff&bold=true&size=80" alt="">
+          </div>
+          <div class="trust-text"><strong>4.9/5 Rating</strong> from 2,000+ reviews</div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="float-card fc1"><div class="fc-icon" style="background:var(--pri-50);color:var(--pri)"><i class="fa-solid fa-calendar-check"></i></div><div class="fc-text"><h4>Appointment Booked</h4><p>Dr. Ahmed — 10:00 AM</p></div></div>
+        <div class="float-card fc2"><div class="fc-icon" style="background:var(--gold-50);color:var(--gold)"><i class="fa-solid fa-file-medical"></i></div><div class="fc-text"><h4>Report Shared</h4><p>Lab results uploaded</p></div></div>
+        <div class="float-card fc3"><div class="fc-icon" style="background:var(--coral-50);color:var(--coral)"><i class="fa-solid fa-heart-pulse"></i></div><div class="fc-text"><h4>Vitals Normal</h4><p>BP 120/80</p></div></div>
+        <div class="mockup">
+          <div class="mockup-bar"><div class="mockup-dot" style="background:#ef4444"></div><div class="mockup-dot" style="background:#f59e0b"></div><div class="mockup-dot" style="background:#22c55e"></div></div>
+          <div class="mockup-body">
+            <div class="mockup-card"><div class="mc-icon" style="background:var(--pri-50);color:var(--pri)"><i class="fa-solid fa-user-doctor"></i></div><div class="mc-text"><h4>Dr. Ahmed Raza</h4><p>Cardiology — 18 yrs exp</p></div><div class="mc-badge" style="background:var(--pri-50);color:var(--pri)">Online</div></div>
+            <div class="mockup-card"><div class="mc-icon" style="background:var(--gold-50);color:var(--gold)"><i class="fa-solid fa-calendar-check"></i></div><div class="mc-text"><h4>Next Appointment</h4><p>Jul 20 — 10:00 AM</p></div><div class="mc-badge" style="background:var(--pri-50);color:var(--pri)">Confirmed</div></div>
+            <div class="mockup-card"><div class="mc-icon" style="background:var(--indigo-50);color:var(--indigo)"><i class="fa-solid fa-flask-vial"></i></div><div class="mc-text"><h4>Blood Test (CBC)</h4><p>Uploaded Jul 10</p></div><div class="mc-badge" style="background:var(--gold-50);color:var(--gold)">Shared</div></div>
+            <div class="mockup-card" style="border:0;margin:0"><div class="mc-icon" style="background:var(--coral-50);color:var(--coral)"><i class="fa-solid fa-hand-holding-medical"></i></div><div class="mc-text"><h4>Home Nursing</h4><p>Jul 18 — Completed</p></div><div class="mc-badge" style="background:var(--pri-50);color:var(--pri)">Done</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features" id="features">
+    <div class="sec-head anim">
+      <div class="sec-tag" style="background:var(--pri-50);color:var(--pri-dk);border:1px solid var(--pri-100)"><i class="fa-solid fa-sparkles"></i> Features</div>
+      <h2>Everything You Need<br>For Better Health</h2>
+      <p>Six powerful modules designed around how healthcare actually works — not how apps think it should.</p>
+    </div>
+    <div class="bento">
+      <div class="feat lg c-emerald anim anim-d1">
+        <div class="feat-deco"><i class="fa-solid fa-calendar-check"></i></div>
+        <div class="feat-inner">
+          <div class="fi"><i class="fa-solid fa-calendar-check"></i></div>
+          <div class="feat-content">
+            <span class="feat-tag">Core Feature</span>
+            <h3>Online Appointments</h3>
+            <p>Browse verified doctors by specialty, availability, and ratings — book your slot in under 10 seconds with instant confirmation — track every status update from waiting room to prescription.</p>
+          </div>
+        </div>
+      </div>
+      <div class="feat c-amber anim anim-d2">
+        <span class="feat-tag">At-Home</span>
+        <div class="fi"><i class="fa-solid fa-hand-holding-medical"></i></div>
+        <h3>Paramedical Services</h3>
+        <p>Request nursing, physiotherapy, lab collection, or speech therapy at your doorstep — verified professionals, scheduled at your convenience.</p>
+      </div>
+      <div class="feat c-rose anim anim-d3">
+        <span class="feat-tag">Security</span>
+        <div class="fi"><i class="fa-solid fa-file-shield"></i></div>
+        <h3>Secure Health Records</h3>
+        <p>Upload reports, scans, and prescriptions with consent-based sharing and end-to-end encryption — your data, your control, always.</p>
+      </div>
+      <div class="feat lg c-indigo anim anim-d4">
+        <div class="feat-deco"><i class="fa-solid fa-comments"></i></div>
+        <div class="feat-inner">
+          <div class="fi"><i class="fa-solid fa-comments"></i></div>
+          <div class="feat-content">
+            <span class="feat-tag">Live Updates</span>
+            <h3>Real-Time Communication</h3>
+            <p>Instant notifications for appointment changes, new prescriptions, and report uploads — plus built-in chat with your doctor — no more phone tag, no more missed updates.</p>
+          </div>
+        </div>
+      </div>
+      <div class="feat c-sky anim anim-d5">
+        <span class="feat-tag">Smart Assist</span>
+        <div class="fi"><i class="fa-solid fa-robot"></i></div>
+        <h3>AI Health Guidance</h3>
+        <p>Get booking guidance, service FAQs, appointment reminders, and ethical navigation — AI assists your care journey without diagnosing or replacing your clinician.</p>
+      </div>
+      <div class="feat rating-card c-mixed anim anim-d6">
+        <div class="feat-text">
+          <span class="feat-tag">Trust Engine</span>
+          <div class="fi"><i class="fa-solid fa-star"></i></div>
+          <h3>Transparent Rating System</h3>
+          <p>Rate every doctor visit, lab test, and home service — honest reviews help the next patient decide smarter — accountability keeps the entire ecosystem sharp.</p>
+        </div>
+        <div class="feat-visual">
+          <div>
+            <div class="rating-num">4.9</div>
+            <div class="rating-label">Average Rating</div>
+            <div class="rating-stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+          </div>
+          <div class="rating-bars">
+            <div class="rbar"><span>5★</span><div class="rbar-track"><div class="rbar-fill" data-w="88"></div></div></div>
+            <div class="rbar"><span>4★</span><div class="rbar-track"><div class="rbar-fill" data-w="9"></div></div></div>
+            <div class="rbar"><span>3★</span><div class="rbar-track"><div class="rbar-fill" data-w="2"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services -->
+  <section class="services-strip" id="services">
+    <div class="sec-head anim" style="text-align:center">
+      <div class="sec-tag" style="background:var(--sky-50);color:var(--sky);border:1px solid rgba(14,165,233,.15)"><i class="fa-solid fa-stethoscope"></i> Services</div>
+      <h2>Six Care Services, One Platform</h2>
+      <p style="margin:0 auto">Same services available inside the patient booking portal</p>
+    </div>
+    <div class="svc-grid">
+      <div class="svc-tile anim anim-d1"><div class="si" style="background:var(--pri-50);color:var(--pri)"><i class="fa-solid fa-hand-holding-medical"></i></div><h4>Home Nursing</h4><p>Skilled nursing at your doorstep</p></div>
+      <div class="svc-tile anim anim-d2"><div class="si" style="background:var(--gold-50);color:var(--gold)"><i class="fa-solid fa-person-walking"></i></div><h4>Physiotherapy</h4><p>Rehab & mobility support</p></div>
+      <div class="svc-tile anim anim-d3"><div class="si" style="background:var(--indigo-50);color:var(--indigo)"><i class="fa-solid fa-flask-vial"></i></div><h4>Lab Tests</h4><p>Sample collection & reports</p></div>
+      <div class="svc-tile anim anim-d4"><div class="si" style="background:var(--violet-50);color:var(--violet)"><i class="fa-solid fa-comments"></i></div><h4>Speech Therapy</h4><p>Communication specialists</p></div>
+      <div class="svc-tile anim anim-d5"><div class="si" style="background:var(--sky-50);color:var(--sky)"><i class="fa-solid fa-user-doctor"></i></div><h4>General Physician</h4><p>Primary care consultations</p></div>
+      <div class="svc-tile anim anim-d6"><div class="si" style="background:var(--coral-50);color:var(--coral)"><i class="fa-solid fa-brain"></i></div><h4>Psychologist</h4><p>Mental health support</p></div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how" id="how">
+    <div class="how-deco"></div>
+    <div class="sec-head anim" style="text-align:center">
+      <div class="sec-tag" style="background:var(--gold-50);color:var(--gold-dark);border:1px solid var(--gold-100)"><i class="fa-solid fa-route"></i> Process</div>
+      <h2>Three Simple Steps</h2>
+      <p style="margin:0 auto">Get started in under 2 minutes</p>
+    </div>
+    <div class="how-grid">
+      <div class="step anim anim-d1"><div class="step-bg-num">01</div><div class="step-num">1</div><h3>Create Account</h3><p>Register as patient, doctor, or staff with your details.</p></div>
+      <div class="step anim anim-d2"><div class="step-bg-num">02</div><div class="step-num">2</div><h3>Book & Connect</h3><p>Choose services, book appointments, or manage operations.</p></div>
+      <div class="step anim anim-d3"><div class="step-bg-num">03</div><div class="step-num">3</div><h3>Receive Care</h3><p>Get quality healthcare, track progress, and stay connected.</p></div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="stats">
+    <div class="stats-bg"></div>
+    <div class="stats-inner">
+      <div class="stat-item anim"><div class="n" data-target="500" data-suffix="+">0</div><div class="l">Expert Doctors</div></div>
+      <div class="stat-item anim anim-d1"><div class="n" data-target="50" data-suffix="K+">0</div><div class="l">Happy Patients</div></div>
+      <div class="stat-item anim anim-d2"><div class="n" data-target="99" data-suffix="%">0</div><div class="l">Satisfaction Rate</div></div>
+      <div class="stat-item anim anim-d3"><div class="n" data-target="24" data-suffix="/7">0</div><div class="l">Support Available</div></div>
+    </div>
+  </section>
+
+  <!-- Platform Roles -->
+  <section class="roles" id="roles">
+    <div class="sec-head anim" style="text-align:center">
+      <div class="sec-tag" style="background:var(--pri-50);color:var(--pri-dk);border:1px solid var(--pri-100)"><i class="fa-solid fa-users-gear"></i> Portals</div>
+      <h2>Built for Every Role</h2>
+      <p style="margin:0 auto">Click your role to open registration — staff accounts use admin sign-in</p>
+    </div>
+    <div class="roles-grid">
+      <div class="role-card anim anim-d1" role="button" tabindex="0" onclick="openAuth('register','Patient')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAuth('register','Patient');}">
+        <div class="ri"><i class="fa-solid fa-user-injured"></i></div>
+        <h4>Patient</h4>
+        <p>Book visits, chat with care team, upload reports, and track appointments.</p>
+        <button class="btn btn-pri" onclick="openAuth('register','Patient')">Join as Patient</button>
+      </div>
+      <div class="role-card anim anim-d2" role="button" tabindex="0" onclick="openAuth('register','Doctor')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAuth('register','Doctor');}">
+        <div class="ri" style="background:var(--sky-50);color:var(--sky)"><i class="fa-solid fa-user-doctor"></i></div>
+        <h4>Doctor</h4>
+        <p>Manage patients, prescriptions, consultations, and shared medical files.</p>
+        <button class="btn btn-w" onclick="openAuth('register','Doctor')">Register Doctor</button>
+      </div>
+      <div class="role-card anim anim-d3" role="button" tabindex="0" onclick="openAuth('register','Lab Technician')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAuth('register','Lab Technician');}">
+        <div class="ri" style="background:var(--indigo-50);color:var(--indigo)"><i class="fa-solid fa-flask"></i></div>
+        <h4>Lab Technician</h4>
+        <p>Process lab orders, enter results, and message patients securely.</p>
+        <button class="btn btn-w" onclick="openAuth('register','Lab Technician')">Register Lab Tech</button>
+      </div>
+      <div class="role-card anim anim-d4" role="button" tabindex="0" onclick="openAuth('login')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAuth('login');}">
+        <div class="ri" style="background:var(--gold-50);color:var(--gold)"><i class="fa-solid fa-shield-halved"></i></div>
+        <h4>Admin (Staff)</h4>
+        <p>Single system administrator — verify doctors & lab techs, approve appointments. Sign in only (no registration).</p>
+        <button class="btn btn-w" onclick="openAuth('login')">Admin Sign In</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="testi" id="testimonials">
+    <div class="sec-head anim" style="text-align:center">
+      <div class="sec-tag" style="background:var(--coral-50);color:var(--coral);border:1px solid rgba(244,63,94,.1)"><i class="fa-solid fa-quote-left"></i> Reviews</div>
+      <h2>Loved by Patients</h2>
+      <p style="margin:0 auto">Real feedback from real users</p>
+    </div>
+    <div class="testi-grid">
+      <div class="testi-featured anim anim-d1">
+        <div class="testi-stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+        <p>"Booking appointments is so easy now. No more waiting in long queues at the hospital. The doctor chat feature is a complete game changer — I discussed my reports with my cardiologist from home. This platform genuinely cares about patient experience."</p>
+        <div class="testi-author"><img src="https://ui-avatars.com/api/?name=Ayesha+Khan&background=10b981&color=fff&bold=true&size=100" alt=""><div><h4>Ayesha Khan</h4><span>Patient — Lahore</span></div></div>
+      </div>
+      <div class="testi-stack">
+        <div class="testi-card anim anim-d2">
+          <div class="testi-stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+          <p>"As a doctor, this platform streamlined my entire practice. Patient management is efficient and the reports system is secure."</p>
+          <div class="testi-author"><img src="https://ui-avatars.com/api/?name=Hassan+Ali&background=0ea5e9&color=fff&bold=true&size=100" alt=""><div><h4>Dr. Hassan Ali</h4><span>Cardiologist — Karachi</span></div></div>
+        </div>
+        <div class="testi-card anim anim-d3">
+          <div class="testi-stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i></div>
+          <p>"The home nursing service saved us during my father's recovery. Professional staff, always on time, very caring."</p>
+          <div class="testi-author"><img src="https://ui-avatars.com/api/?name=Imran+Raza&background=8b5cf6&color=fff&bold=true&size=100" alt=""><div><h4>Imran Raza</h4><span>Patient — Islamabad</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <div class="cta-wrap anim">
+      <div class="cta-card">
+        <h2>Ready to Take Control<br>of Your Health?</h2>
+        <p>Join 50,000+ users who trust HealthOnCall for their healthcare needs.</p>
+        <div class="cta-btns">
+          <button class="btn btn-pri" onclick="openAuth('register')"><i class="fa-solid fa-arrow-right"></i> Create Free Account</button>
+          <button class="btn btn-w" onclick="openAuth('login')">Sign In</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Footer -->
+<footer>
+  <div class="f-logo"><div class="f-logo-icon"><i class="fa-solid fa-heart-pulse"></i></div><span class="f-logo-text">Health<span>OnCall</span></span></div>
+  <div class="links"><a href="#features">Features</a><a href="#services">Services</a><a href="#how">How It Works</a><a href="#testimonials">Reviews</a></div>
+  <p>&copy; 2026 HealthOnCall</p>
+  <p style="margin-top:6px;font-size:11px;opacity:.45">Esha Maham &amp; Mahnoor</p>
+</footer>
+
+<!-- Authentication Modal -->
+<div class="modal-ov" id="authModal">
+  <div class="auth-wrap" id="authWrap">
+    <div class="auth-brand">
+      <div class="auth-brand-logo"><i class="fa-solid fa-heart-pulse"></i></div>
+      <h2>Health<span>OnCall</span></h2>
+      <p>Your health, our priority</p>
+    </div>
+    <div class="auth-box">
+    <button class="auth-close" type="button" aria-label="Close" onclick="closeAuth()"><i class="fa-solid fa-xmark"></i></button>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')"><i class="fa-solid fa-right-to-bracket"></i> Sign In</button>
+      <button class="auth-tab" id="tabRegister" onclick="switchTab('register')"><i class="fa-solid fa-user-plus"></i> Create Account</button>
+    </div>
+    <!-- Login Panel -->
+    <div class="auth-body" id="loginPanel">
+      <div id="loginFormView">
+        <h3>Welcome Back</h3>
+        <div class="auth-err" id="loginErr"><i class="fa-solid fa-circle-exclamation"></i><span id="loginErrMsg"></span></div>
+        <div class="form-group">
+          <label for="lEmail">Email</label>
+          <div class="input-icon-wrap"><i class="fa-solid fa-envelope"></i><input type="email" id="lEmail" placeholder="your.email@example.com" autocomplete="email"></div>
+        </div>
+        <div class="form-group">
+          <label for="lPass">Password</label>
+          <div class="input-icon-wrap"><i class="fa-solid fa-lock"></i><input type="password" id="lPass" placeholder="••••••••" autocomplete="current-password"></div>
+        </div>
+        <div class="auth-row">
+          <label class="auth-remember" for="lRemember">
+            <input type="checkbox" id="lRemember">
+            <span class="auth-check-ui"><i class="fa-solid fa-check"></i></span>
+            Remember me
+          </label>
+          <button type="button" class="auth-forgot" onclick="showForgotPanel()">Forgot password?</button>
+        </div>
+        <button class="btn-auth" id="loginBtn" onclick="doLogin()"><span class="btn-txt">Sign In</span><span class="auth-loader"></span></button>
+        <p class="auth-switch">Don't have an account? <a href="#" onclick="switchTab('register');return false;">Sign up</a></p>
+      </div>
+      <div id="forgotPanel" class="forgot-panel" style="display:none">
+        <button type="button" class="forgot-back" onclick="showLoginForm()"><i class="fa-solid fa-arrow-left"></i> Back to Sign In</button>
+        <h3>Reset Password</h3>
+        <p class="forgot-desc">Enter the email linked to your account. We'll send you a secure link to choose a new password.</p>
+        <div class="auth-success" id="forgotOk"><i class="fa-solid fa-circle-check"></i><span id="forgotOkMsg"></span></div>
+        <div class="auth-err" id="forgotErr"><i class="fa-solid fa-circle-exclamation"></i><span id="forgotErrMsg"></span></div>
+        <div class="form-group">
+          <label for="forgotEmail">Email</label>
+          <div class="input-icon-wrap"><i class="fa-solid fa-envelope"></i><input type="email" id="forgotEmail" placeholder="your.email@example.com" autocomplete="email"></div>
+        </div>
+        <button class="btn-auth" id="forgotBtn" onclick="doForgotPassword()"><span class="btn-txt">Send Reset Link</span><span class="auth-loader"></span></button>
+      </div>
+    </div>
+    <!-- Register Panel -->
+    <div class="auth-body" id="registerPanel" style="display:none">
+      <h3 class="reg-title">Create Account</h3>
+      <p class="reg-sub">Select your role and complete the form</p>
+      <div class="role-grid" id="roleGrid">
+        <div class="role-opt selected" data-role="Patient" onclick="selectRole(this)"><i class="fa-solid fa-user-injured"></i><span>Patient</span></div>
+        <div class="role-opt" data-role="Doctor" onclick="selectRole(this)"><i class="fa-solid fa-user-doctor"></i><span>Doctor</span></div>
+        <div class="role-opt" data-role="Lab Technician" onclick="selectRole(this)"><i class="fa-solid fa-flask"></i><span>Lab Tech</span></div>
+      </div>
+      <div class="role-hint" id="roleHint"><i class="fa-solid fa-circle-check"></i><span>Instant access as a patient — booking, chat, and reports.</span></div>
+      <div class="auth-err" id="regErr"><i class="fa-solid fa-circle-exclamation"></i><span id="regErrMsg"></span></div>
+
+      <div class="auth-section">
+        <div class="auth-section-title"><i class="fa-solid fa-id-card"></i> Basic Details</div>
+        <div class="form-grid"><div class="form-group"><label>First Name *</label><input type="text" id="rFname" placeholder="Sara"></div><div class="form-group"><label>Last Name *</label><input type="text" id="rLname" placeholder="Khan"></div></div>
+        <div class="form-group"><label>Email *</label><input type="email" id="rEmail" placeholder="you@email.com"></div>
+        <div class="form-grid"><div class="form-group"><label>Phone *</label><input type="tel" id="rPhone" placeholder="03001234567"></div><div class="form-group"><label>Gender *</label><select id="rGender"><option value="">Select</option><option>Male</option><option>Female</option></select></div></div>
+      </div>
+
+      <div id="fields-Patient">
+        <div class="auth-section">
+          <div class="auth-section-title"><i class="fa-solid fa-notes-medical"></i> Patient Details</div>
+          <div class="form-grid"><div class="form-group"><label>Date of Birth *</label><input type="date" id="rDob"></div><div class="form-group"><label>Blood Group</label><select id="rBlood"><option value="">Select</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div></div>
+          <div class="form-group"><label>CNIC</label><input type="text" id="rCnic" placeholder="XXXXX-XXXXXXX-X"></div>
+          <div class="form-group"><label>Allergies</label><input type="text" id="rAllergies" placeholder="None"></div>
+          <div class="form-grid"><div class="form-group"><label>Emergency Contact</label><input type="tel" id="rEmergency" placeholder="03001234567"></div><div class="form-group"><label>Address</label><input type="text" id="rAddress" placeholder="House, Street, City"></div></div>
+          <div class="auth-section-title" style="margin-top:12px"><i class="fa-solid fa-heart-pulse"></i> Basic Vitals</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Weight (kg)</label><input type="number" id="rWeight" placeholder="65" min="1" max="300" step="0.1"></div>
+            <div class="form-group"><label>Height (cm)</label><input type="number" id="rHeight" placeholder="170" min="50" max="250"></div>
+            <div class="form-group"><label>Blood Pressure</label><input type="text" id="rBp" placeholder="120/80"></div>
+            <div class="form-group"><label>Pulse (bpm)</label><input type="number" id="rPulse" placeholder="72" min="30" max="220"></div>
+            <div class="form-group"><label>Temperature (°C)</label><input type="number" id="rTemp" placeholder="36.6" min="34" max="42" step="0.1"></div>
+          </div>
+        </div>
+      </div>
+      <div id="fields-Doctor" style="display:none">
+        <div class="auth-section">
+          <div class="auth-section-title"><i class="fa-solid fa-stethoscope"></i> Doctor Profile</div>
+          <div class="form-grid"><div class="form-group"><label>Specialization *</label><input type="text" id="rDocSpec" placeholder="Cardiologist"></div><div class="form-group"><label>License No *</label><input type="text" id="rDocLic" placeholder="PMDC-12345"></div></div>
+          <div class="form-grid"><div class="form-group"><label>Qualification</label><input type="text" id="rDocQual" placeholder="MBBS, FCPS"></div><div class="form-group"><label>Experience</label><input type="text" id="rDocExp" placeholder="5 Years"></div></div>
+          <div class="form-grid"><div class="form-group"><label>Fee (PKR) *</label><input type="number" id="rDocFee" placeholder="1500"></div><div class="form-group"><label>Service *</label><select id="rDocService"><option value="">Select</option><option>Home Nursing</option><option>Physiotherapy</option><option>Lab Tests</option><option>Speech Therapy</option><option>General Physician</option><option>Psychologist</option></select></div></div>
+          <div class="form-group" style="margin-bottom:0"><label>Department</label><input type="text" id="rDocDept" placeholder="Cardiology"></div>
+        </div>
+      </div>
+      <div id="fields-Lab" style="display:none">
+        <div class="auth-section">
+          <div class="auth-section-title"><i class="fa-solid fa-flask-vial"></i> Lab Technician Profile</div>
+          <div class="form-grid"><div class="form-group"><label>Department *</label><input type="text" id="rLabDept" placeholder="Hematology"></div><div class="form-group"><label>Designation</label><input type="text" id="rLabDes" placeholder="Senior Lab Tech"></div></div>
+          <div class="form-grid"><div class="form-group"><label>License ID</label><input type="text" id="rLabLic" placeholder="LAB-12345"></div><div class="form-group"><label>Experience</label><input type="text" id="rLabExp" placeholder="3 Years"></div></div>
+          <div class="form-group" style="margin-bottom:0"><label>Qualification</label><input type="text" id="rLabQual" placeholder="MSc Pathology"></div>
+        </div>
+      </div>
+      <div class="password-block">
+        <div class="auth-section-title"><i class="fa-solid fa-lock"></i> Password</div>
+        <div class="form-group" style="margin-bottom:10px"><label>Password *</label><input type="password" id="rPass" placeholder="Min 6 characters"></div>
+        <div class="form-group" style="margin-bottom:0"><label>Confirm Password *</label><input type="password" id="rPassC" placeholder="Repeat password"></div>
+      </div>
+      <button class="btn-auth" id="regBtn" onclick="doRegister()" style="margin-top:14px"><span class="btn-txt">Create Account</span><span class="auth-loader"></span></button>
+      <p class="auth-switch">Already have an account? <a href="#" onclick="switchTab('login');return false;">Sign in</a></p>
+    </div>
+    </div>
+    <p class="auth-legal">By continuing, you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a></p>
+  </div>
+</div>
+
+<script>
+// Firebase (shared object from doc/hoc-firebase-config.js)
+var firebaseConfig = window.HOC_FIREBASE_CONFIG;
+if (!firebaseConfig || !firebaseConfig.apiKey) {
+  console.error('HealthOnCall: load doc/hoc-firebase-config.js before this script.');
+}
+if (firebaseConfig && firebaseConfig.apiKey && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
+var auth = firebase.auth(), db = firebase.firestore();
+
+// Role Dashboard Mappings
+var DASH = {
+  'Patient': 'patient/Patient%20Dashboard%20Home%20Page%20p1.html',
+  'Doctor': 'doc/doctor-dashboard%202.html',
+  'Staff': 'staff/staff-dashboard.html',
+  'Lab Technician': 'lab%20tecinician/labtecinician.html'
+};
+
+// Global State — public registration is patient-only (doctor / staff / lab = admin invite)
+var selectedRole = 'Patient', busy = false;
+
+// Clear supervisor preview bypass when visiting public landing (login required for dashboards)
+if (typeof hocClearPreviewMode === 'function') hocClearPreviewMode();
+
+// Auth State Listener (Auto-Redirect if logged in — skip after explicit logout)
+function hocIndexErrFromQuery() {
+  try {
+    var qs = new URLSearchParams(location.search);
+    if (qs.get('err') === 'staff') { openAuth('login'); showErr('loginErr', 'No staff profile linked to this account. Contact your administrator.'); }
+    else if (qs.get('err') === 'rules') { openAuth('login'); showErr('loginErr', 'Sign-in was blocked by server permissions. Contact support if this continues.'); }
+    else if (qs.get('err') === 'pending') { openAuth('login'); showErr('loginErr', 'Your account is registered but not verified yet. Please wait for admin approval, then sign in again.'); }
+  } catch (e) {}
+}
+
+auth.onAuthStateChanged(async function(u) {
+  var manualLogout = false;
+  try { manualLogout = localStorage.getItem('hoc_manual_logout') === '1'; } catch (e) {}
+  var signedOut = false;
+  try { signedOut = new URLSearchParams(location.search).get('signedout') === '1'; } catch (e2) {}
+
+  if (manualLogout || signedOut) {
+    if (u) {
+      if (typeof hocForceSignOut === 'function') await hocForceSignOut(auth);
+      else try { await auth.signOut(); } catch (e3) {}
+    }
+    try { localStorage.removeItem('hoc_manual_logout'); } catch (e4) {}
+    openAuth('login');
+    hocIndexErrFromQuery();
+    return;
+  }
+
+  if (u) {
+    if (typeof hocIsFileProtocol === 'function' && hocIsFileProtocol()) return;
+    if (window._hocLoginInProgress) return;
+    try {
+      if (typeof window.hocEnsureFirestoreAuthReady === 'function') {
+        var authOk = await window.hocEnsureFirestoreAuthReady(db, u);
+        if (!authOk) { console.warn('Auth redirect: Firestore not ready'); return; }
+      }
+      var found = await hocResolveLoginProfile(db, u.uid);
+      if (!found || !found.data) {
+        if (typeof window.hocRepairMissingLoginProfile === 'function') {
+          var repaired = await window.hocRepairMissingLoginProfile(db, u.uid, u.email || '');
+          if (repaired && repaired.data) found = repaired;
+        }
+      }
+      if (found && found.data) {
+        var d = found.data, url = DASH[d.role];
+        if (url && (d.role === 'Patient' || (typeof hocRoleCanAccessDashboard === 'function' && hocRoleCanAccessDashboard(d)))) {
+          if (d.role === 'Patient' && typeof hocSyncPatientSession === 'function') hocSyncPatientSession(d, found.docId);
+          window.location.href = url;
+          return;
+        }
+      }
+    } catch (e) { console.error('Auth redirect error:', e); }
+  }
+  hocIndexErrFromQuery();
+});
+
+// Modal Functions
+function hocRememberLoad() {
+  try {
+    var remember = localStorage.getItem('hoc_remember_me') === '1';
+    var email = localStorage.getItem('hoc_remember_email') || '';
+    var cb = document.getElementById('lRemember');
+    var em = document.getElementById('lEmail');
+    if (cb) cb.checked = remember;
+    if (em && remember && email) em.value = email;
+  } catch (e) {}
+}
+function hocRememberSave() {
+  try {
+    var cb = document.getElementById('lRemember');
+    var em = document.getElementById('lEmail');
+    if (!cb) return;
+    localStorage.setItem('hoc_remember_me', cb.checked ? '1' : '0');
+    if (cb.checked && em && em.value.trim()) {
+      localStorage.setItem('hoc_remember_email', em.value.trim());
+    } else if (!cb.checked) {
+      localStorage.removeItem('hoc_remember_email');
+    }
+  } catch (e) {}
+}
+function hocAuthPersistence() {
+  var remember = document.getElementById('lRemember') && document.getElementById('lRemember').checked;
+  var mode = remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION;
+  return auth.setPersistence(mode);
+}
+function showForgotPanel() {
+  hideErr('loginErr');
+  document.getElementById('loginFormView').style.display = 'none';
+  document.getElementById('forgotPanel').style.display = 'block';
+  var em = (document.getElementById('lEmail').value || '').trim();
+  if (em) document.getElementById('forgotEmail').value = em;
+  document.getElementById('forgotOk').classList.remove('show');
+  hideErr('forgotErr');
+}
+function showLoginForm() {
+  document.getElementById('forgotPanel').style.display = 'none';
+  document.getElementById('loginFormView').style.display = 'block';
+  hideErr('forgotErr');
+  document.getElementById('forgotOk').classList.remove('show');
+}
+function showOk(id, msg) {
+  var e = document.getElementById(id);
+  e.classList.add('show');
+  document.getElementById(id + 'Msg').textContent = msg;
+}
+async function doForgotPassword() {
+  if (busy) return;
+  var em = (document.getElementById('forgotEmail').value || '').trim();
+  if (!em) { showErr('forgotErr', 'Please enter your email address.'); return; }
+  hideErr('forgotErr');
+  document.getElementById('forgotOk').classList.remove('show');
+  busy = true;
+  var btn = document.getElementById('forgotBtn');
+  btn.classList.add('loading');
+  try {
+    await auth.sendPasswordResetEmail(em);
+    showOk('forgotOk', 'Reset link sent! Check your inbox (and spam folder) for ' + em + '.');
+    document.getElementById('forgotEmail').value = '';
+  } catch (e) {
+    var m = 'Could not send reset email.';
+    if (e.code === 'auth/user-not-found') m = 'No account found with this email.';
+    else if (e.code === 'auth/invalid-email') m = 'Please enter a valid email address.';
+    else if (e.message) m = e.message;
+    showErr('forgotErr', m);
+  }
+  busy = false;
+  btn.classList.remove('loading');
+}
+function openAuth(t, role) {
+  document.getElementById('authModal').classList.add('show');
+  switchTab(t || 'login');
+  showLoginForm();
+  document.body.style.overflow = 'hidden';
+  hocRememberLoad();
+  if (t === 'register' && role) selectRoleByName(role);
+}
+function selectRoleByName(roleName) {
+  var el = document.querySelector('.role-opt[data-role="' + roleName + '"]');
+  if (el) selectRole(el);
+}
+function closeAuth() {
+  document.getElementById('authModal').classList.remove('show');
+  document.body.style.overflow = '';
+}
+document.getElementById('authModal').addEventListener('click', function(e) {
+  if (e.target === this) closeAuth();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeAuth();
+});document.getElementById('lPass').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('forgotEmail').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doForgotPassword();
+});
+var lRememberEl = document.getElementById('lRemember');
+var lEmailEl = document.getElementById('lEmail');
+if (lRememberEl) lRememberEl.addEventListener('change', hocRememberSave);
+if (lEmailEl) lEmailEl.addEventListener('input', function() {
+  if (lRememberEl && lRememberEl.checked) hocRememberSave();
+});
+hocRememberLoad();
+
+// Nav scroll highlight
+var navLinks = document.querySelectorAll('#navMenu a[href^="#"]');
+var sections = [];
+navLinks.forEach(function(a) {
+  var id = a.getAttribute('href').slice(1);
+  var el = document.getElementById(id);
+  if (el) sections.push({ link: a, el: el });
+});
+if (sections.length) {
+  var navObs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (!entry.isIntersecting) return;
+      sections.forEach(function(s) { s.link.classList.toggle('nav-active', s.el === entry.target); });
+    });
+  }, { rootMargin: '-40% 0px -50% 0px', threshold: 0.01 });
+  sections.forEach(function(s) { navObs.observe(s.el); });
+}
+
+// Tab Switching
+function switchTab(t) {
+  document.getElementById('loginPanel').style.display = t === 'login' ? 'block' : 'none';
+  document.getElementById('registerPanel').style.display = t === 'register' ? 'block' : 'none';
+  document.getElementById('tabLogin').classList.toggle('active', t === 'login');
+  document.getElementById('tabRegister').classList.toggle('active', t === 'register');
+  var wrap = document.getElementById('authWrap');
+  if (wrap) wrap.classList.toggle('wide', t === 'register');
+  if (t === 'login') showLoginForm();
+}
+
+// Role Selection
+function selectRole(el) {
+  document.querySelectorAll('.role-opt').forEach(function(o) { o.classList.remove('selected'); });
+  el.classList.add('selected');
+  selectedRole = el.dataset.role || 'Patient';
+  var fp = document.getElementById('fields-Patient');
+  var fd = document.getElementById('fields-Doctor');
+  var fl = document.getElementById('fields-Lab');
+  if (fp) fp.style.display = selectedRole === 'Patient' ? 'block' : 'none';
+  if (fd) fd.style.display = selectedRole === 'Doctor' ? 'block' : 'none';
+  if (fl) fl.style.display = selectedRole === 'Lab Technician' ? 'block' : 'none';
+  var hint = document.getElementById('roleHint');
+  if (!hint) return;
+  hint.className = 'role-hint';
+  if (selectedRole === 'Doctor') {
+    hint.classList.add('doctor');
+    hint.innerHTML = '<i class="fa-solid fa-user-clock"></i><span>Admin verification required after registration — dashboard opens once approved.</span>';
+  } else if (selectedRole === 'Lab Technician') {
+    hint.classList.add('lab');
+    hint.innerHTML = '<i class="fa-solid fa-flask"></i><span>Lab account activates after admin approval.</span>';
+  } else {
+    hint.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>Instant access as a patient — booking, chat, and reports.</span>';
+  }
+}
+
+// Error Handling
+function showErr(id, m) {
+  var e = document.getElementById(id);
+  e.classList.add('show');
+  document.getElementById(id + 'Msg').textContent = m;
+}
+function hideErr(id) { document.getElementById(id).classList.remove('show'); }
+
+async function hocSaveUserIndex(db, uid, meta) {
+  if (typeof window.hocSaveUserIndexShared === 'function') {
+    return window.hocSaveUserIndexShared(db, uid, meta);
+  }
+  if (!db || !uid || !meta) return;
+  await db.collection('UserIndex').doc(uid).set({
+    role: String(meta.role || ''),
+    profileCollection: String(meta.profileCollection || ''),
+    profileId: String(meta.profileId || ''),
+    email: String(meta.email || '').toLowerCase(),
+    updatedAt: new Date().toISOString()
+  });
+}
+
+async function hocWaitFirestoreAuth(user) {
+  if (!user) return;
+  if (typeof window.hocEnsureFirestoreAuthReady === 'function') {
+    await window.hocEnsureFirestoreAuthReady(db, user);
+    return;
+  }
+  try { await user.getIdToken(false); } catch (e0) {}
+  await new Promise(function (r) { setTimeout(r, 200); });
+}
+
+async function hocResolveLoginProfile(db, uid) {
+  if (!db || !uid) return null;
+  if (typeof hocIsFileProtocol === 'function' && hocIsFileProtocol()) {
+    console.warn('Profile lookup skipped — use Live Server (http://), not file://');
+    return null;
+  }
+  var user = firebase.auth && firebase.auth().currentUser;
+  if (user && user.uid === uid) {
+    await hocWaitFirestoreAuth(user);
+    if (typeof window.hocEnsureFirestoreAuthReady === 'function') {
+      var ready = await window.hocEnsureFirestoreAuthReady(db, user);
+      if (!ready) {
+        console.warn('Profile lookup skipped — Firestore auth not attached');
+        return null;
+      }
+    }
+  }
+  try {
+    var idx = await db.collection('UserIndex').doc(uid).get();
+    if (idx.exists) {
+      var m = idx.data();
+      if (m.profileCollection && m.profileId) {
+        try {
+          var prof = await db.collection(m.profileCollection).doc(m.profileId).get();
+          if (prof.exists) return { data: prof.data(), docId: prof.id };
+        } catch (eProf) {
+          console.warn('UserIndex profile get', eProf);
+        }
+      }
+    }
+  } catch (e1) {
+    console.warn('UserIndex lookup', e1);
+  }
+  var cols = ['Patients', 'Doctors', 'Staff', 'LabTechnicians'];
+  for (var i = 0; i < cols.length; i++) {
+    try {
+      var q = await db.collection(cols[i]).where('uid', '==', uid).limit(1).get();
+      if (!q.empty) {
+        var found = { data: q.docs[0].data(), docId: q.docs[0].id };
+        try {
+          var saveIdx = typeof hocSaveUserIndex === 'function' ? hocSaveUserIndex : window.hocSaveUserIndexShared;
+          await saveIdx(db, uid, {
+            role: found.data.role,
+            profileCollection: cols[i],
+            profileId: q.docs[0].id,
+            email: found.data.email || ''
+          });
+        } catch (e2) {}
+        return found;
+      }
+    } catch (err) {
+      console.warn('Profile lookup ' + cols[i], err);
+    }
+  }
+  return null;
+}
+
+// Login Logic
+async function doLogin() {
+  if (busy) return;
+  if (typeof hocIsFileProtocol === 'function' && hocIsFileProtocol()) {
+    showErr('loginErr', 'Open with Live Server (http://) — file:// breaks Firebase login.');
+    return;
+  }
+  var em = document.getElementById('lEmail').value.trim(),
+      pw = document.getElementById('lPass').value;
+  
+  if (!em || !pw) { showErr('loginErr', 'Email and password required.'); return; }
+  
+  hideErr('loginErr');
+  busy = true;
+  window._hocLoginInProgress = true;
+  var btn = document.getElementById('loginBtn');
+  btn.classList.add('loading');
+  hocRememberSave();
+  try {
+    await hocAuthPersistence();
+    try { localStorage.removeItem('hoc_manual_logout'); } catch (e0) {}
+    try {
+      if (new URLSearchParams(location.search).get('signedout') === '1') {
+        history.replaceState({}, '', location.pathname + location.hash);
+      }
+    } catch (eSigned) {}
+    if (auth.currentUser && auth.currentUser.email && auth.currentUser.email.toLowerCase() !== em.toLowerCase()) {
+      try { await auth.signOut(); } catch (e1) {}
+    }
+    var cr = await auth.signInWithEmailAndPassword(em, pw),
+        uid = cr.user.uid;
+    await hocWaitFirestoreAuth(cr.user);
+    var found = await hocResolveLoginProfile(db, uid);
+
+    if (!found || !found.data) {
+      if (typeof window.hocRepairMissingLoginProfile === 'function') {
+        var repaired = await window.hocRepairMissingLoginProfile(db, uid, em);
+        if (repaired && repaired.error === 'permission-denied') {
+          var permMsg = (typeof hocIsFileProtocol === 'function' && hocIsFileProtocol())
+            ? 'Use Live Server (http://) — file:// blocks Firebase after sign-in.'
+            : 'Firestore blocked profile access. Hard-refresh (Ctrl+Shift+R) on http://127.0.0.1:5500 and try again.';
+          showErr('loginErr', permMsg);
+          await auth.signOut();
+          return;
+        }
+        if (repaired && repaired.data) found = repaired;
+      }
+    }
+
+    if (!found || !found.data) {
+      await auth.signOut();
+      showErr('loginErr', 'No profile found. Register again, or use demo patient@hoc.com / pat789');
+      return;
+    }
+
+    if ((found.data.role === 'Doctor' || found.data.role === 'Lab Technician') && typeof hocRoleCanAccessDashboard === 'function' && !hocRoleCanAccessDashboard(found.data)) {
+      await auth.signOut();
+      showErr('loginErr', found.data.status === 'rejected' ? 'Your registration was rejected by admin. Contact support.' : 'Account pending admin verification. You cannot access the dashboard yet.');
+      return;
+    }
+
+    if (found.data.role === 'Staff' && typeof hocIsSingleSystemAdmin === 'function' && !hocIsSingleSystemAdmin(found.data, found.docId)) {
+      await auth.signOut();
+      showErr('loginErr', 'Only the designated system administrator can access the admin portal.');
+      return;
+    }
+    
+    var url = DASH[found.data.role];
+    if (!url) { showErr('loginErr', 'Unknown role.'); return; }
+    
+    localStorage.setItem('hoc_user', JSON.stringify(found.data));
+    if (found.data.role === 'Patient' && typeof hocSyncPatientSession === 'function') {
+      hocSyncPatientSession(found.data, found.docId);
+    }
+    window.location.href = url;
+    
+  } catch (e) {
+    var m = (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') ? 'Invalid email or password.' : e.message;
+    if (e.code === 'permission-denied' || (m && m.toLowerCase().indexOf('permission') >= 0)) {
+      m = (typeof hocIsFileProtocol === 'function' && hocIsFileProtocol())
+        ? 'Use Live Server (http://) — file:// blocks Firebase sign-in.'
+        : 'Firestore blocked sign-in. Hard-refresh (Ctrl+Shift+R) on Live Server, then try demo patient@hoc.com / pat789.';
+    }
+    showErr('loginErr', m);
+  } finally {
+    busy = false;
+    window._hocLoginInProgress = false;
+    btn.classList.remove('loading');
+  }
+}
+
+// Registration — Patient (instant) | Doctor / Lab (pending admin verify)
+async function doRegister() {
+  if (busy) return;
+  var role = selectedRole || 'Patient';
+
+  var fn = document.getElementById('rFname').value.trim(),
+      ln = document.getElementById('rLname').value.trim(),
+      em = document.getElementById('rEmail').value.trim(),
+      rawPhone = document.getElementById('rPhone').value.trim(),
+      gn = document.getElementById('rGender').value,
+      pw = document.getElementById('rPass').value,
+      pwc = document.getElementById('rPassC').value;
+
+  var ph = rawPhone.replace(/[\s-]/g, '');
+  if (ph.length !== 11 || !ph.startsWith('03')) {
+    showErr('regErr', 'Please enter a valid 11-digit mobile number (e.g., 03001234567).');
+    return;
+  }
+  if (typeof hocValidatePersonName === 'function') {
+    var nv1 = hocValidatePersonName(fn, 'First name');
+    if (!nv1.ok) { showErr('regErr', nv1.msg); return; }
+    var nv2 = hocValidatePersonName(ln, 'Last name');
+    if (!nv2.ok) { showErr('regErr', nv2.msg); return; }
+  }
+  if (typeof hocValidateEmail === 'function') {
+    var ev = hocValidateEmail(em);
+    if (!ev.ok) { showErr('regErr', ev.msg); return; }
+  }
+  if (!fn || !ln || !em || !ph || !gn || !pw) {
+    showErr('regErr', 'All required fields must be filled.');
+    return;
+  }
+  if (pw.length < 6) {
+    showErr('regErr', 'Password must be at least 6 characters.');
+    return;
+  }
+  if (pw !== pwc) {
+    showErr('regErr', 'Passwords do not match.');
+    return;
+  }
+  if (role === 'Patient' && !document.getElementById('rDob').value) {
+    showErr('regErr', 'Date of birth is required.');
+    return;
+  }
+  if (role === 'Doctor') {
+    if (!document.getElementById('rDocSpec').value.trim() || !document.getElementById('rDocLic').value.trim()) {
+      showErr('regErr', 'Specialization and license are required for doctors.');
+      return;
+    }
+    if (!document.getElementById('rDocService').value) {
+      showErr('regErr', 'Select your app service type.');
+      return;
+    }
+    if (!document.getElementById('rDocFee').value) {
+      showErr('regErr', 'Consultation fee is required.');
+      return;
+    }
+  }
+  if (role === 'Lab Technician' && !document.getElementById('rLabDept').value.trim()) {
+    showErr('regErr', 'Lab department is required.');
+    return;
+  }
+  if (role === 'Staff') {
+    showErr('regErr', 'Admin accounts cannot be self-registered. Use the designated administrator sign-in.');
+    return;
+  }
+
+  hideErr('regErr');
+  busy = true;
+  var btn = document.getElementById('regBtn');
+  btn.classList.add('loading');
+
+  try {
+    var cr = await auth.createUserWithEmailAndPassword(em, pw),
+        uid = cr.user.uid;
+    em = em.toLowerCase();
+
+    if (role === 'Patient') {
+      var newId = 'PAT-' + Date.now();
+      var ud = {
+        name: fn + ' ' + ln, firstName: fn, lastName: ln, email: em, phone: ph, gender: gn,
+        role: 'Patient', status: 'active', uid: uid, createdAt: new Date().toISOString(),
+        patientId: newId,
+        shareRecords: true,
+        dob: document.getElementById('rDob').value,
+        bloodGroup: document.getElementById('rBlood').value,
+        cnic: document.getElementById('rCnic').value.trim(),
+        allergies: document.getElementById('rAllergies').value.trim(),
+        emergencyContact: document.getElementById('rEmergency').value.trim(),
+        address: document.getElementById('rAddress').value.trim(),
+        weight: document.getElementById('rWeight').value.trim(),
+        height: document.getElementById('rHeight').value.trim(),
+        bloodPressure: document.getElementById('rBp').value.trim(),
+        pulse: document.getElementById('rPulse').value.trim(),
+        temperature: document.getElementById('rTemp').value.trim(),
+        vitalsRecordedAt: new Date().toISOString()
+      };
+      try {
+        var existing = await db.collection('Patients').where('email', '==', em).limit(5).get();
+        if (!existing.empty) {
+          var best = existing.docs[0];
+          existing.docs.forEach(function (d) {
+            var b = best.data(), c = d.data();
+            var bs = (b.phone ? 1 : 0) + (b.gender ? 1 : 0) + (b.dob ? 1 : 0);
+            var cs = (c.phone ? 1 : 0) + (c.gender ? 1 : 0) + (c.dob ? 1 : 0);
+            if (cs > bs) best = d;
+          });
+          newId = best.id;
+          ud = Object.assign({}, best.data(), ud, { patientId: best.data().patientId || best.id, uid: uid });
+        }
+      } catch (eFind) { console.warn('Patient lookup on register', eFind); }
+      await db.collection('Patients').doc(newId).set(ud, { merge: true });
+      await hocSaveUserIndex(db, uid, { role: 'Patient', profileCollection: 'Patients', profileId: newId, email: em });
+      localStorage.setItem('hoc_user', JSON.stringify(ud));
+      if (typeof hocSyncPatientSession === 'function') hocSyncPatientSession(ud, newId);
+      window.location.href = DASH['Patient'];
+      return;
+    }
+
+    if (role === 'Doctor') {
+      var docId = 'DOC-' + Date.now();
+      var spec = document.getElementById('rDocSpec').value.trim();
+      await db.collection('Doctors').doc(docId).set({
+        name: fn + ' ' + ln, firstName: fn, lastName: ln, email: em, phone: ph, gender: gn,
+        role: 'Doctor', status: 'pending', verified: false, uid: uid, doctorId: docId,
+        specialization: spec, service: document.getElementById('rDocService').value,
+        qualification: document.getElementById('rDocQual').value.trim(),
+        licenseNumber: document.getElementById('rDocLic').value.trim(),
+        experience: document.getElementById('rDocExp').value.trim(),
+        fee: parseInt(document.getElementById('rDocFee').value, 10) || 0,
+        department: document.getElementById('rDocDept').value.trim() || spec,
+        createdAt: new Date().toISOString()
+      });
+      await hocSaveUserIndex(db, uid, { role: 'Doctor', profileCollection: 'Doctors', profileId: docId, email: em });
+      if (typeof hocNotifyPush === 'function') {
+        hocNotifyPush(db, { targetRole: 'staff', targetUid: '_broadcast', type: 'registration', title: 'New doctor registration', body: fn + ' ' + ln + ' — pending admin verification.' });
+      }
+      await auth.signOut();
+      busy = false;
+      btn.classList.remove('loading');
+      switchTab('login');
+      showErr('loginErr', 'Doctor registration submitted. Wait for admin verification, then sign in.');
+      return;
+    }
+
+    if (role === 'Lab Technician') {
+      var labId = 'LAB-' + Date.now();
+      await db.collection('LabTechnicians').doc(labId).set({
+        name: fn + ' ' + ln, firstName: fn, lastName: ln, email: em, phone: ph, gender: gn,
+        role: 'Lab Technician', status: 'pending', verified: false, uid: uid, labTechId: labId,
+        labDepartment: document.getElementById('rLabDept').value.trim(),
+        labDesignation: document.getElementById('rLabDes').value.trim(),
+        labLicenseId: document.getElementById('rLabLic').value.trim(),
+        labExperience: document.getElementById('rLabExp').value.trim(),
+        qualification: document.getElementById('rLabQual').value.trim(),
+        createdAt: new Date().toISOString()
+      });
+      await hocSaveUserIndex(db, uid, { role: 'Lab Technician', profileCollection: 'LabTechnicians', profileId: labId, email: em });
+      if (typeof hocNotifyPush === 'function') {
+        hocNotifyPush(db, { targetRole: 'staff', targetUid: '_broadcast', type: 'registration', title: 'New lab tech registration', body: fn + ' ' + ln + ' — pending admin verification.' });
+      }
+      await auth.signOut();
+      busy = false;
+      btn.classList.remove('loading');
+      switchTab('login');
+      showErr('loginErr', 'Lab technician registration submitted. Wait for admin verification, then sign in.');
+      return;
+    }
+
+    await auth.signOut();
+    showErr('regErr', 'Invalid role.');
+    busy = false;
+    btn.classList.remove('loading');
+  } catch (e) {
+    busy = false;
+    btn.classList.remove('loading');
+    try {
+      if (auth.currentUser && (e.code === 'permission-denied' || String(e.message || '').toLowerCase().indexOf('permission') >= 0)) {
+        await auth.currentUser.delete();
+      }
+    } catch (eDel) {}
+    var m = e.code === 'auth/email-already-in-use' ? 'Email already registered. Please sign in.' : e.message;
+    if (e.code === 'permission-denied' || (m && m.toLowerCase().indexOf('permission') >= 0)) {
+      m = (typeof hocIsFileProtocol === 'function' && hocIsFileProtocol())
+        ? 'Use Live Server (http://) — file:// blocks saving your profile.'
+        : 'Could not save profile to Firestore. Hard-refresh (Ctrl+Shift+R) and register again.';
+    }
+    showErr('regErr', m);
+  }
+}
+
+// Hero Mouse Interaction
+var heroEl = document.getElementById('hero');
+if (window.matchMedia('(hover:hover)').matches) {
+  heroEl.addEventListener('mousemove', function(e) {
+    var r = heroEl.getBoundingClientRect();
+    heroEl.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+    heroEl.style.setProperty('--my', (e.clientY - r.top) + 'px');
+  });
+}
+
+// Intersection Observer for Animations
+var obs = new IntersectionObserver(function(entries) {
+  entries.forEach(function(entry) {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('vis');
+      
+      // Counter Animation
+      var counters = entry.target.querySelectorAll('[data-target]');
+      counters.forEach(function(c) { animateCounter(c); });
+      
+      // Bar Animation
+      var bars = entry.target.querySelectorAll('.rbar-fill[data-w]');
+      bars.forEach(function(b) { b.style.width = b.dataset.w + '%'; });
+      
+      obs.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
+
+document.querySelectorAll('.anim').forEach(function(el) { obs.observe(el); });
+
+function animateCounter(el) {
+  if (el.dataset.done) return;
+  el.dataset.done = '1';
+  var target = parseInt(el.dataset.target),
+      suffix = el.dataset.suffix || '';
+  var startTs = null, duration = 1800;
+  
+  function step(ts) {
+    if (!startTs) startTs = ts;
+    var p = Math.min((ts - startTs) / duration, 1);
+    var ease = 1 - Math.pow(1 - p, 4);
+    el.textContent = Math.floor(ease * target) + suffix;
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// Header Glass Effect on Scroll
+window.addEventListener('scroll', function() {
+  document.getElementById('hdr').classList.toggle('glass', scrollY > 30);
+}, { passive: true });
+
+// Mobile Menu Auto Close
+document.querySelectorAll('#navMenu a').forEach(function(a) {
+  a.addEventListener('click', function() {
+    document.getElementById('navMenu').classList.remove('open');
+  });
+});
+window.addEventListener('resize', function() {
+  if (window.innerWidth > 820) document.getElementById('navMenu').classList.remove('open');
+});
+</script>
+</body>
+</html> 

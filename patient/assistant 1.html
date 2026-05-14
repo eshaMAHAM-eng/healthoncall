@@ -2,31 +2,69 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>AI Assistant | HealthOnCall</title>
+    <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="../doc/hoc-theme-init.js"></script>
+    <link rel="stylesheet" href="../doc/hoc-global-theme.css">
+    <script src="../doc/hoc-firebase-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="../doc/hoc-clinical-shared.js"></script>
+    <script src="../doc/hoc-notifications.js"></script>
+    <script src="hoc-patient-common.js"></script>
     <style>
-        :root{--sidebar-bg:#0b1120;--sidebar-hover:rgba(16,185,129,.08);--sidebar-active-bg:rgba(16,185,129,.15);--accent:#10b981;--accent-glow:rgba(16,185,129,.25);--accent-soft:#d1fae5;--accent-dark:#059669;--gold:#f59e0b;--gold-soft:#fef3c7;--rose:#f43f5e;--rose-soft:#ffe4e6;--sky:#0ea5e9;--sky-soft:#e0f2fe;--indigo:#6366f1;--indigo-soft:#e0e7ff;--violet:#8b5cf6;--violet-soft:#ede9fe;--pink:#ec4899;--pink-soft:#fce7f3;--slate:#64748b;--slate-soft:#f1f5f9;--bg:#f0f4f8;--bg-gradient:linear-gradient(135deg,#f0f4f8 0%,#e8eef5 50%,#f0f4f8 100%);--card:#ffffff;--card-border:rgba(0,0,0,.04);--text:#0f172a;--text-secondary:#475569;--text-muted:#94a3b8;--border:#e2e8f0;--shadow-sm:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.02);--shadow-md:0 8px 30px rgba(0,0,0,.06);--shadow-lg:0 20px 60px rgba(0,0,0,.1);--radius:18px;--radius-lg:24px;--transition:all .35s cubic-bezier(.4,0,.2,1);}
-        body.dark-mode{--bg:#020617;--bg-gradient:linear-gradient(135deg,#020617 0%,#0a0f1e 50%,#020617 100%);--card:#0f172a;--card-border:rgba(255,255,255,.06);--text:#f1f5f9;--text-secondary:#cbd5e1;--text-muted:#64748b;--border:#1e293b;--slate-soft:#1e293b;--sky-soft:rgba(14,165,233,.1);--indigo-soft:rgba(99,102,241,.1);--violet-soft:rgba(139,92,246,.1);--accent-soft:rgba(16,185,129,.12);--gold-soft:rgba(245,158,11,.12);--rose-soft:rgba(244,63,94,.12);--pink-soft:rgba(236,72,153,.12);}
+        :root{
+            --sidebar-bg:#0b1120;--sidebar-hover:rgba(16,185,129,.08);--sidebar-active-bg:rgba(16,185,129,.15);
+            --sidebar-width:280px;
+            --accent:#10b981;--accent-glow:rgba(16,185,129,.25);--accent-soft:#d1fae5;--accent-dark:#059669;
+            --gold:#f59e0b;--gold-soft:#fef3c7;--rose:#f43f5e;--rose-soft:#ffe4e6;
+            --sky:#0ea5e9;--sky-soft:#e0f2fe;--indigo:#6366f1;--indigo-soft:#e0e7ff;
+            --violet:#8b5cf6;--violet-soft:#ede9fe;--pink:#ec4899;--pink-soft:#fce7f3;
+            --slate:#64748b;--slate-soft:#f1f5f9;
+            --bg:#f0f4f8;--bg-gradient:linear-gradient(135deg,#f0f4f8 0%,#e8eef5 50%,#f0f4f8 100%);
+            --card:#ffffff;--card-border:rgba(0,0,0,.04);
+            --text:#0f172a;--text-secondary:#475569;--text-muted:#94a3b8;--border:#e2e8f0;
+            --shadow-sm:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.02);
+            --shadow-md:0 8px 30px rgba(0,0,0,.06);--shadow-lg:0 20px 60px rgba(0,0,0,.1);
+            --radius:18px;--radius-lg:24px;--transition:all .35s cubic-bezier(.4,0,.2,1);
+        }
+        body.dark-mode{
+            --bg:#020617;--bg-gradient:linear-gradient(135deg,#020617 0%,#0a0f1e 50%,#020617 100%);
+            --card:#0f172a;--card-border:rgba(255,255,255,.06);--text:#f1f5f9;--text-secondary:#cbd5e1;--text-muted:#64748b;
+            --border:#1e293b;--slate-soft:#1e293b;--sky-soft:rgba(14,165,233,.1);
+            --indigo-soft:rgba(99,102,241,.1);--violet-soft:rgba(139,92,246,.1);
+            --accent-soft:rgba(16,185,129,.12);--gold-soft:rgba(245,158,11,.12);
+            --rose-soft:rgba(244,63,94,.12);--pink-soft:rgba(236,72,153,.12);
+        }
         *{margin:0;padding:0;box-sizing:border-box;}
+        html{scroll-behavior:smooth;}
         body{font-family:'DM Sans',sans-serif;background:var(--bg-gradient);color:var(--text);min-height:100vh;display:flex;overflow:hidden;transition:background .5s,color .4s;}
         h1,h2,h3,h4,h5,h6{font-family:'Sora',sans-serif;}
-        .bg-blobs{position:fixed;top:0;left:280px;right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;}
+
+        /* ===== BG BLOBS ===== */
+        .bg-blobs{position:fixed;top:0;left:var(--sidebar-width);right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;transition:left .35s cubic-bezier(.4,0,.2,1);}
         .bg-blobs .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.3;animation:blobFloat 20s ease-in-out infinite;transition:opacity .5s;}
         body.dark-mode .bg-blobs .blob{opacity:.1;}
         .blob-1{width:350px;height:350px;background:#10b981;top:-80px;right:5%;animation-delay:0s;}
         .blob-2{width:280px;height:280px;background:#0ea5e9;bottom:15%;left:8%;animation-delay:-7s;}
         .blob-3{width:220px;height:220px;background:#f59e0b;top:50%;right:25%;animation-delay:-14s;}
         @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1);}25%{transform:translate(30px,-40px) scale(1.1);}50%{transform:translate(-20px,20px) scale(.95);}75%{transform:translate(15px,35px) scale(1.05);}}
-        .sidebar{width:280px;height:100vh;position:fixed;left:0;top:0;background:var(--sidebar-bg);z-index:1000;display:flex;flex-direction:column;overflow:hidden;}
+
+        /* ===== SIDEBAR ===== */
+        .sidebar{width:var(--sidebar-width);height:100vh;position:fixed;left:0;top:0;background:var(--sidebar-bg);z-index:1000;display:flex;flex-direction:column;overflow:hidden;transition:transform .35s cubic-bezier(.4,0,.2,1);}
         .sidebar::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,185,129,.07) 0%,transparent 40%,transparent 60%,rgba(14,165,233,.05) 100%);pointer-events:none;}
-        .sidebar-brand{padding:32px 28px 28px;position:relative;}
+        .sidebar-brand{padding:32px 28px 28px;position:relative;z-index:1;}
         .sidebar-brand .logo-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;color:white;margin-bottom:16px;box-shadow:0 8px 24px rgba(16,185,129,.3);}
         .sidebar-brand h2{font-size:22px;font-weight:800;color:#f1f5f9;letter-spacing:-.5px;}
         .sidebar-brand h2 span{color:var(--accent);}
         .sidebar-brand p{font-size:11px;color:var(--text-muted);margin-top:4px;font-weight:500;letter-spacing:1px;text-transform:uppercase;}
-        .sidebar-nav{flex:1;padding:0 16px;display:flex;flex-direction:column;gap:4px;position:relative;}
+        .sidebar-nav{flex:1;padding:0 16px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;-webkit-overflow-scrolling:touch;position:relative;z-index:1;}
+        .sidebar-nav::-webkit-scrollbar{width:3px;}
+        .sidebar-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px;}
         .nav-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;padding:20px 16px 8px;}
         .sidebar-nav a{display:flex;align-items:center;gap:14px;padding:13px 18px;border-radius:14px;text-decoration:none;color:#94a3b8;font-weight:500;font-size:14.5px;transition:var(--transition);position:relative;overflow:hidden;}
         .sidebar-nav a i{width:20px;text-align:center;font-size:16px;transition:var(--transition);}
@@ -35,7 +73,9 @@
         .sidebar-nav a.active{color:#f1f5f9;background:var(--sidebar-active-bg);font-weight:600;}
         .sidebar-nav a.active i{color:var(--accent);}
         .sidebar-nav a.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:24px;background:var(--accent);border-radius:0 4px 4px 0;}
-        .sidebar-footer{padding:20px 24px;border-top:1px solid rgba(255,255,255,.05);position:relative;}
+        .sidebar-nav a.nav-danger:hover{background:rgba(244,63,94,.1);}
+        .sidebar-nav a.nav-danger:hover i{color:var(--rose);}
+        .sidebar-footer{padding:20px 24px;border-top:1px solid rgba(255,255,255,.05);position:relative;z-index:1;}
         .sidebar-footer .user-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.03);transition:var(--transition);}
         .sidebar-footer .user-card:hover{background:rgba(255,255,255,.06);}
         .user-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--sky),var(--indigo));display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;font-family:'Sora',sans-serif;overflow:hidden;}
@@ -43,8 +83,23 @@
         .user-info .user-name{color:#e2e8f9;font-weight:600;font-size:14px;}
         .user-info .user-role{color:var(--text-muted);font-size:11px;}
 
+        /* ===== SIDEBAR OVERLAY ===== */
+        .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);z-index:999;opacity:0;transition:opacity .3s ease;}
+        .sidebar-overlay.active{display:block;opacity:1;}
+
+        /* ===== MOBILE TOP BAR ===== */
+        .mobile-topbar{display:none;position:fixed;top:0;left:0;right:0;z-index:900;background:var(--card);border-bottom:1px solid var(--border);padding:12px 16px;align-items:center;gap:12px;backdrop-filter:blur(12px);}
+        .hamburger{width:42px;height:42px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);font-size:18px;transition:var(--transition);flex-shrink:0;}
+        .hamburger:hover{border-color:var(--accent);color:var(--accent);}
+        .m-logo{display:flex;align-items:center;gap:10px;}
+        .m-logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:white;flex-shrink:0;}
+        .m-logo-text{font-family:'Sora',sans-serif;font-weight:800;font-size:17px;color:var(--text);}
+        .m-logo-text span{color:var(--accent);}
+        .m-notif{margin-left:auto;width:42px;height:42px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);font-size:16px;transition:var(--transition);flex-shrink:0;}
+        .m-notif:hover{border-color:var(--accent);color:var(--accent);}
+
         /* ===== MAIN ===== */
-        .main{margin-left:280px;flex:1;display:flex;flex-direction:column;height:100vh;padding:28px 36px;position:relative;z-index:1;}
+        .main{margin-left:var(--sidebar-width);flex:1;display:flex;flex-direction:column;height:100vh;padding:28px 36px;position:relative;z-index:1;transition:margin-left .35s cubic-bezier(.4,0,.2,1);}
 
         /* Header */
         .chat-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-shrink:0;}
@@ -70,7 +125,7 @@
         /* Quick Queries */
         .quick-section{flex-shrink:0;margin-bottom:14px;}
         .quick-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
-        .quick-grid{display:flex;gap:8px;flex-wrap:wrap;max-height:120px;overflow-y:auto;padding:2px;}
+        .quick-grid{display:flex;gap:8px;flex-wrap:wrap;max-height:200px;overflow-y:auto;padding:2px;}
         .quick-grid::-webkit-scrollbar{width:4px;}.quick-grid::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;}
         .q-chip{padding:9px 15px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;transition:var(--transition);white-space:nowrap;display:inline-flex;align-items:center;gap:6px;box-shadow:var(--shadow-sm);}
         .q-chip:hover{border-color:var(--accent);color:var(--accent-dark);background:var(--accent-soft);transform:translateY(-1px);}
@@ -81,22 +136,29 @@
         .chat-messages{flex:1;overflow-y:auto;padding:22px 24px;display:flex;flex-direction:column;gap:14px;}
         .chat-messages::-webkit-scrollbar{width:5px;}.chat-messages::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;}
 
-        .msg{max-width:82%;padding:16px 20px;border-radius:20px;font-size:14px;line-height:1.7;animation:msgIn .35s ease;}
+        .msg{max-width:82%;padding:16px 20px;border-radius:20px;font-size:14px;line-height:1.6;animation:msgIn .35s ease;word-wrap:break-word;}
         @keyframes msgIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
         .msg-ai{background:var(--slate-soft);color:var(--text-secondary);align-self:flex-start;border-bottom-left-radius:6px;}
         body.dark-mode .msg-ai{background:rgba(255,255,255,.04);}
         .msg-user{background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:white;align-self:flex-end;border-bottom-right-radius:6px;}
-        .msg-ai b,.msg-ai strong{color:var(--text);}
-        .msg-ai .msg-highlight{background:var(--accent-soft);color:var(--accent-dark);padding:2px 6px;border-radius:6px;font-weight:700;}
+        
+        /* AI Response Styling */
+        .msg-ai b, .msg-ai strong{color:var(--text);font-weight:700;}
+        .msg-ai .msg-highlight{background:var(--accent-soft);color:var(--accent-dark);padding:2px 6px;border-radius:6px;font-weight:700;font-size:0.9em;display:inline-block;}
         body.dark-mode .msg-ai .msg-highlight{background:rgba(16,185,129,.15);}
-        .msg-time{font-size:10px;opacity:.5;display:block;margin-top:6px;}
-        .msg-ai .msg-steps{margin-top:10px;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:6px;}
-        .msg-ai .msg-steps li{font-size:13px;color:var(--text-secondary);display:flex;align-items:flex-start;gap:8px;}
-        .msg-ai .msg-steps li .step-num{width:22px;height:22px;border-radius:7px;background:var(--accent-soft);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;margin-top:1px;}
-        body.dark-mode .msg-ai .msg-steps li .step-num{background:rgba(16,185,129,.12);}
-        .msg-ai .msg-tip{margin-top:12px;padding:12px 16px;border-radius:12px;background:linear-gradient(135deg,var(--gold-soft),var(--accent-soft));border-left:3px solid var(--gold);font-size:13px;color:var(--text-secondary);line-height:1.6;}
-        body.dark-mode .msg-ai .msg-tip{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(16,185,129,.08));}
-        .msg-ai .msg-tip i{color:var(--gold);margin-right:6px;}
+        
+        .msg-time{font-size:10px;opacity:.5;display:block;margin-top:8px;}
+        
+        .msg-ai ul.msg-steps{margin-top:10px;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:8px;}
+        .msg-ai ul.msg-steps li{font-size:13px;color:var(--text-secondary);display:flex;align-items:flex-start;gap:10px;line-height:1.5;}
+        .msg-ai ul.msg-steps li .step-num{width:24px;height:24px;border-radius:8px;background:var(--accent-soft);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;margin-top:1px;}
+        body.dark-mode .msg-ai ul.msg-steps li .step-num{background:rgba(16,185,129,.12);}
+        
+        .msg-ai .msg-tip{margin-top:14px;padding:14px 18px;border-radius:12px;background:linear-gradient(135deg,var(--gold-soft),var(--accent-soft));border-left:4px solid var(--gold);font-size:13px;color:var(--text-secondary);line-height:1.5;}
+        body.dark-mode .msg-ai .msg-tip{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(16,185,129,.08));border-left-color:var(--accent);}
+        .msg-ai .msg-tip i{color:var(--gold);margin-right:8px;}
+        .msg-ai .msg-link{color:var(--accent-dark);font-weight:600;text-decoration:none;border-bottom:1px dashed var(--accent-dark);}
+        .msg-ai .msg-link:hover{border-bottom-style:solid;}
 
         /* Typing indicator */
         .typing-indicator{align-self:flex-start;display:none;padding:14px 20px;}
@@ -120,42 +182,84 @@
         .send-btn.sending i{animation:spin .8s linear infinite;}
         @keyframes spin{to{transform:rotate(360deg);}}
 
-        .toast-container{position:fixed;top:24px;right:24px;z-index:5000;display:flex;flex-direction:column;gap:10px;}
-        .toast{background:var(--card);border-radius:14px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.12);border-left:4px solid var(--accent);font-size:14px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);min-width:300px;}
+        /* Toast */
+        .toast-container{position:fixed;top:24px;right:24px;z-index:5000;display:flex;flex-direction:column;gap:10px;pointer-events:none;}
+        .toast{background:var(--card);border-radius:14px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.12);border-left:4px solid var(--accent);font-size:14px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);min-width:300px;pointer-events:auto;}
         .toast.show{transform:translateX(0);}
         .toast i{font-size:18px;}
         .toast .t-success{color:var(--accent);}
         .toast .t-info{color:var(--sky);}
 
-        @media(max-width:768px){.sidebar{transform:translateX(-100%);}.main{margin-left:0;padding:16px;}.quick-grid{max-height:80px;}.chat-header{flex-direction:column;align-items:flex-start;gap:10px;}}
+        /* ===== RESPONSIVE ===== */
+        @media(max-width:768px){
+            .sidebar{transform:translateX(-100%);}
+            .sidebar.open{transform:translateX(0);}
+            .sidebar-overlay.active{display:block;opacity:1;}
+            .mobile-topbar{display:flex!important;}
+            .main{margin-left:0;padding:76px 16px 16px;}
+            .bg-blobs{left:0;}
+            .quick-grid{max-height:80px;}
+            .chat-header{flex-direction:column;align-items:flex-start;gap:10px;}
+            .chat-header-left h1{font-size:20px;}
+            .toast-container{right:8px;left:8px;top:8px;}
+            .toast{min-width:0;font-size:12px;padding:10px 14px;}
+        }
+        @media(max-width:480px){
+            .q-chip{font-size:11px;padding:7px 12px;}
+            .msg{max-width:90%;}
+        }
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
     </style>
+    <link rel="stylesheet" href="../doc/SIDEBAR.CSS">
+    <link rel="stylesheet" href="../doc/shared sidebar footer.css">
+    <script src="../doc/hoc-sidebar.js" defer></script>
 </head>
 <body>
+<script src="hoc-patient-common.js"></script>
+<script>try{HOC_applyThemeFromStorage();}catch(e){}</script>
+
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay" id="hocSbOverlay"></div>
+
+<!-- Mobile Top Bar -->
+<div class="mobile-topbar" id="mobTopbar">
+    <button class="hamburger" id="hocHamburger" aria-label="Open menu"><i class="fas fa-bars"></i></button>
+    <div class="m-logo">
+        <div class="m-logo-icon"><i class="fas fa-heartbeat"></i></div>
+        <span class="m-logo-text">Health<span>OnCall</span></span>
+    </div>
+    <button class="m-notif" aria-label="Notifications"><i class="fas fa-bell"></i></button>
+</div>
 
 <div class="bg-blobs"><div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div></div>
 
-<aside class="sidebar">
+<aside class="sidebar" id="hocSidebar">
     <div class="sidebar-brand">
         <div class="logo-icon"><i class="fas fa-heartbeat"></i></div>
-        <h2>Health<span>OnCall</span></h2>
-        <p>Patient Portal</p>
+        <div>
+            <h2>Health<span>OnCall</span></h2>
+            <p>Patient Portal</p>
+        </div>
     </div>
     <nav class="sidebar-nav">
         <div class="nav-label">Menu</div>
         <a href="Patient Dashboard Home Page p1.html"><i class="fas fa-th-large"></i> Home</a>
-        <a href="find doc 1.html"><i class="fas fa-search"></i> Find Specialist</a>
-        <a href="services 1.html"><i class="fas fa-concierge-bell"></i> Services</a>
+         
+        <a href="book-appointment.html"><i class="fas fa-calendar-plus"></i> Book Appointment</a>
+        <a href="Patient Dashboard Home Page p1.html#messages"><i class="fas fa-comments"></i> Messages</a>
         <a href="assistant 1.html" class="active"><i class="fas fa-robot"></i> AI Assistant</a>
         <a href="feedback 1.html"><i class="fas fa-star"></i> Feedback</a>
         <div class="nav-label">Account</div>
         <a href="setting 1.html"><i class="fas fa-cog"></i> Settings</a>
-        <a href="logout 1.html"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        <a href="logout 1.html" class="nav-danger"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </nav>
     <div class="sidebar-footer">
         <div class="user-card">
-            <div class="user-avatar"><img src="https://ui-avatars.com/api/?name=Esha+Maham&background=0ea5e9&color=fff&bold=true&size=80" alt=""></div>
-            <div class="user-info"><div class="user-name">Esha Maham</div><div class="user-role">Patient</div></div>
+            <div class="user-avatar"><img src="https://ui-avatars.com/api/?name=Esha+Maham&background=0ea5e9&color=fff&bold=true&size=80" alt="Esha Maham"></div>
+            <div class="user-info">
+                <div class="user-name">Esha Maham</div>
+                <div class="user-role">Patient</div>
+            </div>
         </div>
     </div>
 </aside>
@@ -166,7 +270,7 @@
             <div class="ai-logo"><i class="fas fa-robot"></i><div class="ai-pulse"></div></div>
             <div>
                 <h1>AI <span>Assistant</span></h1>
-                <div class="ai-status"><span class="dot"></span> Online — Ready to help</div>
+                <div class="ai-status" id="hocAiStatusLine"><span class="dot"></span> Online — Ready to help</div>
             </div>
         </div>
         <button class="clear-btn" onclick="clearChat()"><i class="fas fa-broom"></i> Clear Chat</button>
@@ -174,7 +278,7 @@
 
     <div class="disclaimer">
         <i class="fas fa-shield-alt"></i>
-        <p><strong>Health Navigator Only:</strong> I can guide you about services, bookings, fees, and app features. I cannot provide medical diagnosis or replace your doctor.</p>
+        <p><strong>Health Navigator Only:</strong> I only help with this patient dashboard and our six bookable services (Home Nursing, Physiotherapy, Lab Tests, Speech Therapy, General Physician, Psychologist). I do not diagnose, prescribe, or replace a clinician.</p>
     </div>
 
     <div class="quick-section">
@@ -190,7 +294,7 @@
     </div>
 
     <div class="input-area">
-        <input type="text" id="userInput" placeholder="Ask about services, bookings, fees, health tips..." autocomplete="off">
+        <input type="text" id="userInput" placeholder="Ask about the 6 services, booking, fees, or app help…" autocomplete="off">
         <button class="send-btn" id="sendBtn" onclick="handleSend()"><i class="fas fa-paper-plane"></i></button>
     </div>
 </main>
@@ -198,469 +302,401 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-    document.getElementById('todayStr')?.remove();
-    const chatEl = document.getElementById('chatMessages');
-    const inputEl = document.getElementById('userInput');
-    const typingEl = document.getElementById('typingIndicator');
+/* ===== SIDEBAR TOGGLE ===== */
+var sidebar = document.getElementById('hocSidebar');
+var overlay = document.getElementById('hocSbOverlay');
+var hamburger = document.getElementById('hocHamburger');
 
-    /* ===== WELCOME MESSAGE ===== */
-    addAiMsg(`Welcome, <b>Esha</b>! 👋 I'm your <b>HealthOnCall Navigator</b>.<br><br>I can help you with:
-        <ul class="msg-steps">
-            <li><span class="step-num">1</span> Booking appointments & finding specialists</li>
-            <li><span class="step-num">2</span> Service fees & package info</li>
-            <li><span class="step-num">3</span> Downloading reports & prescriptions</li>
-            <li><span class="step-num">4</span> Navigating the app features</li>
-            <li><span class="step-num">5</span> General health & wellness tips</li>
-            <li><span class="step-num">6</span> Appointment reminders & scheduling</li>
-        </ul>
-        <div class="msg-tip"><i class="fas fa-lightbulb"></i> Try asking: "How do I book a nurse?" or "What services do you offer?"</div>`);
+function hocToggleSidebar(){
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+    document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+}
+function hocCloseSidebar(){
+    sidebar.classList.remove('open');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+}
 
-    /* ===== QUICK CHIPS ===== */
-    const quickQueries = [
-        {icon:'fa-heart',text:'How do I book a nurse?',q:'How do I book a nurse?'},
-        {icon:'fa-vials',text:'Lab test prices',q:'What are the lab test charges?'},
-        {icon:'fa-running',text:'Physiotherapy sessions',q:'How do physiotherapy sessions work?'},
-        {icon:'fa-download',text:'Download my report',q:'How can I download my medical report?'},
-        {icon:'fa-credit-card',text:'Payment methods',q:'What payment methods do you accept?'},
-        {icon:'fa-video',text:'Join video call',q:'How do I join a video call with my doctor?'},
-        {icon:'fa-redo',text:'Reschedule appointment',q:'How can I reschedule my appointment?'},
-        {icon:'fa-comment-medical',text:'Speech therapy for kids',q:'Do you have speech therapy for children?'},
-        {icon:'fa-tooth',text:'Dental services available?',q:'Do you offer dental care services?'},
-        {icon:'fa-tint',text:'Drink more water tip',q:'Give me a health tip'},
-        {icon:'fa-clock',text:'My upcoming appointments',q:'What are my upcoming appointments?'},
-        {icon:'fa-star',text:'How to rate my doctor?',q:'How can I rate my doctor?'},
-        {icon:'fa-map-marker-alt',text:'Which areas do you cover?',q:'In which areas of Faisalabad do you operate?'},
-        {icon:'fa-calendar-check',text:'Full body checkup',q:'Do you offer full body checkup packages?'}
-    ];
+hamburger.addEventListener('click', hocToggleSidebar);
+overlay.addEventListener('click', hocCloseSidebar);
+document.addEventListener('keydown', function(e){ if(e.key === 'Escape') hocCloseSidebar(); });
+window.addEventListener('resize', function(){ if(window.innerWidth > 768) hocCloseSidebar(); });
 
-    document.getElementById('quickGrid').innerHTML = quickQueries.map(q =>
-        `<div class="q-chip" onclick="quickAsk('${q.q.replace(/'/g,"\\'")}')"><i class="fas ${q.icon}"></i> ${q.text}</div>`
-    ).join('');
+/* ===== CHAT LOGIC ===== */
+var HOC_SIX_SERVICES = ['Home Nursing','Physiotherapy','Lab Tests','Speech Therapy','General Physician','Psychologist'];
+var HOC_SIX_SERVICES_INLINE = HOC_SIX_SERVICES.join(', ');
 
-    function quickAsk(q){inputEl.value=q;handleSend();}
+(function(){
+  var st = document.getElementById('hocAiStatusLine');
+  if(!st) return;
+  st.innerHTML = '<span class="dot"></span> Navigator for the six bookable services — no diagnosis';
+})();
 
-    /* ===== SEND ===== */
-    let isProcessing = false;
-    function handleSend(){
-        if(isProcessing) return;
-        const text = inputEl.value.trim();
-        if(!text) return;
-        addUserMsg(text);
-        inputEl.value = '';
-        isProcessing = true;
-        document.getElementById('sendBtn').classList.add('sending');
-        showTyping();
+const chatEl = document.getElementById('chatMessages');
+const inputEl = document.getElementById('userInput');
+const typingEl = document.getElementById('typingIndicator');
 
-        const delay = 800 + Math.random() * 800;
-        setTimeout(()=>{
+function hocAssistantSystemPrompt(){
+  return [
+    'You are the HealthOnCall Patient Portal assistant (navigator only).',
+    'STRICT SAFETY: Never diagnose, label a disease, interpret lab/imaging results, or suggest medications or dosages. If the user asks for any of that, refuse briefly and tell them to book a qualified clinician through the app.',
+    'SCOPE: Only help with (a) these six bookable services: '+HOC_SIX_SERVICES_INLINE+' — general what-the-service-is explanations in non-diagnostic language; (b) how to use this portal: Book Appointment, Messages, Feedback, Settings, payments, maps, rescheduling.',
+    'Do not invent other clinical services (no dentistry, surgery, pharmacy dosing, etc.). If asked, say this portal lists only the six services above.',
+    'Keep replies under 200 words. Use plain sentences; no HTML tags.'
+  ].join(' ');
+}
+
+function hocEscapeAiTextToHtml(s){
+  if(!s) return '';
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML.replace(/\n/g,'<br>');
+}
+
+function hocBuildLlmMessages(userText){
+  return [
+    {role:'system',content:hocAssistantSystemPrompt()},
+    {role:'user',content:userText}
+  ];
+}
+
+function hocTryOllamaChat(messages){
+  var base = (typeof HOC_getLocalLlmBase === 'function' ? HOC_getLocalLlmBase() : '') || (localStorage.getItem('hoc_local_llm_base')||'').trim();
+  base = base.replace(/\/+$/,'');
+  if(!base) return Promise.resolve(null);
+  var model = (typeof HOC_getLocalLlmModel === 'function' ? HOC_getLocalLlmModel() : '') || (localStorage.getItem('hoc_local_llm_model')||'').trim() || 'llama3.2';
+  return fetch(base + '/api/chat',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:model,messages:messages,stream:false})
+  }).then(function(r){ if(!r.ok) return null; return r.json(); })
+    .then(function(d){
+      if(!d || !d.message || typeof d.message.content !== 'string') return null;
+      var t = d.message.content.trim();
+      return t || null;
+    }).catch(function(){ return null; });
+}
+
+function hocTryOpenAiChat(messages){
+  var apiKey = (typeof HOC_getOpenAIKey==='function'?HOC_getOpenAIKey():'')||(localStorage.getItem('hoc_openai_key')||'');
+  if(!apiKey) return Promise.resolve(null);
+  return fetch('https://api.openai.com/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+    body:JSON.stringify({model:'gpt-4o-mini',messages:messages,temperature:0.3})
+  }).then(function(r){ if(!r.ok) return null; return r.json(); })
+    .then(function(d){
+      var c = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+      if(typeof c !== 'string' || !c.trim()) return null;
+      return c.trim();
+    }).catch(function(){ return null; });
+}
+
+/* Welcome Message */
+addAiMsg('Hello! I\'m your <b>HealthOnCall Navigator</b> for this dashboard. I only cover our <b>six services</b>:<ul class="msg-steps">'+
+  HOC_SIX_SERVICES.map(function(s,i){return '<li><span class="step-num">'+(i+1)+'</span> '+s+'</li>';}).join('')+
+  '</ul><div class="msg-tip"><i class="fas fa-shield-alt"></i> I do <b>not</b> diagnose or prescribe. Ask me how to use Book Appointment, Messages, or any of the six services above.</div>');
+
+/* Quick Chips — only six services + portal */
+const quickQueries = [
+    {icon:'fa-calendar-plus',text:'How do I book?',q:'How do I book an appointment in this app?'},
+    {icon:'fa-heart',text:'Home Nursing',q:'What is Home Nursing on HealthOnCall and how do I book it?'},
+    {icon:'fa-running',text:'Physiotherapy',q:'What is Physiotherapy here and how do sessions work?'},
+    {icon:'fa-vials',text:'Lab Tests',q:'How do home lab tests work on this portal?'},
+    {icon:'fa-comment-medical',text:'Speech Therapy',q:'Who is Speech Therapy for and how do I book?'},
+    {icon:'fa-user-md',text:'General Physician',q:'When should I book General Physician vs other services?'},
+    {icon:'fa-brain',text:'Psychologist',q:'How do I book a Psychologist visit (online or in person)?'},
+    {icon:'fa-comments',text:'Messages',q:'How do I use Messages to chat with staff?'},
+    {icon:'fa-star',text:'Feedback',q:'How do I send feedback from the Feedback page?'},
+    {icon:'fa-credit-card',text:'Payment methods',q:'What payment options are mentioned in the booking flow?'},
+    {icon:'fa-video',text:'Online visit',q:'How do online visits work when I book?'},
+    {icon:'fa-map-marker-alt',text:'Areas covered',q:'Which areas does the app mention for visits?'},
+    {icon:'fa-clock',text:'Appointment status',q:'What does Pending or Staff Approved mean on my appointment?'},
+    {icon:'fa-file-prescription',text:'Prescriptions',q:'Where do I see or download my prescription on the dashboard?'},
+    {icon:'fa-flask',text:'Lab results',q:'How will I know when my lab results are ready?'},
+    {icon:'fa-user-shield',text:'Patient ID',q:'What is my patient ID for and where do I set it in Settings?'},
+    {icon:'fa-list',text:'Reason for visit',q:'Why must I pick a suggested reason when booking?'},
+    {icon:'fa-home',text:'Home visit address',q:'When do I need to enter my home address for a visit?'},
+    {icon:'fa-redo',text:'Cancel or change',q:'How can I cancel or reschedule an appointment?'},
+    {icon:'fa-file-medical-alt',text:'Medical reports',q:'How do I upload my medical reports on the dashboard?'},
+    {icon:'fa-lock',text:'Privacy & consent',q:'How does sharing medical records with doctors work in Settings?'},
+    {icon:'fa-bell',text:'Reminders',q:'How do appointment reminder notifications work?'},
+    {icon:'fa-robot',text:'Assistant help',q:'What can this AI assistant help me with?'},
+    {icon:'fa-shield-alt',text:'Is this a doctor?',q:'Can the AI assistant diagnose my disease?'}
+];
+
+document.getElementById('quickGrid').innerHTML = quickQueries.map(q =>
+    '<div class="q-chip" onclick="quickAsk(\'' + q.q.replace(/'/g,"\\'") + '\')"><i class="fas ' + q.icon + '"></i> ' + q.text + '</div>'
+).join('');
+
+function quickAsk(q){inputEl.value=q;handleSend();}
+
+/* Send */
+let isProcessing = false;
+function handleSend(){
+    if(isProcessing) return;
+    const text = inputEl.value.trim();
+    if(!text) return;
+    addUserMsg(text);
+    inputEl.value = '';
+    isProcessing = true;
+    document.getElementById('sendBtn').classList.add('sending');
+    showTyping();
+    const delay = 500 + Math.random() * 400;
+    setTimeout(function(){
+        Promise.resolve(generateReply(text)).then(function(){
             hideTyping();
-            generateReply(text);
+        }).catch(function(){
+            hideTyping();
+            addAiMsg('Something went wrong. Please try again in a moment.');
+        }).finally(function(){
             isProcessing = false;
             document.getElementById('sendBtn').classList.remove('sending');
-        }, delay);
+        });
+    }, delay);
+}
+
+/* Message Helpers */
+function addUserMsg(text){
+    const div = document.createElement('div');
+    div.className = 'msg msg-user';
+    div.innerHTML = text + '<span class="msg-time">' + timeStr() + '</span>';
+    chatEl.appendChild(div);
+    scrollChat();
+}
+function addAiMsg(html){
+    const div = document.createElement('div');
+    div.className = 'msg msg-ai';
+    div.innerHTML = html + '<span class="msg-time">' + timeStr() + '</span>';
+    chatEl.appendChild(div);
+    scrollChat();
+}
+function timeStr(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
+function showTyping(){typingEl.classList.add('show');scrollChat();}
+function hideTyping(){typingEl.classList.remove('show');}
+function scrollChat(){chatEl.scrollTop=chatEl.scrollHeight;}
+
+function clearChat(){
+    chatEl.innerHTML='';
+    addAiMsg('Chat cleared! 🧹 How can I help you today?');
+    showToast('Chat history cleared','info');
+}
+
+/* ===== AI RESPONSE ENGINE — six services + portal; optional LLM via legacy localStorage only ===== */
+async function generateReply(input){
+    var q = input.toLowerCase().trim();
+
+    if(isDiagnosisAttempt(q,input)){
+        addAiMsg('<div class="msg-tip" style="border-left-color:var(--rose);background:var(--rose-soft);"><i class="fas fa-exclamation-triangle" style="color:var(--rose);"></i> I\'m a <b>dashboard navigator only</b>. I cannot diagnose, interpret tests, prescribe, or suggest medicines/doses.<br><br>Use <b>Book Appointment</b> to choose one of: '+HOC_SIX_SERVICES_INLINE+' — a licensed clinician can evaluate you.</div>');
+        return;
     }
 
-    /* ===== MESSAGE HELPERS ===== */
-    function addUserMsg(text){
-        const div = document.createElement('div');
-        div.className = 'msg msg-user';
-        div.innerHTML = text + `<span class="msg-time">${timeStr()}</span>`;
-        chatEl.appendChild(div);
-        scrollChat();
+    if(q.includes('message') && (q.includes('chat') || q.includes('staff') || q.includes('doctor') || q.includes('how'))){
+        addAiMsg('<span class="msg-highlight">Messages</span>: open <b>Home</b> from the sidebar, scroll to the <b>Messages</b> section, or use the Messages link. There you can chat in-app with care team threads tied to your account — not WhatsApp.');
+        return;
     }
 
-    function addAiMsg(html){
-        const div = document.createElement('div');
-        div.className = 'msg msg-ai';
-        div.innerHTML = html + `<span class="msg-time">${timeStr()}</span>`;
-        chatEl.appendChild(div);
-        scrollChat();
+    if(q.includes('pending') || q.includes('staff approved') || q.includes('appointment status')){
+        addAiMsg('<b>Pending</b> means your request is waiting for staff review. <b>Staff approved</b> means you can proceed with in-app messaging and next steps shown on <b>Home</b>. Status badges sit on each appointment row.');
+        return;
     }
 
-    function timeStr(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
-    function showTyping(){typingEl.classList.add('show');scrollChat();}
-    function hideTyping(){typingEl.classList.remove('show');}
-    function scrollChat(){chatEl.scrollTop=chatEl.scrollHeight;}
-
-    function clearChat(){
-        chatEl.innerHTML='';
-        addAiMsg('Chat cleared! 🧹 How can I help you?');
-        showToast('Chat history cleared','info');
+    if(q.includes('patient id') || (q.includes('patient') && q.includes('id'))){
+        addAiMsg('Your <b>patient ID</b> filters which appointments load from the cloud. Set or copy it under <b>Settings → Integrations</b>. Use one ID per person so you only see your own visits.');
+        return;
     }
 
-    /* ===== AI RESPONSE ENGINE ===== */
-    function generateReply(input){
-        const q = input.toLowerCase().trim();
-
-        // Medical diagnosis check
-        if(isDiagnosisAttempt(q)){
-            addAiMsg(`<div class="msg-tip"><i class="fas fa-exclamation-triangle"></i> I'm a <b>service navigator</b>, not a doctor. I cannot diagnose conditions, prescribe medicine, or provide medical advice.<br><br>For medical concerns, please <b>book an appointment</b> with one of our specialists through the <b>Find Specialist</b> page. They can properly evaluate your symptoms.</div>`);
-            return;
-        }
-
-        // Booking related
-        if(q.includes('book') && (q.includes('nurse') || q.includes('nursing'))){
-            addAiMsg(`Great question! Here's how to book a <span class="msg-highlight">Home Nurse</span>:<br><br>
-                <ol class="msg-steps">
-                    <li><span class="step-num">1</span> Go to <b>Find Specialist</b> in the sidebar</li>
-                    <li><span class="step-num">2</span> Click the <b>"Home Nursing"</b> service tab</li>
-                    <li><span class="step-num">3</span> Browse available nurses like <b>Dr. Asma Naz</b> (Rs.3,500) or <b>Dr. Nadia Fatima</b> (Rs.1,000)</li>
-                    <li><span class="step-num">4</span> Select a time slot and click <b>"Book Now"</b></li>
-                    <li><span class="step-num">5</span> Choose <b>Online</b> or <b>Physical</b> visit type</li>
-                    <li><span class="step-num">6</span> Fill in reason and confirm!</li>
-                </ol>
-                <div class="msg-tip"><i class="fas fa-lightbulb"></i> Tip: Night shift nurses are available for 12h/24h sessions. Mention this in the reason field.</div>`);
-            return;
-        }
-
-        if(q.includes('book') && (q.includes('physio') || q.includes('physiotherapy'))){
-            addAiMsg(`To book a <span class="msg-highlight">Physiotherapy</span> session:<br><br>
-                <ol class="msg-steps">
-                    <li><span class="step-num">1</span> Open <b>Find Specialist</b> → click <b>"Physiotherapy"</b> tab</li>
-                    <li><span class="step-num">2</span> We have <b>Dr. Zain Ahmed</b> (Rs.4,500, Sports Physio) and <b>Dr. Hassan Ali</b> (Rs.5,000, Ortho Physio)</li>
-                    <li><span class="step-num">3</span> Both offer <b>Online</b> and <b>Physical</b> sessions</li>
-                    <li><span class="step-num">4</span> Pick a slot, fill reason (e.g., "back pain for 2 weeks"), and confirm</li>
-                </ol>
-                <div class="msg-tip"><i class="fas fa-lightbulb"></i> A typical session is 45-60 minutes. For chronic issues, book a package of 6 sessions for 10% off!</div>`);
-            return;
-        }
-
-        if(q.includes('book') || q.includes('appointment') || q.includes('how to')){
-            addAiMsg(`Here's a quick guide to <span class="msg-highlight">book any appointment</span>:<br><br>
-                <ol class="msg-steps">
-                    <li><span class="step-num">1</span> Click <b>"Find Specialist"</b> in the left sidebar</li>
-                    <li><span class="step-num">2</span> Use <b>service tabs</b> to filter by category</li>
-                    <li><span class="step-num">3</span> Use <b>search, filters</b> (visit type, area) to find your doctor</li>
-                    <li><span class="step-num">4</span> Click <b>"Book Now"</b> → fill date, time, reason</li>
-                    <li><span class="step-num">5</span> Choose <b>Online</b> (video call) or <b>Physical</b> (at clinic/home)</li>
-                    <li><span class="step-num">6</span> Confirm! You'll get a WhatsApp reminder.</li>
-                </ol>
-                <div class="msg-tip"><i class="fas fa-info-circle"></i> Payment is <b>Cash on Delivery</b> — you pay after the service. No advance payment needed!</div>`);
-            return;
-        }
-
-        // Fee related
-        if(q.includes('fee') || q.includes('price') || q.includes('charge') || q.includes('cost') || q.includes('how much')){
-            if(q.includes('lab') || q.includes('test')){
-                addAiMsg(`Here are our <span class="msg-highlight">Lab Test</span> charges:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">🧪</span> <b>Basic Blood Test (CBC)</b> — Rs.500</li>
-                        <li><span class="step-num">🧪</span> <b>Full Body Checkup</b> — Rs.2,500</li>
-                        <li><span class="step-num">🧪</span> <b>Liver Function Test</b> — Rs.800</li>
-                        <li><span class="step-num">🧪</span> <b>Thyroid Panel</b> — Rs.1,200</li>
-                        <li><span class="step-num">🧪</span> <b>Vitamin D Test</b> — Rs.600</li>
-                        <li><span class="step-num">🧪</span> <b>Urine Analysis</b> — Rs.400</li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-lightbulb"></i> Home sample collection is available! The lab technician will visit your home for sample collection at no extra charge.</div>`);
-            } else if(q.includes('nurse')){
-                addAiMsg(`<span class="msg-highlight">Home Nursing</span> pricing:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">🏠</span> <b>Dr. Asma Naz</b> (Senior) — Rs.3,500/visit</li>
-                        <li><span class="step-num">🏠</span> <b>Dr. Nadia Fatima</b> (Critical Care) — Rs.1,000/visit</li>
-                        <li><span class="step-num">🌙</span> <b>Night Shift (12h)</b> — Additional Rs.1,500</li>
-                        <li><span class="step-num">🌙</span> <b>Full Day (24h)</b> — Additional Rs.2,500</li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-info-circle"></i> Nursing fee covers basic care. Medicines and supplies are charged separately.</div>`);
-            } else if(q.includes('physio')){
-                addAiMsg(`<span class="msg-highlight">Physiotherapy</span> fees:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">🧘</span> <b>Dr. Zain Ahmed</b> — Rs.4,500/session</li>
-                        <li><span class="step-num">🧘</span> <b>Dr. Hassan Ali</b> — Rs.5,000/session</li>
-                        <li><span class="step-num">📦</span> <b>6-session package</b> — 10% discount</li>
-                        <li><span class="step-num">📦</span> <b>12-session package</b> — 15% discount</li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-lightbulb"></i> Session duration is 45-60 minutes. Packages are popular for chronic back pain and post-surgery recovery.</div>`);
-            } else if(q.includes('speech')){
-                addAiMsg(`<span class="msg-highlight">Speech Therapy</span> pricing:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">🗣️</span> <b>Dr. Fatima Noor</b> — Rs.5,000/session</li>
-                        <li><span class="step-num">🗣️</span> Available for <b>children and adults</b></li>
-                        <li><span class="step-num">📹</span> Both <b>home visits</b> and <b>online sessions</b></li>
-                        <li><span class="step-num">📝</span> Daily home practice exercises provided</li>
-                    </ol>`);
-            } else if(q.includes('dental')){
-                addAiMsg(`<span class="msg-highlight">Dental Care</span> charges:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">🦷</span> <b>Dr. Bilal Hussain</b> — Rs.1,000/visit</li>
-                        <li><span class="step-num">🦷</span> Root Canal — Rs.3,000 - Rs.5,000</li>
-                        <li><span class="step-num">🦷</span> Teeth Cleaning — Rs.800</li>
-                        <li><span class="step-num">🦷</span> Braces (Orthodontics) — Rs.40,000 - Rs.80,000</li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-info-circle"></i> Dental is available at the clinic only (Physical visit) in Ghulam Muhammad Abad, Faisalabad.</div>`);
-            } else if(q.includes('checkup') || q.includes('package')){
-                addAiMsg(`<span class="msg-highlight">Full Body Checkup</span> package — Rs.2,500:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">🧪</span> Complete Blood Count (CBC)</li>
-                        <li><span class="step-num">🧪</span> Liver & Kidney Function</li>
-                        <li><span class="step-num">🧪</span> Blood Sugar & HbA1c</li>
-                        <li><span class="step-num">🧪</span> Lipid Profile</li>
-                        <li><span class="step-num">🧪</span> Urine Analysis</li>
-                        <li><span class="step-num">📋</span> Free doctor consultation with report</li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-gift"></i> Book through the <b>Services</b> page → Lab Tests → Dr. Kamran Shahid. Home sample collection available!</div>`);
-            } else {
-                addAiMsg(`Our <span class="msg-highlight">service charges</span> vary by specialist:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">🏠</span> Home Nursing — Rs.1,000 - 3,500</li>
-                        <li><span class="step-num">🧘</span> Physiotherapy — Rs.4,500 - 5,000</li>
-                        <li><span class="step-num">🧪</span> Lab Tests — Rs.400 - 2,500</li>
-                        <li><span class="step-num">🗣️</span> Speech Therapy — Rs.5,000</li>
-                        <li><span class="step-num">🦷</span> Dental — Rs.800 - 80,000</li>
-                        <li><span class="step-num">🩺</span> General Checkup — Rs.800</li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-info-circle"></i> All payments are <b>Cash on Delivery</b>. Cards, JazzCash, EasyPaisa also accepted.</div>`);
-            }
-            return;
-        }
-
-        // Report download
-        if(q.includes('report') || q.includes('download') || q.includes('prescription')){
-            addAiMsg(`To <span class="msg-highlight">download your reports</span>:<br><br>
-                <ol class="msg-steps">
-                    <li><span class="step-num">1</span> Go to <b>Services</b> page from sidebar</li>
-                    <li><span class="step-num">2</span> Select the relevant service (e.g., Lab Tests)</li>
-                    <li><span class="step-num">3</span> Look at your <b>Medical History</b> section on the right</li>
-                    <li><span class="step-num">4</span> Click the <b>download icon (📥)</b> next to any prescription</li>
-                    <li><span class="step-num">5</span> You can also <b>upload</b> your own files for safekeeping</li>
-                </ol>
-                <div class="msg-tip"><i class="fas fa-lightbulb"></i> Reports are also accessible from your <b>Home Dashboard</b> under the "Medical Reports" section.</div>`);
-            return;
-        }
-
-        // Video call
-        if(q.includes('video') || q.includes('call') || q.includes('join')){
-            addAiMsg(`Here's how <span class="msg-highlight">video calls</span> work:<br><br>
-                <ol class="msg-steps">
-                    <li><span class="step-num">1</span> Book an <b>Online</b> appointment with any doctor</li>
-                    <li><span class="step-num">2</span> 15 minutes before the session, a <b>"Join Call"</b> button appears</li>
-                    <li><span class="step-num">3</span> Click it — it opens in your browser</li>
-                    <li><span class="step-num">4</span> Make sure <b>camera and microphone</b> permissions are allowed</li>
-                    <li><span class="step-num">5</span> You'll also get a <b>WhatsApp reminder</b> with the link</li>
-                </ol>
-                <div class="msg-tip"><i class="fas fa-lightbulb"></i> Use <b>Google Chrome</b> for the best video call experience. Test your camera beforehand!</div>`);
-            return;
-        }
-
-        // Reschedule
-        if(q.includes('reschedule') || q.includes('cancel') || q.includes('missed')){
-            addAiMsg(`To <span class="msg-highlight">reschedule or cancel</span>:<br><br>
-                <ol class="msg-steps">
-                    <li><span class="step-num">1</span> Go to <b>Home Dashboard</b></li>
-                    <li><span class="step-num">2</span> Find your appointment in the <b>Recent Appointments</b> list</li>
-                    <li><span class="step-num">3</span> Click the status badge to modify</li>
-                    <li><span class="step-num">4</span> <b>Free reschedule</b> if done 2+ hours before the slot</li>
-                    <li><span class="step-num">5</span> Late cancellations may incur a small fee</li>
-                </ol>
-                <div class="msg-tip"><i class="fas fa-info-circle"></i> If you missed an appointment, don't worry — just rebook from <b>Find Specialist</b> page. No penalty!</div>`);
-            return;
-        }
-
-        // Payment
-        if(q.includes('payment') || q.includes('pay') || q.includes('card') || q.includes('jazzcash') || q.includes('easypaisa')){
-            addAiMsg(`We accept <span class="msg-highlight">multiple payment methods</span>:<br><br>
-                <ol class="msg-steps">
-                    <li><span class="step-num">💵</span> <b>Cash on Delivery</b> — Pay after service (default)</li>
-                    <li><span class="step-num">💳</span> <b>Credit/Debit Card</b> — Visa, Mastercard</li>
-                    <li><span class="step-num">📱</span> <b>JazzCash</b> — Send to our number</li>
-                    <li><span class="step-num">📱</span> <b>EasyPaisa</b> — Send to our number</li>
-                    <li><span class="step-num">🏦</span> <b>Bank Transfer</b> — Ask support for details</li>
-                </ol>
-                <div class="msg-tip"><i class="fas fa-shield-alt"></i> All payments are secure. You're never charged before the service is delivered.</div>`);
-            return;
-        }
-
-        // Speech therapy
-        if(q.includes('speech') || q.includes('kid') || q.includes('child') || q.includes('stutter')){
-            addAiMsg(`Yes! We have <span class="msg-highlight">pediatric speech therapy</span>:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">👩‍⚕️</span> <b>Dr. Fatima Noor</b> — MSc Speech & Language Pathology</li>
-                        <li><span class="step-num">🗣️</span> Specializes in: <b>stuttering, articulation, language delays</b></li>
-                        <li><span class="step-num">👶</span> Works with <b>children aged 2-12 years</b></li>
-                        <li><span class="step-num">🏠</span> Available for <b>home visits</b> in Madina Town</li>
-                        <li><span class="step-num">📹</span> Also offers <b>online sessions</b></li>
-                        <li><span class="step-num">📝</span> Provides daily home practice exercises</li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-lightbulb"></i> Book through <b>Services</b> → <b>Speech Therapy</b> tab. Initial assessment takes 30-45 minutes.</div>`);
-            return;
-        }
-
-        // Dental
-        if(q.includes('dental') || q.includes('tooth') || q.includes('braces')){
-            addAiMsg(`Yes, <span class="msg-highlight">dental services</span> are available!<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">🦷</span> <b>Dr. Bilal Hussain</b> — BDS, RDS (7 years exp.)</li>
-                        <li><span class="step-num">📍</span> Location: <b>Ghulam Muhammad Abad, Faisalabad</li>
-                        <li><span class="step-num">🦷</span> Services: Root canal, implants, braces, cleaning, fillings</li>
-                        <li><span class="step-num">💰</span> Consultation: <b>Rs.1,000</b></li>
-                        <li><span class="step-num">🏥</span> Physical visit only (clinic-based)</li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-lightbulb</i> Find him under <b>Find Specialist</b> → All Specialists filter, or directly book from his profile.</div>`);
-            return;
-        }
-
-        // Area
-        if(q.includes('area') || q.includes('where') || q.includes('location') || q.includes('city') || q.includes('faisalabad')){
-            addAiMsg(`We operate across <span class="msg-highlight">Faisalabad</span> in these areas:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">📍</span> <b>D-Ground</b> — Main Boulevard</li>
-                        <li><span class="step-num">📍</span> <b>Kohinoor City</b> — Block A-D</li>
-                        <li><span class="step-num">📍</span> <b>Madina Town</b> — Near General Hospital</li>
-                        <li><span class="step-num">📍</span> <b>Ghulam Muhammad Abad</b></li>
-                        <li><span class="step-num">📍</span> <b>Samanabad</b></li>
-                        <li><span class="step-num">📍</span> <b>Peoples Colony</b></li>
-                        <li><span class="step-num">📍</span> <b>Jinnah Colony</b></li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-info-circle"></i> Use the <b>Area filter</b> on Find Specialist page to see doctors near you. Online services are available everywhere!</div>`);
-            return;
-        }
-
-        // Rating
-        if(q.includes('rate') || q.includes('review') || q.includes('feedback') || q.includes('star')){
-            addAiMsg(`To <span class="msg-highlight">rate your doctor</span>:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">1</span> Go to <b>Feedback</b> page from sidebar</li>
-                        <li><span class="step-num">2</span> Select the doctor you want to rate</li>
-                        <li><span class="step-num">3</span> Give a <b>1-5 star rating</b></li>
-                        <li><span class="step-num">4</span> Write your experience in the review box</li>
-                        <li><span class="step-num">5</span> Submit — it helps other patients choose!</li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-star" style="color:#f59e0b;"></i> Your honest feedback helps us improve our services. All reviews are anonymous and verified.</div>`);
-            return;
-        }
-
-        // Checkup packages/discount
-        if(q.includes('discount') || q.includes('package') || q.includes('offer')){
-            addAiMsg(`Current <span class="msg-highlight">offers & packages</span>:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">🎁</span> <b>Physio Package</b> — 6 sessions = 10% off, 12 sessions = 15% off</li>
-                        <li><span class="step-num">🎁</span> <b>Full Body Checkup</b> — Rs.2,500 (includes free consult)</li>
-                        <li><span class="step-num">🎁</span> <b>New Patient</b> — First lab test at 20% discount</li>
-                        <li><span class="step-num">🎁</span> <b>Referral Bonus</b> — Refer a friend, both get Rs.200 off</li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-gift"></i> Offers may change. Check the <b>Services</b> page for the latest promotions!</div>`);
-            return;
-        }
-
-        // Appointment/upcoming
-        if(q.includes('appointment') || q.includes('upcoming') || q.includes('my') || q.includes('schedule')){
-            addAiMsg(`To check <span class="msg-highlight">your appointments</span>:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">1</span> Go to your <b>Home Dashboard</b></li>
-                        <li><span class="step-num">2</span> See <b>"Recent Appointments"</b> section</li>
-                        <li><span class="step-num">3</span> Statuses: <b>Waiting, Active, Done</b></li>
-                        <li><span class="step-num">4</span> You'll also get <b>WhatsApp reminders</b> before each session</li>
-                        <li><span class="step-num">5</span> Check <b>"Upcoming"</b> stat card on dashboard for quick count</li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-bell"></i> Reminders are sent 1 hour before your appointment via WhatsApp. Make sure your number is updated in <b>Settings</b>.</div>`);
-            return;
-        }
-
-        // Health tips
-        if(q.includes('tip') || q.includes('health') || q.includes('water') || q.includes('sleep') || q.includes('exercise') || q.includes('diet') || q.includes('stress') || q.includes('headache') || q.includes('cold') || q.includes('cough')){
-            const tips = [
-                {q:['water','drink'],tip:'💧 <b>Stay Hydrated:</b> Aim for 8-10 glasses of water daily. It improves digestion, skin, energy, and helps flush toxins. Keep a water bottle nearby!'},
-                {q:['sleep','rest'],tip:'😴 <b>Better Sleep:</b> Try to sleep 7-8 hours. Avoid screens 1 hour before bed. A consistent sleep schedule improves both physical and mental health.'},
-                {q:['exercise','walk','gym','workout'],tip:'🏃 <b>Stay Active:</b> Even a 30-minute daily walk makes a huge difference. Start small and gradually increase. Consistency matters more than intensity!'},
-                {q:['diet','eat','food','nutrition'],tip:'🥗 <b>Balanced Diet:</b> Include fruits, vegetables, whole grains, and protein in every meal. Limit processed foods, sugary drinks, and excess salt.'},
-                {q:['stress','anxiety','mental','worry'],tip:'🧘 <b>Manage Stress:</b> Try deep breathing (4-7-8 technique), meditation, or a short walk. Talking to someone also helps. If stress persists, consider booking our Mental Health service.'},
-                {q:['headache'],tip:'🤕 <b>Headache Relief:</b> Drink water, rest in a dark quiet room, and apply a cold compress. If headaches are frequent, please consult <b>Dr. Ahmed Raza</b> (General Physician).'},
-                {q:['cold','cough','flu','fever'],tip:'🤧 <b>Cold/Flu Care:</b> Rest, drink warm fluids, take steam, and use honey for cough. If fever persists beyond 3 days or is very high, see a doctor immediately.'},
-                {q:['eye','vision'],tip:'👁️ <b>Eye Care:</b> Follow the 20-20-20 rule: every 20 minutes, look at something 20 feet away for 20 seconds. Blink frequently when using screens.'},
-                {q:['back','back pain'],tip:'🧘 <b>Back Pain Prevention:</b> Maintain good posture, stretch daily, avoid heavy lifting, and stay active. If pain persists, book <b>Dr. Zain Ahmed</b> (Physiotherapist).'},
-                {q:['blood pressure','bp','sugar','diabetes'],tip:'❤️ <b>Health Monitoring:</b> If you have BP or diabetes, check regularly, take medicines on time, and keep a log. Book <b>Dr. Ahmed Raza</b> for follow-up.'}
-            ];
-            const matched = tips.find(t => t.q.some(kw => q.includes(kw)));
-            addAiMsg(matched ? matched.tip : `🧘 <b>General Health Tip:</b> A balanced routine of proper sleep (7-8hrs), regular exercise (30min/day), hydration (8 glasses), and a nutritious diet goes a long way. Small consistent habits beat drastic changes!<br><br>Ask me about specific topics like "headache tips", "sleep tips", or "diet advice" for targeted guidance.`);
-            return;
-        }
-
-        // Services overview
-        if(q.includes('service') || q.includes('what do you') || q.includes('offer') || q.includes('provide')){
-            addAiMsg(`HealthOnCall provides <span class="msg-highlight">4 main services</span>:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">🏠</span> <b>Home Nursing</b> — Post-surgical care, elderly care, critical care, night shifts (Rs.1,000 - 3,500)</li>
-                        <li><span class="step-num">🧘</span> <b>Physiotherapy</b> — Sports injuries, back pain, post-fracture rehab (Rs.4,500 - 5,000)</li>
-                        <li><span class="step-num">🧪</span> <b>Lab Tests</b> — Blood work, urine analysis, full body checkup, home collection (Rs.400 - 2,500)</li>
-                        <li><span class="step-num">🗣️</span> <b>Speech Therapy</b> — Child & adult speech disorders, stuttering (Rs.5,000)</li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-info-circle"></i> We also have <b>General Checkup</b>, <b>Dental Care</b>, and <b>Gynecology</b> doctors available. Check <b>Find Specialist</b> for the full list!</div>`);
-            return;
-        }
-
-        // Sample collection
-        if(q.includes('sample') || q.includes('collection') || q.includes('home collection')){
-            addAiMsg(`Yes! <span class="msg-highlight">Home sample collection</span> is available for lab tests:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">1</span> Book a <b>Lab Test</b> appointment on Services page</li>
-                        <li><span class="step-num">2</span> Our lab technician <b>visits your home</b> at the scheduled time</li>
-                        <li><span class="step-num">3</span> Samples are collected safely and professionally</li>
-                        <li><span class="step-num">4</span> Reports are ready within <b>24-48 hours</b></li>
-                        <li><span class="step-num">5</span> Download from <b>Services → Medical History</b></li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-check-circle"></i> <b>No extra charge</b> for home collection! Available in all Faisalabad areas we cover.</div>`);
-            return;
-        }
-
-        // Settings/account
-        if(q.includes('setting') || q.includes('account') || q.includes('profile') || q.includes('name') || q.includes('password')){
-            addAiMsg(`To manage your <span class="msg-highlight">account settings</span>:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">1</span> Click <b>Settings</b> in the sidebar</li>
-                        <li><span class="step-num">2</span> <b>Profile:</b> Change name, email, upload photo</li>
-                        <li><span class="step-num">3</span> <b>Security:</b> Update password with strength meter</li>
-                        <li><span class="step-num">4</span> <b>Communication:</b> Toggle WhatsApp reminders, analytics emails</li>
-                        <li><span class="step-num">5</span> <b>System:</b> Dark mode, compact view</li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-shield-alt"></i> All changes are saved locally. Your session data persists across pages. Logout clears everything.</div>`);
-            return;
-        }
-
-        // Reminder
-        if(q.includes('reminder') || q.includes('notify') || q.includes('alert')){
-            addAiMsg(`About <span class="msg-highlight">appointment reminders</span>:<br><br>
-                    <ol class="msg-steps">
-                        <li><span class="step-num">📱</span> You get a <b>WhatsApp message 1 hour before</b> each appointment</li>
-                        <li><span class="step-num">📱</span> Includes: date, time, doctor name, and video link (for online)</li>
-                        <li><span class="step-num">🔔</span> <b>Session Start Alert</b> — notify 5 min before (enable in Settings)</li>
-                        <li><span class="step-num">📊</span> <b>Weekly Analytics Email</b> — every Monday (enable in Settings)</li>
-                    </ol>
-                    <div class="msg-tip"><i class="fas fa-bell"></i> Make sure your <b>phone number is correct</b> in Settings to receive reminders. Enable/disable in <b>Settings → Communication</b>.</div>`);
-            return;
-        }
-
-        // General/Default
-        addAiMsg(`I understand you're asking about <b>"${input.substring(0,50)}"</b>. Let me help!<br><br>
-            Here are some things I can assist with:<br>
-            • <b>Booking guides</b> — "How to book a nurse?"<br>
-            • <b>Fee inquiries</b> — "Physiotherapy pricing?"<br>
-            • <b>App navigation</b> — "How to download reports?"<br>
-            • <b>Health tips</b> — "Tips for better sleep?"<br>
-            • <b>Payment info</b> — "What payment methods?"<br>
-            • <b>Service details</b> — "Speech therapy for kids?"<br><br>
-            <div class="msg-tip"><i class="fas fa-lightbulb"></i> Try asking a specific question for the best response! You can also use the <b>Quick Questions</b> above for common queries.</div>`);
+    if(q.includes('ollama') || (q.includes('local') && q.includes('llm')) || (q.includes('openai') && q.includes('key'))){
+        addAiMsg('External AI keys and local LLM setup are <b>not</b> configured from Settings anymore. This assistant still covers the <b>six services</b> and how to use the portal — ask about booking, Messages, Feedback, or your patient ID under <b>Settings → Integrations</b>.');
+        return;
     }
 
-    function isDiagnosisAttempt(q){
-        const diagWords = ['diagnos','symptom','treatment','medicine','drug','pain in my','my head hurts','my chest','i have fever','i feel sick','i think i have','cure','what disease','what condition','blood test result','my sugar is','my bp is','prescribe','dose','antibiotic','infection','cancer','diabetes','typhoid','dengue','malaria','tb','corona','covid'];
-        return diagWords.some(w => q.includes(w));
+    if((q.includes('reason') || q.includes('suggested')) && (q.includes('book') || q.includes('visit') || q.includes('why'))){
+        addAiMsg('When you book, the <b>reason / symptoms</b> field must match one of the <b>suggested phrases</b> for that service. That keeps requests clear for staff and reduces wrong or vague entries.');
+        return;
     }
 
-    /* ===== INPUT EVENTS ===== */
-    inputEl.addEventListener('keypress', e => { if(e.key === 'Enter' && !e.shiftKey) handleSend(); });
-
-    /* ===== TOAST ===== */
-    function showToast(message,type='info'){
-        const c=document.getElementById('toastContainer');
-        const t=document.createElement('div');t.className='toast';
-        const icons={info:'<i class="fas fa-info-circle t-info"></i>'};
-        const colors={info:'var(--sky)'};
-        t.style.borderLeftColor=colors[type]||colors.info;
-        t.innerHTML=(icons[type]||icons.info)+' '+message;
-        c.appendChild(t);
-        requestAnimationFrame(()=>{requestAnimationFrame(()=>t.classList.add('show'));});
-        setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),500);},3500);
+    if(q.includes('assistant') && (q.includes('what') || q.includes('help') || q.includes('do'))){
+        addAiMsg('I\'m a <b>navigator</b> for this patient portal: the six bookable services, how to book, Messages, Feedback, maps, and patient ID in Settings. I do <b>not</b> diagnose or prescribe.');
+        return;
     }
+
+    if(q.includes('assistant') && (q.includes('diagnos') || q.includes('doctor'))){
+        addAiMsg('The <b>AI Assistant</b> is a <b>navigator only</b>: it helps with the six services and how to use the app. It does <b>not</b> diagnose or prescribe — always rely on your booked clinician for medical decisions.');
+        return;
+    }
+
+    if(q.includes('book') && (q.includes('nurse') || q.includes('nursing'))){
+        addAiMsg('To book <span class="msg-highlight">Home Nursing</span>:<br><br><ul class="msg-steps"><li><span class="step-num">1</span> Open <b>Book Appointment</b></li><li><span class="step-num">2</span> Step 1: choose <b>Home Nursing</b></li><li><span class="step-num">3</span> Step 2: pick a provider & visit type</li><li><span class="step-num">4</span> Step 3: date, time, reason (from suggested reasons), address if needed, confirm</li></ul><div class="msg-tip"><i class="fas fa-lightbulb"></i> The reason field must match a suggested phrase for that service — it keeps bookings clear for staff.</div>');
+        return;
+    }
+
+    if(q.includes('book') && q.includes('physio')){
+        addAiMsg('To book <span class="msg-highlight">Physiotherapy</span>: <b>Book Appointment</b> → step 1 choose <b>Physiotherapy</b> → step 2 select a physiotherapist (e.g. Dr. Zain Ahmed or Dr. Sara Malik) → step 3 complete details. Pick <b>Online</b> or <b>Physical</b> where offered.');
+        return;
+    }
+
+    if(q.includes('book') || q.includes('appointment') || q.includes('how to book')){
+        addAiMsg('Booking uses three steps on <b>Book Appointment</b>:<br><br><ul class="msg-steps"><li><span class="step-num">1</span> <b>Choose Service</b> — one of: '+HOC_SIX_SERVICES_INLINE+'</li><li><span class="step-num">2</span> <b>Find Doctor</b> — map & list for that service</li><li><span class="step-num">3</span> <b>Book</b> — date, time, visit type, reason, payment</li></ul>');
+        return;
+    }
+
+    if(q.includes('fee') || q.includes('price') || q.includes('cost') || q.includes('charge') || q.includes('rate')){
+        if(q.includes('zain')){ addAiMsg('<span class="msg-highlight">Dr. Zain Ahmed</span> (Physiotherapy) lists <b>Rs.1,800</b> in the demo roster — confirm on the booking card before you pay.'); return; }
+        if(q.includes('hassan')){ addAiMsg('<span class="msg-highlight">Dr. Hassan Ali</span> (Psychologist) lists <b>Rs.1,800</b> in the demo roster.'); return; }
+        if(q.includes('asma')){ addAiMsg('<span class="msg-highlight">Dr. Asma Naz</span> (Home Nursing) lists <b>Rs.1,200</b> per visit in the demo roster.'); return; }
+        if(q.includes('nadia')){ addAiMsg('<span class="msg-highlight">Dr. Nadia Fatima</span> (Home Nursing) lists <b>Rs.1,000</b> in the demo roster.'); return; }
+        if(q.includes('kamran')){ addAiMsg('<span class="msg-highlight">Dr. Kamran Shahid</span> (Lab Tests) lists <b>Rs.500</b> in the demo roster.'); return; }
+        if(q.includes('fatima') && q.includes('noor')){ addAiMsg('<span class="msg-highlight">Dr. Fatima Noor</span> (Speech Therapy) lists <b>Rs.1,500</b> in the demo roster.'); return; }
+        if(q.includes('ahmed') && q.includes('raza')){ addAiMsg('<span class="msg-highlight">Dr. Ahmed Raza</span> (General Physician) lists <b>Rs.1,500</b> in the demo roster.'); return; }
+        if(q.includes('sana') && q.includes('khan')){ addAiMsg('<span class="msg-highlight">Dr. Sana Khan</span> (Psychologist) lists <b>Rs.2,000</b> in the demo roster.'); return; }
+        if(q.includes('lab') || q.includes('test') || q.includes('blood')){
+            addAiMsg('Under <b>Lab Tests</b>, the demo shows Dr. Kamran Shahid at <b>Rs.500</b> as a starting point; exact test packages depend on what you book. Use Book Appointment → Lab Tests → pick provider.');
+            return;
+        }
+        if(q.includes('nurse') || q.includes('nursing')){ addAiMsg('Home Nursing in the demo list is about <b>Rs.1,000–1,200</b> per visit depending on the nurse card — always check the live fee on the card before confirming.'); return; }
+        if(q.includes('physio')){ addAiMsg('Physiotherapy demo fees are around <b>Rs.1,500–1,800</b> per session (see Dr. Zain / Dr. Sara on Book Appointment).'); return; }
+        if(q.includes('psych')){ addAiMsg('Psychologist demo fees: e.g. <b>Dr. Sana Khan Rs.2,000</b>, <b>Dr. Hassan Ali Rs.1,800</b> — confirm on the booking screen.'); return; }
+        if(q.includes('speech')){ addAiMsg('Speech Therapy (demo): <b>Dr. Fatima Noor Rs.1,500</b> per session.'); return; }
+        if(q.includes('physician') || q.includes('gp ') || q.endsWith('gp') || q.includes(' general ')){ addAiMsg('General Physician (demo): <b>Dr. Ahmed Raza Rs.1,500</b>.'); return; }
+    }
+
+    if(q.includes('medical report') || q.includes('upload report') || (q.includes('upload') && q.includes('report')) || q.includes('lab report file')){
+        addAiMsg('On <b>Home</b> dashboard, scroll to <b>Medical Reports</b> → tap <b>Upload</b> → choose PDF/JPG/PNG (max 10MB). Add an optional description. Files are stored securely when cloud storage is enabled.<br><br>Doctors see them during consultation only if you keep <b>Share Medical Records with Doctors</b> enabled in <b>Settings → Privacy</b>.');
+        return;
+    }
+
+    if(q.includes('consent') || q.includes('share record') || q.includes('privacy') && q.includes('doctor')){
+        addAiMsg('<b>Settings → Privacy → Data Sharing</b>: toggle <b>Share Medical Records with Doctors</b>. When ON, clinicians assigned to your care can view uploaded reports during visits. When OFF, reports stay private on your account.');
+        return;
+    }
+
+    if(q.includes('reminder') && (q.includes('appointment') || q.includes('1 hour') || q.includes('24'))){
+        addAiMsg('When an appointment is approved, HealthOnCall can send <b>in-app reminders</b> about 24 hours and 1 hour before your visit (bell icon on dashboard). Keep notifications enabled in Settings for the best experience.');
+        return;
+    }
+
+    if(q.includes('lab') && (q.includes('chat') || q.includes('technician') || q.includes('message'))){
+        addAiMsg('From <b>Home → Messages</b>, use <b>Chat lab technician</b> after staff approves a lab-related appointment. Same in-app thread — not external WhatsApp.');
+        return;
+    }
+
+    if(q.includes('feedback') || q.includes('rate') || q.includes('review')){
+        addAiMsg('Open <b>Feedback</b> in the sidebar → pick your doctor from completed visits → rate 1–5 stars and write a comment. Reviews save to the cloud and help improve service quality.');
+        return;
+    }
+
+    if(q.includes('report') || q.includes('download') || q.includes('prescription') || q.includes('result')){
+        addAiMsg('For <b>prescriptions</b>: <b>Home</b> dashboard → Prescriptions section → View or Download PDF.<br>For <b>lab results</b>: check appointment row or notifications when status is completed.<br>For <b>uploaded files</b>: Medical Reports section on Home.<br><br>I cannot interpret clinical results — your clinician does that.');
+        return;
+    }
+
+    if(q.includes('speech') && !q.includes('book')){
+        addAiMsg('<b>Speech Therapy</b> on HealthOnCall covers language development, speech disorders, and voice therapy for children and adults. Book via <b>Book Appointment → Speech Therapy</b>.');
+        return;
+    }
+
+    if(q.includes('psycholog') && !q.includes('book')){
+        addAiMsg('<b>Psychologist</b> visits support mental wellbeing, stress, and counselling — book online or in-person from <b>Book Appointment → Psychologist</b>. This is not emergency psychiatric care.');
+        return;
+    }
+
+    if(q.includes('nurs') && !q.includes('book')){
+        addAiMsg('<b>Home Nursing</b> brings qualified nursing care to your address — wound care, post-surgery support, elderly care, and more. Book from <b>Book Appointment → Home Nursing</b> and enter your home address.');
+        return;
+    }
+
+    if(q.includes('physio') && !q.includes('book')){
+        addAiMsg('<b>Physiotherapy</b> helps with pain, mobility, and rehabilitation after injury. Sessions can be online or at home depending on provider. Book via <b>Book Appointment → Physiotherapy</b>.');
+        return;
+    }
+
+    if(q.includes('video') || (q.includes('online') && q.includes('visit')) || q.includes('zoom')){
+        addAiMsg('When you book, choose <b>Online</b> as visit type if the doctor offers it. Join links or in-app call actions appear from your appointment details on the dashboard — use a stable browser connection.');
+        return;
+    }
+
+    if(q.includes('pay') || q.includes('cash') || q.includes('jazzcash') || q.includes('easypaisa') || q.includes('bank')){
+        addAiMsg('The booking flow lets you pick payment options such as <b>Cash</b> or online-style methods where configured. Complete payment details on step 3 before confirming.');
+        return;
+    }
+
+    if(q.includes('reschedule') || q.includes('cancel') || q.includes('change')){
+        addAiMsg('Manage upcoming visits from the <b>Home</b> dashboard appointment list. Exact cancel/reschedule rules follow what staff set on each booking.');
+        return;
+    }
+
+    if(q.includes('tip') || q.includes('wellness') || q.includes('lifestyle') || q.includes('exercise') || q.includes('diet') || q.includes('sleep') || q.includes('stress')){
+        addAiMsg('I stay away from medical tips that sound like treatment. For habits, generic advice is: move regularly, sleep on a schedule, and stay hydrated. For symptoms, book <b>General Physician</b> or <b>Psychologist</b> through the six services — not random internet care.');
+        return;
+    }
+
+    if(q.includes('headache') || q.includes('fever') || q.includes('pain in my') || q.includes('chest pain')){
+        addAiMsg('I can\'t assess symptoms. If you have <b>severe chest pain, stroke signs, trouble breathing, or high fever with confusion</b>, seek emergency care (e.g. local emergency number) immediately.<br><br>Otherwise, book <b>General Physician</b> or the right service from: '+HOC_SIX_SERVICES_INLINE+'.');
+        return;
+    }
+
+    if(q.includes('service') || q.includes('offer') || q.includes('what do you')){
+        addAiMsg('This patient portal books exactly these six services: <b>'+HOC_SIX_SERVICES_INLINE+'</b>. Anything outside that list isn\'t part of this assistant\'s scope.');
+        return;
+    }
+
+    if(q.includes('area') || q.includes('location') || q.includes('where')){
+        addAiMsg('Demo doctors use Faisalabad-area locations (e.g. Kohinoor City, Madina Town, D-Ground). Your map on <b>Book Appointment</b> step 2 reflects provider pins.');
+        return;
+    }
+
+    var fb = 'I focus on <b>'+HOC_SIX_SERVICES_INLINE+'</b> and this portal (book, messages, feedback, settings). Ask a specific question about any of those.<br><br>For emergencies, use your local emergency number.';
+
+    if(!navigator.onLine){
+        addAiMsg('<div class="msg-tip"><i class="fas fa-wifi"></i> You are <b>offline</b>. Try again when you are back online.</div>'+fb);
+        return;
+    }
+
+    var msgs = hocBuildLlmMessages(input);
+    var localTxt = await hocTryOllamaChat(msgs);
+    if(localTxt){
+        addAiMsg(hocEscapeAiTextToHtml(localTxt));
+        return;
+    }
+
+    var cloudTxt = await hocTryOpenAiChat(msgs);
+    if(cloudTxt){
+        addAiMsg(hocEscapeAiTextToHtml(cloudTxt));
+        return;
+    }
+
+    addAiMsg(fb);
+}
+
+function isDiagnosisAttempt(q, raw){
+    var r = (raw || '').toLowerCase();
+    var phrases = ['diagnos','prescribe','prescription for me','what disease','what condition do i','do i have cancer','dosage','dose of','how much medicine','which antibiotic','interpret my lab','read my report','is it positive','am i pregnant','stroke right now','suicide','kill myself'];
+    for(var i=0;i<phrases.length;i++){ if(q.indexOf(phrases[i])>=0) return true; }
+    if(/\bwhat('s| is) wrong with me\b/.test(r)) return true;
+    if(/\bshould i (take|stop)\b/.test(r)) return true;
+    if(/\b(i think i have|do i have) (typhoid|dengue|malaria|tuberculosis|covid|hepatitis)\b/.test(r)) return true;
+    return false;
+}
+
+/* Input Events */
+inputEl.addEventListener('keypress', function(e){ if(e.key === 'Enter' && !e.shiftKey) handleSend(); });
+
+/* Toast */
+function showToast(message,type){
+    type = type || 'info';
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast';
+    const icons = {info:'<i class="fas fa-info-circle t-info"></i>'};
+    const colors = {info:'var(--sky)'};
+    t.style.borderLeftColor = colors[type] || colors.info;
+    t.innerHTML = (icons[type] || icons.info) + ' ' + message;
+    c.appendChild(t);
+    requestAnimationFrame(function(){requestAnimationFrame(function(){t.classList.add('show');});});
+    setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.remove();},500);},3500);
+}
 </script>
-
 </body>
 </html>

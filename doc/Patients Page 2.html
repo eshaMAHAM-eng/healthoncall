@@ -1,14 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="../STORE.JS.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weekly Patient Plan | HealthOnCall</title>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+     <link rel="stylesheet" href="shared sidebar footer.css">
+    <script src="hoc-theme-init.js"></script>
+    <link rel="stylesheet" href="hoc-global-theme.css">
+    <script src="hoc-firebase-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="hoc-clinical-shared.js"></script>
+    <script src="hoc-notifications.js"></script>
+    <script src="hoc-doctor-notifications-boot.js"></script>
+    <script src="hoc-doctor-sidebar-profile.js"></script>
+    <script>
+    (function () {
+        var cfg = window.HOC_FIREBASE_CONFIG || {};
+        if (!firebase.apps.length && cfg.apiKey) firebase.initializeApp(cfg);
+        window._hocDb = firebase.firestore();
+        window.HOC_DOCTOR_ID = localStorage.getItem('hoc_doctor_id') || null;
+        if (firebase.auth) {
+            firebase.auth().onAuthStateChanged(function (user) {
+                if (!user) {
+                    window.location.href = '../index.html';
+                    return;
+                }
+                window._hocDb.collection('Doctors').where('uid', '==', user.uid).limit(1).get()
+                    .then(function (q) {
+                        if (q.empty) return;
+                        var doc = q.docs[0];
+                        var d = doc.data();
+                        if (typeof hocRoleCanAccessDashboard === 'function' && !hocRoleCanAccessDashboard(d)) {
+                            window.location.replace('../index.html?err=pending');
+                            return;
+                        }
+                        window.HOC_DOCTOR_ID = d.doctorId || doc.id;
+                        localStorage.setItem('hoc_doctor_id', window.HOC_DOCTOR_ID);
+                        localStorage.setItem('hoc_user', JSON.stringify(d));
+                        if (typeof hocApplyDoctorSidebarProfile === 'function') hocApplyDoctorSidebarProfile(d);
+                        if (typeof hocInitWeeklyServiceFilter === 'function') hocInitWeeklyServiceFilter();
+                        if (typeof refreshWeeklyPlan === 'function') refreshWeeklyPlan();
+                    });
+            });
+        }
+        if (window._hocDb) {
+            window._hocDb.collection('Appointments').onSnapshot(function (snap) {
+                var apts = [];
+                snap.forEach(function (d) {
+                    var data = d.data();
+                    data.id = d.id;
+                    apts.push(data);
+                });
+                var docId = window.HOC_DOCTOR_ID || localStorage.getItem('hoc_doctor_id') || '';
+                var mine = docId ? apts.filter(function (a) {
+                    return typeof hocApptBelongsToDoctor === 'function' && hocApptBelongsToDoctor(a, docId);
+                }) : [];
+                var local = [];
+                try { local = JSON.parse(localStorage.getItem('hoc_appointments') || '[]'); } catch (e) { local = []; }
+                mine.forEach(function (remote) {
+                    var loc = local.find(function (a) { return a.id === remote.id; });
+                    if (loc && loc.status === 'in-progress' && remote.status !== 'in-progress' && remote.status !== 'completed') {
+                        remote.status = 'in-progress';
+                    }
+                });
+                local.forEach(function (loc) {
+                    if (!mine.some(function (m) { return m.id === loc.id; }) && docId && hocApptBelongsToDoctor(loc, docId)) {
+                        mine.push(loc);
+                    }
+                });
+                localStorage.setItem('hoc_appointments', JSON.stringify(mine));
+                if (typeof refreshWeeklyPlan === 'function') refreshWeeklyPlan();
+            });
+        }
+    })();
+    </script>
     <style>
         :root {
-            --sidebar-bg:#0b1120;--sidebar-hover:rgba(16,185,129,.08);--sidebar-active-bg:rgba(16,185,129,.15);
             --accent:#10b981;--accent-glow:rgba(16,185,129,.25);--accent-soft:#d1fae5;--accent-dark:#059669;
             --gold:#f59e0b;--gold-soft:#fef3c7;--gold-dark:#92400e;
             --rose:#f43f5e;--rose-soft:#ffe4e6;--rose-dark:#9f1239;
@@ -29,36 +101,16 @@
         h1,h2,h3,h4,h5,h6{font-family:'Sora',sans-serif;}
         html{scroll-behavior:smooth;}
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
-        .bg-blobs{position:fixed;top:0;left:280px;right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;}
+
+        /* ── Background Blobs ── */
+        .bg-blobs{position:fixed;top:0;left:var(--sidebar-width,280px);right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;}
         .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.3;animation:bF 20s ease-in-out infinite;}
         .b1{width:350px;height:350px;background:#10b981;top:-80px;right:5%;}
         .b2{width:280px;height:280px;background:#0ea5e9;bottom:15%;left:8%;animation-delay:-7s;}
         .b3{width:220px;height:220px;background:#f59e0b;top:50%;right:25%;animation-delay:-14s;}
         @keyframes bF{0%,100%{transform:translate(0,0) scale(1);}25%{transform:translate(30px,-40px) scale(1.1);}50%{transform:translate(-20px,20px) scale(.95);}75%{transform:translate(15px,35px) scale(1.05);}}
-        .sidebar{width:280px;height:100vh;position:fixed;left:0;top:0;background:var(--sidebar-bg);z-index:1000;display:flex;flex-direction:column;overflow:hidden;}
-        .sidebar::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,185,129,.07) 0%,transparent 40%,transparent 60%,rgba(14,165,233,.05) 100%);pointer-events:none;}
-        .sb-brand{padding:32px 28px 28px;position:relative;display:flex;align-items:center;gap:14px;}
-        .logo-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0;box-shadow:0 8px 24px rgba(16,185,129,.3);}
-        .sb-brand-text h2{font-size:20px;font-weight:800;color:#f1f5f9;letter-spacing:-.5px;line-height:1.2;}
-        .sb-brand-text h2 span{color:var(--accent);}
-        .sb-brand-text p{font-size:9.5px;color:rgba(255,255,255,.3);margin-top:3px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;}
-        .sb-nav{flex:1;padding:0 16px;display:flex;flex-direction:column;gap:4px;position:relative;}
-        .nav-label{font-size:10px;font-weight:700;color:rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:1.5px;padding:20px 16px 8px;}
-        .sb-nav a{display:flex;align-items:center;gap:14px;padding:13px 18px;border-radius:14px;text-decoration:none;color:#94a3b8;font-weight:500;font-size:14.5px;transition:var(--tr);position:relative;overflow:hidden;}
-        .sb-nav a i{width:20px;text-align:center;font-size:16px;transition:var(--tr);}
-        .sb-nav a:hover{color:#e2e8f0;background:var(--sidebar-hover);}
-        .sb-nav a:hover i{color:var(--accent);}
-        .sb-nav a.active{color:#f1f5f9;background:var(--sidebar-active-bg);font-weight:600;}
-        .sb-nav a.active i{color:var(--accent);}
-        .sb-nav a.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:24px;background:var(--accent);border-radius:0 4px 4px 0;}
-        .sb-nav a .nav-badge{margin-left:auto;background:var(--rose);color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:8px;min-width:20px;text-align:center;line-height:1.3;}
-        .sb-footer{padding:20px 24px;border-top:1px solid rgba(255,255,255,.05);position:relative;}
-        .user-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.03);transition:var(--tr);}
-        .user-card:hover{background:rgba(255,255,255,.06);}
-        .user-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#0ea5e9);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;font-family:'Sora',sans-serif;}
-        .u-name{color:#e2e8f0;font-weight:600;font-size:14px;}
-        .u-role{color:rgba(255,255,255,.3);font-size:11px;}
-        .main{margin-left:280px;flex:1;padding:32px 40px;position:relative;z-index:1;min-height:100vh;}
+
+        /* ── Top Header ── */
         .top-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;gap:24px;flex-wrap:wrap;}
         .greeting-section h1{font-size:28px;font-weight:800;letter-spacing:-.8px;line-height:1.2;}
         .greeting-section h1 span{color:var(--accent-dark);}
@@ -67,6 +119,8 @@
         .header-right{display:flex;align-items:center;gap:12px;}
         .remind-btn{display:flex;align-items:center;gap:8px;padding:10px 18px;background:linear-gradient(135deg,var(--gold-dark),var(--gold));color:#fff;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;transition:var(--tr);box-shadow:0 4px 14px rgba(245,158,11,.3);border:none;font-family:'DM Sans',sans-serif;}
         .remind-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(245,158,11,.4);}
+
+        /* ── Purpose Banner ── */
         .purpose-banner{background:linear-gradient(135deg,var(--accent-dark),#0d9488);border-radius:var(--radius-lg);padding:22px 28px;margin-bottom:28px;display:flex;align-items:center;gap:18px;position:relative;overflow:hidden;}
         .purpose-banner::before{content:'';position:absolute;top:-30%;right:-10%;width:250px;height:250px;background:radial-gradient(circle,rgba(255,255,255,.1),transparent 70%);pointer-events:none;}
         .purpose-icon{width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0;position:relative;z-index:1;}
@@ -76,8 +130,10 @@
         .purpose-content p strong{color:#fff;}
         .purpose-steps{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;align-items:center;}
         .purpose-step{display:flex;align-items:center;gap:6px;font-size:11.5px;color:rgba(255,255,255,.9);font-weight:600;}
-        .purpose-step .ps-num{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;}
-        .purpose-step .ps-arrow{color:rgba(255,255,255,.35);font-size:9px;}
+        .ps-num{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;}
+        .ps-arrow{color:rgba(255,255,255,.35);font-size:9px;}
+
+        /* ── Summary Cards ── */
         .summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:28px;}
         .s-card{background:var(--card);border-radius:var(--radius-lg);padding:22px;position:relative;overflow:hidden;border:1px solid var(--card-border);transition:var(--tr);box-shadow:var(--shadow-sm);}
         .s-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);}
@@ -95,17 +151,21 @@
         .sc-pending .sc-bar{background:linear-gradient(90deg,#f59e0b,#fbbf24);}
         .sc-confirmed .sc-bar{background:linear-gradient(90deg,#10b981,#34d399);}
         .sc-emergency .sc-bar{background:linear-gradient(90deg,#f43f5e,#fb7185);}
+
+        /* ── AI Banner ── */
         .ai-banner{background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:var(--radius-lg);padding:22px 28px;margin-bottom:28px;display:flex;align-items:center;gap:20px;border:1px solid rgba(16,185,129,.15);position:relative;overflow:hidden;}
         .ai-banner::before{content:'';position:absolute;top:-50%;right:-20%;width:300px;height:300px;background:radial-gradient(circle,rgba(16,185,129,.15),transparent 70%);pointer-events:none;}
         .ai-icon{width:50px;height:50px;border-radius:16px;background:linear-gradient(135deg,var(--accent),#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;flex-shrink:0;box-shadow:0 8px 24px rgba(16,185,129,.3);position:relative;z-index:1;}
         .ai-content{flex:1;position:relative;z-index:1;}
         .ai-content h4{font-size:15px;font-weight:700;color:#f1f5f9;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-        .ai-content h4 .ai-tag{font-size:9px;background:var(--accent);color:#fff;padding:2px 8px;border-radius:6px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;}
+        .ai-tag{font-size:9px;background:var(--accent);color:#fff;padding:2px 8px;border-radius:6px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;}
         .ai-content p{font-size:13px;color:#94a3b8;line-height:1.6;}
         .ai-content p strong{color:#e2e8f0;}
         .ai-x{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.05);border:none;color:#64748b;width:30px;height:30px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--tr);z-index:2;font-size:12px;}
         .ai-x:hover{background:rgba(255,255,255,.1);color:#e2e8f0;}
         .ai-tip{display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,.12);color:#fbbf24;font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;margin-top:8px;border:1px solid rgba(245,158,11,.15);}
+
+        /* ── Controls Bar ── */
         .controls-bar{display:flex;gap:14px;margin-bottom:32px;flex-wrap:wrap;}
         .search-wrap{position:relative;flex:1;min-width:240px;}
         .search-wrap i{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;transition:var(--tr);pointer-events:none;}
@@ -114,10 +174,12 @@
         .search-wrap input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-glow),var(--shadow-md);}
         .search-wrap input:focus~i{color:var(--accent);}
         .filter-wrap{position:relative;min-width:160px;}
-        .filter-wrap i.fi-left{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;z-index:2;}
+        .fi-left{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;pointer-events:none;z-index:2;}
         .filter-wrap select{width:100%;padding:13px 18px 13px 44px;border:1.5px solid var(--border);border-radius:14px;background:var(--card);font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;transition:var(--tr);box-shadow:var(--shadow-sm);cursor:pointer;appearance:none;-webkit-appearance:none;}
         .filter-wrap select:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-glow),var(--shadow-md);}
         .filter-wrap::after{content:'\f078';font-family:'Font Awesome 6 Free';font-weight:900;position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:11px;pointer-events:none;z-index:2;}
+
+        /* ── Day Sections ── */
         .day-section{margin-bottom:28px;animation:dayIn .5s ease both;}
         @keyframes dayIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
         .day-heading{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:0 4px;}
@@ -125,6 +187,8 @@
         .day-heading h3{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0;}
         .day-count{background:var(--accent-soft);color:var(--accent-dark);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;}
         .day-line{flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent);}
+
+        /* ── Patient Row ── */
         .patient-row{background:var(--card);padding:22px 26px;margin-bottom:10px;border-radius:var(--radius-lg);display:flex;justify-content:space-between;align-items:center;gap:20px;border:1px solid var(--card-border);box-shadow:var(--shadow-sm);transition:var(--tr);position:relative;overflow:hidden;}
         .patient-row:hover{transform:translateY(-3px);border-color:rgba(16,185,129,.2);box-shadow:var(--shadow-lg);}
         .patient-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;}
@@ -138,13 +202,18 @@
         .av-confirmed{background:linear-gradient(135deg,#10b981,#34d399);}
         .av-canceled{background:linear-gradient(135deg,#94a3b8,#cbd5e1);}
         .av-in-session{background:linear-gradient(135deg,#6366f1,#818cf8);}
-        .pr-avatar .em-dot{position:absolute;top:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:var(--rose);border:2px solid var(--card);display:flex;align-items:center;justify-content:center;}
-        .pr-avatar .em-dot i{font-size:6px;color:#fff;}
+        .em-dot{position:absolute;top:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:var(--rose);border:2px solid var(--card);display:flex;align-items:center;justify-content:center;}
+        .em-dot i{font-size:6px;color:#fff;}
         @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(1.6);}}
         .pr-details{min-width:0;flex:1;}
         .pr-name{font-weight:700;font-size:15px;margin-bottom:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
         .svc-badge{font-size:9px;padding:2px 8px;border-radius:6px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;flex-shrink:0;}
-        .svc-cardio{background:#ede9fe;color:#7c3aed;}.svc-lab{background:var(--teal-soft);color:var(--teal-dark);}.svc-physio{background:var(--orange-soft);color:var(--orange-dark);}.svc-derma{background:var(--sky-soft);color:var(--sky-dark);}.svc-neuro{background:var(--rose-soft);color:var(--rose-dark);}
+        .svc-cardio{background:#ede9fe;color:#7c3aed;}
+        .svc-lab{background:var(--teal-soft);color:var(--teal-dark);}
+        .svc-physio{background:var(--orange-soft);color:var(--orange-dark);}
+        .svc-derma{background:var(--sky-soft);color:var(--sky-dark);}
+        .svc-neuro{background:var(--rose-soft);color:var(--rose-dark);}
+        .svc-general{background:var(--slate-soft);color:var(--slate);}
         .returning-badge{font-size:9px;background:var(--indigo-soft);color:var(--indigo-dark);padding:2px 8px;border-radius:6px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;}
         .moved-badge{font-size:9px;background:var(--indigo-soft);color:var(--indigo-dark);padding:2px 8px;border-radius:6px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;animation:pulse 2s infinite;}
         .session-badge{font-size:9px;background:linear-gradient(135deg,var(--indigo),var(--sky));color:#fff;padding:2px 8px;border-radius:6px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;display:inline-flex;align-items:center;gap:3px;}
@@ -152,16 +221,22 @@
         .pr-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
         .pr-meta span{font-size:12px;color:var(--text-muted);font-weight:500;display:inline-flex;align-items:center;gap:4px;}
         .pr-meta span i{font-size:10px;}
-        .online i{color:var(--accent);}.physical i{color:var(--sky);}
+        .online i{color:var(--accent);}
+        .physical i{color:var(--sky);}
         .files-badge{color:var(--indigo)!important;background:var(--indigo-soft);padding:2px 7px!important;border-radius:6px;font-size:10px!important;font-weight:700!important;}
         .pr-badges{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;}
         .badge{display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;font-size:11.5px;font-weight:700;letter-spacing:.3px;white-space:nowrap;}
         .badge::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0;}
-        .badge-pending{background:var(--gold-soft);color:var(--gold-dark);}.badge-pending::before{background:var(--gold);}
-        .badge-confirmed{background:var(--accent-soft);color:#065f46;}.badge-confirmed::before{background:var(--accent);}
-        .badge-canceled{background:var(--slate-soft);color:#475569;}.badge-canceled::before{background:#94a3b8;}
-        .badge-in-session{background:var(--indigo-soft);color:var(--indigo-dark);}.badge-in-session::before{background:var(--indigo);animation:pulse 1.5s infinite;}
-        .badge-emergency{background:var(--rose-soft);color:var(--rose-dark);font-size:10px;padding:3px 10px;border-radius:6px;}.badge-emergency::before{background:var(--rose);animation:pulse 1.5s infinite;}
+        .badge-pending{background:var(--gold-soft);color:var(--gold-dark);}
+        .badge-pending::before{background:var(--gold);}
+        .badge-confirmed{background:var(--accent-soft);color:#065f46;}
+        .badge-confirmed::before{background:var(--accent);}
+        .badge-canceled{background:var(--slate-soft);color:#475569;}
+        .badge-canceled::before{background:#94a3b8;}
+        .badge-in-session{background:var(--indigo-soft);color:var(--indigo-dark);}
+        .badge-in-session::before{background:var(--indigo);animation:pulse 1.5s infinite;}
+        .badge-emergency{background:var(--rose-soft);color:var(--rose-dark);font-size:10px;padding:3px 10px;border-radius:6px;}
+        .badge-emergency::before{background:var(--rose);animation:pulse 1.5s infinite;}
         .pr-actions{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;}
         .btn{padding:9px 15px;border:none;border-radius:11px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:var(--tr);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
         .btn:hover{transform:translateY(-2px);}
@@ -173,13 +248,18 @@
         .btn-start:hover{box-shadow:0 6px 24px rgba(16,185,129,.45);}
         .btn-cancel{background:var(--slate-soft);color:var(--slate);}
         .btn-cancel:hover{background:#e2e8f0;box-shadow:var(--shadow-sm);}
-        .btn-wa{background:linear-gradient(135deg,#128c7e,#25d366);color:#fff;box-shadow:0 4px 14px rgba(37,211,102,.25);}
+        .btn-app-chat{background:linear-gradient(135deg,#0d9488,#10b981);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.35);}
+        .btn-app-chat:hover{transform:translateY(-2px);filter:brightness(1.05);}
         .btn-done{background:var(--slate-soft);color:var(--text-muted);cursor:default;padding:9px 15px;border:none;border-radius:11px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
         .btn-done i{color:var(--indigo);}
+
+        /* ── Empty State ── */
         .empty-state{text-align:center;padding:80px 20px;color:var(--text-muted);}
         .empty-state i{font-size:52px;margin-bottom:18px;opacity:.2;display:block;}
         .empty-state p{font-size:15px;font-weight:500;}
         .empty-state p.sub{font-size:13px;margin-top:6px;opacity:.7;}
+
+        /* ── Modal ── */
         .modal-overlay{position:fixed;inset:0;background:rgba(11,17,32,.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;justify-content:center;align-items:center;z-index:2000;padding:20px;}
         .modal-overlay.show{display:flex;}
         .modal-box{background:var(--card);width:100%;max-width:880px;border-radius:28px;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.2);transform:scale(.92) translateY(20px);opacity:0;transition:all .4s cubic-bezier(.34,1.56,.64,1);max-height:90vh;display:flex;flex-direction:column;}
@@ -190,39 +270,50 @@
         .modal-close{width:40px;height:40px;border:none;border-radius:12px;background:#f1f5f9;color:var(--text-muted);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:var(--tr);flex-shrink:0;}
         .modal-close:hover{background:var(--rose-soft);color:var(--rose);}
         .m-tabs{display:flex;gap:4px;padding:16px 32px 0;border-bottom:2px solid #f1f5f9;flex-shrink:0;overflow-x:auto;}
+        .m-tabs::-webkit-scrollbar{height:0;}
         .m-tab{padding:12px 16px;font-size:12.5px;font-weight:600;color:var(--text-muted);cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;margin-bottom:-2px;transition:var(--tr);font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:7px;white-space:nowrap;}
         .m-tab:hover{color:var(--text-sec);}
         .m-tab.active{color:var(--accent-dark);border-bottom-color:var(--accent);}
         .m-tab i{font-size:13px;}
-        .mtc{display:none;}.mtc.active{display:block;animation:mtcIn .3s ease;}
+        .mtc{display:none;}
+        .mtc.active{display:block;animation:mtcIn .3s ease;}
         @keyframes mtcIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
         .modal-body{padding:24px 32px 32px;overflow-y:auto;flex:1;}
         .modal-body::-webkit-scrollbar{width:6px;}
         .modal-body::-webkit-scrollbar-track{background:transparent;}
         .modal-body::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;}
+
+        /* ── Modal: Info Grid ── */
         .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
         .info-item{background:#fafbfc;border-radius:14px;padding:16px 18px;border:1px solid #f1f5f9;transition:var(--tr);}
         .info-item:hover{border-color:var(--border);box-shadow:var(--shadow-sm);}
         .info-item label{display:block;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
         .info-item p{font-family:'Sora',sans-serif;font-weight:700;font-size:14px;}
         .sec-title{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
-        .sec-title .st-bar{width:4px;height:20px;background:linear-gradient(180deg,var(--accent),var(--sky));border-radius:4px;flex-shrink:0;}
+        .st-bar{width:4px;height:20px;background:linear-gradient(180deg,var(--accent),var(--sky));border-radius:4px;flex-shrink:0;}
         .sec-title h4{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin:0;}
+
+        /* ── Modal: Timeline ── */
         .timeline{position:relative;padding-left:32px;margin-bottom:20px;}
         .timeline::before{content:'';position:absolute;left:11px;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--accent),var(--border));border-radius:2px;}
-        .tl-item{position:relative;margin-bottom:24px;}.tl-item:last-child{margin-bottom:0;}
+        .tl-item{position:relative;margin-bottom:24px;}
+        .tl-item:last-child{margin-bottom:0;}
         .tl-dot{position:absolute;left:-32px;top:4px;width:24px;height:24px;border-radius:50%;background:var(--card);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;}
         .tl-dot i{font-size:9px;color:var(--accent);}
-        .tl-dot.tl-lab{border-color:var(--teal);}.tl-dot.tl-lab i{color:var(--teal);}
-        .tl-dot.tl-rx{border-color:var(--gold);}.tl-dot.tl-rx i{color:var(--gold);}
-        .tl-dot.tl-physio{border-color:var(--orange);}.tl-dot.tl-physio i{color:var(--orange);}
+        .tl-dot.tl-lab{border-color:var(--teal);}
+        .tl-dot.tl-lab i{color:var(--teal);}
+        .tl-dot.tl-rx{border-color:var(--gold);}
+        .tl-dot.tl-rx i{color:var(--gold);}
+        .tl-dot.tl-physio{border-color:var(--orange);}
+        .tl-dot.tl-physio i{color:var(--orange);}
         .tl-date{font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:4px;}
         .tl-title{font-size:14px;font-weight:700;margin-bottom:4px;}
         .tl-desc{font-size:13px;color:var(--text-sec);line-height:1.6;}
         .tl-card{background:#fafbfc;border-radius:14px;padding:16px 18px;border:1px solid #f1f5f9;margin-top:10px;}
         .tl-card h5{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text);}
         .tl-meds{display:flex;flex-direction:column;gap:6px;}
-        .tl-med{display:flex;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px dashed #e2e8f0;}.tl-med:last-child{border-bottom:none;}
+        .tl-med{display:flex;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px dashed #e2e8f0;}
+        .tl-med:last-child{border-bottom:none;}
         .tl-med-num{font-weight:800;color:var(--accent-dark);min-width:18px;}
         .tl-lab-item{font-size:12.5px;padding:6px 0;display:flex;gap:8px;align-items:center;}
         .tl-lab-item i{color:var(--teal);font-size:11px;flex-shrink:0;}
@@ -230,14 +321,20 @@
         .tl-vital{background:#fff;border-radius:10px;padding:10px 12px;text-align:center;border:1px solid #f1f5f9;}
         .tl-vital label{display:block;font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;}
         .tl-vital p{font-family:'Sora',sans-serif;font-weight:800;font-size:14px;color:var(--text);margin-top:2px;}
+
+        /* ── Modal: Files ── */
         .files-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px;}
         .file-card{display:flex;align-items:center;gap:14px;padding:16px;background:#fafbfc;border-radius:14px;border:1px solid #f1f5f9;transition:var(--tr);cursor:pointer;}
         .file-card:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);transform:translateY(-2px);}
         .f-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
-        .f-icon.pdf{background:var(--rose-soft);color:var(--rose);}.f-icon.img{background:var(--sky-soft);color:var(--sky);}.f-icon.doc{background:var(--indigo-soft);color:var(--indigo);}
+        .f-icon.pdf{background:var(--rose-soft);color:var(--rose);}
+        .f-icon.img{background:var(--sky-soft);color:var(--sky);}
+        .f-icon.doc{background:var(--indigo-soft);color:var(--indigo);}
         .f-info{flex:1;min-width:0;}
-        .f-info .fn{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-        .f-info .fd{font-size:11px;color:var(--text-muted);margin-top:2px;}
+        .fn{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .fd{font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+        /* ── Modal: Prescription ── */
         .rx-display{border:2px solid var(--accent);border-radius:16px;padding:28px;background:#fff;margin-bottom:20px;}
         .rx-head{text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #f1f5f9;}
         .rx-head h3{font-size:20px;font-weight:800;color:var(--accent-dark);}
@@ -245,7 +342,8 @@
         .rx-pat{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;margin-bottom:16px;}
         .rx-sec{margin-bottom:16px;}
         .rx-sec h5{font-size:13px;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sec);}
-        .rx-mrow{padding:8px 0;border-bottom:1px dashed #e2e8f0;font-size:13px;display:flex;gap:8px;}.rx-mrow:last-child{border-bottom:none;}
+        .rx-mrow{padding:8px 0;border-bottom:1px dashed #e2e8f0;font-size:13px;display:flex;gap:8px;}
+        .rx-mrow:last-child{border-bottom:none;}
         .rx-mn{font-weight:800;color:var(--accent-dark);min-width:20px;}
         .rx-lrow{font-size:13px;padding:6px 0;display:flex;align-items:center;gap:8px;}
         .rx-lrow i{color:var(--teal);font-size:11px;}
@@ -253,43 +351,142 @@
         .rx-foot{text-align:right;padding-top:14px;border-top:2px solid #f1f5f9;}
         .rx-sig{font-family:'Sora',sans-serif;font-weight:800;font-size:16px;color:var(--accent-dark);}
         .rx-foot p{font-size:11px;color:var(--text-muted);}
+
+        /* ── Modal: Lab Table ── */
         .lab-table{width:100%;border-collapse:collapse;border-radius:14px;overflow:hidden;border:1px solid #f1f5f9;margin-bottom:16px;}
         .lab-table th{background:#fafbfc;padding:13px 18px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);}
         .lab-table td{padding:14px 18px;border-top:1px solid #f1f5f9;font-size:13px;color:var(--text-sec);}
         .lab-table tr:hover td{background:#fafcff;}
         .no-data{text-align:center;padding:30px;color:var(--text-muted);font-size:13px;}
         .no-data i{font-size:28px;opacity:.3;display:block;margin-bottom:10px;}
+
+        /* ── Toast ── */
         .toast-container{position:fixed;top:24px;right:24px;z-index:5000;display:flex;flex-direction:column;gap:10px;}
-        .toast{background:var(--card);border-radius:14px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.12);border-left:4px solid var(--accent);font-size:14px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);min-width:300px;}
+        .toast{background:var(--card);border-radius:14px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.12);border-left:4px solid var(--accent);font-size:14px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);min-width:300px;max-width:420px;}
         .toast.show{transform:translateX(0);}
-        .toast.toast-warn{border-left-color:var(--gold);}.toast.toast-err{border-left-color:var(--rose);}
-        .toast i.fa-check-circle{color:var(--accent);font-size:18px;}.toast i.fa-exclamation-circle{color:var(--gold);font-size:18px;}.toast i.fa-times-circle{color:var(--rose);font-size:18px;}
+        .toast.toast-warn{border-left-color:var(--gold);}
+        .toast.toast-err{border-left-color:var(--rose);}
+        .toast i.fa-check-circle{color:var(--accent);font-size:18px;}
+        .toast i.fa-exclamation-circle{color:var(--gold);font-size:18px;}
+        .toast i.fa-times-circle{color:var(--rose);font-size:18px;}
         @keyframes startFlash{0%{box-shadow:0 0 0 0 rgba(99,102,241,.4);}70%{box-shadow:0 0 0 15px rgba(99,102,241,0);}100%{box-shadow:0 0 0 0 rgba(99,102,241,0);}}
         .row-started{animation:startFlash .6s ease-out;}
-        @media(max-width:1200px){.summary-row{grid-template-columns:repeat(2,1fr);}.info-grid{grid-template-columns:repeat(2,1fr);}.files-grid{grid-template-columns:1fr;}.tl-vitals{grid-template-columns:repeat(2,1fr);}}
-        @media(max-width:900px){.sidebar{transform:translateX(-100%);}.main{margin-left:0;padding:20px;}.patient-row{flex-direction:column;align-items:flex-start;gap:14px;}.pr-badges{flex-direction:row;align-self:flex-start;}.pr-actions{width:100%;}.pr-actions .btn{flex:1;justify-content:center;}.purpose-steps{flex-direction:column;gap:8px;}}
-        @media(max-width:600px){.summary-row{grid-template-columns:1fr 1fr;gap:10px;}.info-grid{grid-template-columns:1fr;}.m-tabs{gap:0;}.m-tab{padding:10px 12px;font-size:11px;}}
+
+        /* ── Sidebar badge (page-specific) ── */
+        .sb-badge{margin-left:auto;background:var(--rose);color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:8px;min-width:20px;text-align:center;line-height:1.3;}
+
+        /* ════════════════════════════════════════
+           RESPONSIVE
+           ════════════════════════════════════════ */
+        @media(max-width:1200px){
+            .summary-row{grid-template-columns:repeat(2,1fr);}
+            .info-grid{grid-template-columns:repeat(2,1fr);}
+            .files-grid{grid-template-columns:1fr;}
+            .tl-vitals{grid-template-columns:repeat(2,1fr);}
+            .patient-row{flex-wrap:wrap;}
+            .pr-actions{flex-wrap:wrap;}
+        }
+        @media(max-width:1024px){
+            .bg-blobs{left:0;}
+        }
+        @media(max-width:768px){
+            .sidebar-page-main{padding-top:76px;}
+            .greeting-section h1{font-size:22px;}
+            .remind-btn span{display:none;}
+            .remind-btn{padding:10px 14px;}
+            .purpose-banner{flex-direction:column;text-align:center;gap:14px;padding:20px;}
+            .purpose-steps{justify-content:center;}
+            .ai-banner{flex-direction:column;text-align:center;gap:14px;padding:18px;}
+            .ai-x{top:8px;right:8px;}
+            .controls-bar{flex-direction:column;}
+            .search-wrap{min-width:unset;width:100%;}
+            .filter-wrap{min-width:unset;width:100%;}
+            .summary-row{grid-template-columns:1fr 1fr;gap:10px;}
+            .sc-num{font-size:24px;}
+            .s-card{padding:16px;}
+        }
+        @media(max-width:600px){
+            .patient-row{flex-direction:column;align-items:flex-start;gap:14px;padding:18px 20px;}
+            .pr-badges{flex-direction:row;align-self:flex-start;}
+            .pr-actions{width:100%;}
+            .pr-actions .btn{flex:1;justify-content:center;}
+            .info-grid{grid-template-columns:1fr;}
+            .m-tabs{gap:0;padding:12px 16px 0;}
+            .m-tab{padding:10px 12px;font-size:11px;}
+            .modal-header{padding:18px 20px 0;}
+            .modal-body{padding:18px 20px 24px;}
+            .summary-row{gap:8px;}
+            .sc-num{font-size:22px;}
+            .s-card{padding:14px;}
+            .sc-label{font-size:10px;}
+            .toast{min-width:unset;max-width:calc(100vw - 48px);font-size:13px;padding:12px 16px;}
+            .toast-container{top:76px;right:12px;left:12px;}
+        }
+        @media(max-width:380px){
+            .summary-row{grid-template-columns:1fr;}
+            .pr-actions .btn{padding:8px 10px;font-size:11px;}
+        }
     </style>
+    <link rel="stylesheet" href="SIDEBAR.CSS">
+    <script src="hoc-sidebar.js" defer></script>
 </head>
 <body>
+
+<!-- Mobile Top Bar -->
+<div class="mob-topbar" id="mobTopbar">
+    <button class="mob-hamburger" id="mobHamburgerBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
+    <div class="mob-logo">
+        <div class="mob-logo-icon"><i class="fas fa-heartbeat"></i></div>
+        <span class="mob-logo-text">Health<span>OnCall</span></span>
+    </div>
+    <button class="mob-notif" aria-label="Notifications"><i class="fas fa-bell"></i></button>
+</div>
+
+<!-- Sidebar Overlay -->
+<div class="sb-overlay" id="hocSbOverlay"></div>
+
+<!-- Background Blobs -->
 <div class="bg-blobs"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
-<aside class="sidebar">
-    <div class="sb-brand"><div class="logo-icon"><i class="fas fa-heartbeat"></i></div><div class="sb-brand-text"><h2>Health<span>OnCall</span></h2><p>Doctor Portal</p></div></div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="hocSidebar">
+    <div class="sb-brand">
+        <div class="sb-logo"><i class="fas fa-heartbeat"></i></div>
+        <div class="sb-brand-text"><h2>Health<span>OnCall</span></h2><p>Doctor Portal</p></div>
+    </div>
     <nav class="sb-nav">
-        <div class="nav-label">Main Menu</div>
+        <div class="sb-nav-label">Main Menu</div>
         <a href="doctor-dashboard 2.html"><i class="fas fa-th-large"></i> Dashboard</a>
-        <a href="Patients Page 2.html" class="active"><i class="fas fa-calendar-week"></i> Patients <span class="nav-badge" id="navDot" style="display:none;">0</span></a>
-        <div class="nav-label">System</div>
+    
+        <a href="Patients Page 2.html" class="active"><i class="fas fa-calendar-week"></i> Weekly Patient Plan <span class="sb-badge" id="navDot" style="display:none;">0</span></a>
+        <div class="sb-nav-label">System</div>
         <a href="setting 2.html"><i class="fas fa-cog"></i> Settings</a>
-        <a href="logout 2.html"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        <a href="logout 2.html" class="nav-danger"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </nav>
-    <div class="sb-footer"><div class="user-card"><div class="user-avatar">DA</div><div class="user-info"><div class="u-name">Dr. Ahmed</div><div class="u-role">Cardiology</div></div></div></div>
+    <div class="sb-footer">
+        <div class="sb-user">
+            <div class="sb-avatar" id="sidebarAvatar">DR</div>
+            <div>
+                <div class="sb-uname" id="sidebarName">Doctor</div>
+                <div class="sb-urole" id="sidebarRole">Loading...</div>
+            </div>
+        </div>
+    </div>
 </aside>
-<main class="main">
+
+<!-- Main Content -->
+<main class="sidebar-page-main">
     <header class="top-header">
-        <div class="greeting-section"><h1>Weekly <span>Patient Plan</span></h1><div class="date-line"><i class="fas fa-calendar-alt"></i><span id="dateDisplay"></span></div></div>
-        <div class="header-right"><button class="remind-btn" onclick="sendAllReminders()"><i class="fas fa-bell"></i> Send All Reminders</button></div>
+        <div class="greeting-section">
+            <h1>Weekly <span>Patient Plan</span></h1>
+            <div class="date-line"><i class="fas fa-calendar-alt"></i><span id="dateDisplay"></span></div>
+            <p id="hocDoctorScopeLine" style="font-size:13px;color:var(--text-muted);margin-top:8px;font-weight:600;max-width:640px;line-height:1.5;">Loading your schedule…</p>
+        </div>
+        <div class="header-right">
+            <button class="remind-btn" onclick="sendAllReminders()"><i class="fas fa-bell"></i> <span>Send in-app reminders</span></button>
+        </div>
     </header>
+
     <div class="purpose-banner">
         <div class="purpose-icon"><i class="fas fa-bullseye"></i></div>
         <div class="purpose-content">
@@ -297,36 +494,45 @@
             <p>Admin sends patient appointments here. <strong>Start Session</strong> directly — patient instantly appears on Dashboard with consultation modal auto-opened.</p>
             <div class="purpose-steps">
                 <div class="purpose-step"><span class="ps-num">1</span> Review patient</div>
-                <i class="fas fa-arrow-right purpose-step ps-arrow"></i>
+                <i class="fas fa-arrow-right ps-arrow"></i>
                 <div class="purpose-step"><span class="ps-num">2</span> Start Session</div>
-                <i class="fas fa-arrow-right purpose-step ps-arrow"></i>
+                <i class="fas fa-arrow-right ps-arrow"></i>
                 <div class="purpose-step"><span class="ps-num">3</span> Dashboard + modal auto-open</div>
-                <i class="fas fa-arrow-right purpose-step ps-arrow"></i>
+                <i class="fas fa-arrow-right ps-arrow"></i>
                 <div class="purpose-step"><span class="ps-num">4</span> Examine & treat</div>
             </div>
         </div>
     </div>
+
     <section class="summary-row">
         <div class="s-card sc-total"><div class="sc-icon"><i class="fas fa-clipboard-list"></i></div><div class="sc-num" id="sumTotal">00</div><div class="sc-label">Total Planned</div><div class="sc-bar"></div></div>
         <div class="s-card sc-pending"><div class="sc-icon"><i class="fas fa-hourglass-half"></i></div><div class="sc-num" id="sumPending">00</div><div class="sc-label">Pending Action</div><div class="sc-bar"></div></div>
         <div class="s-card sc-confirmed"><div class="sc-icon"><i class="fas fa-check-double"></i></div><div class="sc-num" id="sumConfirmed">00</div><div class="sc-label">In Progress</div><div class="sc-bar"></div></div>
         <div class="s-card sc-emergency"><div class="sc-icon"><i class="fas fa-bolt"></i></div><div class="sc-num" id="sumEmergency">00</div><div class="sc-label">Emergency</div><div class="sc-bar"></div></div>
     </section>
+
     <div class="ai-banner" id="aiBanner">
         <div class="ai-icon"><i class="fas fa-robot"></i></div>
         <div class="ai-content"><h4>AI Weekly Insights <span class="ai-tag">Smart</span></h4><p id="aiText">Analyzing...</p></div>
         <button class="ai-x" onclick="this.parentElement.style.display='none'"><i class="fas fa-times"></i></button>
     </div>
+
     <div class="controls-bar">
         <div class="search-wrap"><input type="text" id="search" placeholder="Search by patient name or service..."><i class="fas fa-search"></i></div>
         <div class="filter-wrap"><select id="filter"><option value="">All Status</option><option value="pending">Pending</option><option value="confirmed">In Progress</option><option value="in-session">In Session</option><option value="canceled">Canceled</option></select><i class="fas fa-filter fi-left"></i></div>
-        <div class="filter-wrap"><select id="svcFilter"><option value="">All Services</option><option value="Cardiology">Cardiology</option><option value="Lab Technician">Lab Technician</option><option value="Physiotherapy">Physiotherapy</option><option value="Dermatology">Dermatology</option><option value="Neurology">Neurology</option></select><i class="fas fa-stethoscope fi-left"></i></div>
+        <div class="filter-wrap"><select id="svcFilter"><option value="">My service</option></select><i class="fas fa-stethoscope fi-left"></i></div>
     </div>
+
     <div id="list"></div>
 </main>
+
+<!-- Patient Modal -->
 <div class="modal-overlay" id="modal">
     <div class="modal-box">
-        <div class="modal-header"><div class="modal-header-left"><h2 id="modalTitle">Patient Details</h2><p>Complete medical history, files, labs, and prescriptions</p></div><button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button></div>
+        <div class="modal-header">
+            <div class="modal-header-left"><h2 id="modalTitle">Patient Details</h2><p>Complete medical history, files, labs, and prescriptions</p></div>
+            <button class="modal-close" id="modalCloseBtn"><i class="fas fa-times"></i></button>
+        </div>
         <div class="m-tabs" id="mTabs">
             <button class="m-tab active" data-tab="mt-info"><i class="fas fa-info-circle"></i> Info</button>
             <button class="m-tab" data-tab="mt-history"><i class="fas fa-history"></i> Full History</button>
@@ -343,169 +549,631 @@
         </div>
     </div>
 </div>
+
+<!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
+
 <script>
-document.getElementById("dateDisplay").innerText = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-function svcCls(s){return'svc-'+s.toLowerCase().replace(/\s/g,'').replace('technician','lab');}
-const patients = [
-    {id:'1',name:'Sara Khan',age:28,status:'pending',priority:'emergency',service:'Cardiology',day:'Monday',session:'AM',type:'Physical',uploadedFiles:[{name:'Blood Report CBC.pdf',type:'pdf',date:'2025-01-10',size:'2.4 MB',desc:'Complete blood count'},{name:'Chest X-Ray.jpg',type:'img',date:'2025-01-08',size:'1.8 MB',desc:'PA view chest radiograph'}],visitHistory:[{date:'2024-12-10',doctor:'Dr. Ahmed',field:'Cardiology',vitals:{BP:'118/76',Pulse:'72',Temp:'98.4 °F',SpO2:'99%'},symptoms:['Mild palpitations','Chest discomfort'],complaint:'Follow-up echo review',exam:'Normal S1 S2. No murmur. JVP not raised.',diagnosis:'Mild Mitral Valve Prolapse',medicines:[{name:'Propranolol',dosage:'20mg',freq:'Once daily',dur:'3 months',inst:'After breakfast'},{name:'Multivitamin',dosage:'1 tab',freq:'Once daily',dur:'3 months',inst:'With water'}],labs:[{name:'CBC',sample:'Blood',priority:'Routine',inst:'Fasting not required'},{name:'TSH',sample:'Blood',priority:'Routine',inst:'Fasting required'}],labNotes:'Check thyroid association with MVP.',advice:'Regular light exercise. Avoid caffeine. Repeat echo in 6 months.',followUp:'2025-06-10'},{date:'2024-11-15',doctor:'Dr. Hassan',field:'Neurology',vitals:{BP:'120/78',Pulse:'68',Temp:'98.6 °F',SpO2:'98%'},symptoms:['Tension headache','Neck stiffness'],complaint:'Recurrent headaches',exam:'Neck muscles tender. No neurological deficit.',diagnosis:'Tension-Type Headache',medicines:[{name:'Ibuprofen',dosage:'400mg',freq:'As needed',dur:'2 weeks',inst:'With food'}],labs:[{name:'Vitamin D',sample:'Blood',priority:'Routine',inst:'No fasting'}],labNotes:'',advice:'Stress management, sleep schedule, posture correction.',followUp:'2024-12-15'}],next:{date:'2025-01-15',session:'AM',type:'Physical'}},
-    {id:'2',name:'Ali Raza',age:45,status:'pending',priority:'emergency',service:'Cardiology',day:'Monday',session:'PM',type:'Online',uploadedFiles:[{name:'ECG Report.pdf',type:'pdf',date:'2025-01-12',size:'1.1 MB',desc:'Slight ST changes'},{name:'Lipid Profile.pdf',type:'pdf',date:'2025-01-11',size:'800 KB',desc:'Fasting lipid panel'}],visitHistory:[{date:'2024-09-05',doctor:'Dr. Ahmed',field:'Cardiology',vitals:{BP:'145/92',Pulse:'82',Temp:'98.6 °F',SpO2:'97%'},symptoms:['Headache','Dizziness','Chest heaviness'],complaint:'High BP, chest discomfort on stairs',exam:'BP elevated. S4 gallop present.',diagnosis:'Essential Hypertension Stage 2',medicines:[{name:'Amlodipine',dosage:'5mg',freq:'Once daily',dur:'Ongoing',inst:'Morning'},{name:'Aspirin',dosage:'75mg',freq:'Once daily',dur:'Ongoing',inst:'After lunch'},{name:'Atorvastatin',dosage:'20mg',freq:'Once at night',dur:'Ongoing',inst:'With water'}],labs:[{name:'Lipid Profile',sample:'Blood',priority:'Routine',inst:'12hr fasting'},{name:'KFT',sample:'Blood',priority:'Routine',inst:'No fasting'},{name:'ECG',sample:'N/A',priority:'Routine',inst:'Resting 12-lead'}],labNotes:'Monitor kidney function.',advice:'Low salt diet, daily walk, avoid smoking, BP monitoring twice daily.',followUp:'2024-10-05'}],next:{date:'2025-01-15',session:'PM',type:'Online'}},
-    {id:'3',name:'Omar Riaz',age:40,status:'confirmed',priority:'normal',service:'Lab Technician',day:'Tuesday',session:'AM',type:'Physical',uploadedFiles:[{name:'Previous Lab Report.pdf',type:'pdf',date:'2024-12-20',size:'1.5 MB',desc:'CBC and LFT'}],visitHistory:[],next:{date:'2025-01-20',session:'AM',type:'Physical'}},
-    {id:'4',name:'Fatima Noor',age:25,status:'in-session',priority:'normal',service:'Physiotherapy',day:'Tuesday',session:'PM',type:'Online',uploadedFiles:[{name:'Knee MRI.pdf',type:'pdf',date:'2025-01-05',size:'5.2 MB',desc:'ACL partial tear'}],visitHistory:[],next:{date:'2025-01-21',session:'PM',type:'Online'}},
-    {id:'5',name:'Hassan Malik',age:52,status:'pending',priority:'normal',service:'Cardiology',day:'Wednesday',session:'AM',type:'Physical',uploadedFiles:[{name:'HbA1c Report.pdf',type:'pdf',date:'2025-01-13',size:'600 KB',desc:'HbA1c 7.8%'}],visitHistory:[{date:'2024-10-10',doctor:'Dr. Ahmed',field:'Cardiology',vitals:{BP:'138/88',Pulse:'76',Temp:'98.6 °F',SpO2:'97%'},symptoms:['Frequent urination','Increased thirst','Fatigue'],complaint:'T2DM uncontrolled',exam:'BMI 29. Acanthosis nigricans.',diagnosis:'Type 2 Diabetes — uncontrolled',medicines:[{name:'Metformin',dosage:'500mg',freq:'Twice daily',dur:'Ongoing',inst:'After meals'},{name:'Glimepiride',dosage:'2mg',freq:'Once daily',dur:'Ongoing',inst:'Before breakfast'}],labs:[{name:'HbA1c',sample:'Blood',priority:'Routine',inst:'No fasting'},{name:'FBS',sample:'Blood',priority:'Routine',inst:'8-10hr fasting'}],labNotes:'Check microvascular complications.',advice:'Strict diet, daily walk 40min, foot care, sugar monitoring.',followUp:'2025-01-15'}],next:{date:'2025-01-15',session:'AM',type:'Physical'}},
-    {id:'6',name:'Ayesha Siddiqui',age:31,status:'pending',priority:'normal',service:'Physiotherapy',day:'Wednesday',session:'PM',type:'Online',uploadedFiles:[],visitHistory:[],next:{date:'2025-01-25',session:'PM',type:'Online'}},
-    {id:'7',name:'Bilal Hussain',age:45,status:'canceled',priority:'normal',service:'Cardiology',day:'Thursday',session:'AM',type:'Physical',uploadedFiles:[],visitHistory:[{date:'2024-08-20',doctor:'Dr. Ahmed',field:'Cardiology',vitals:{BP:'128/82',Pulse:'72',Temp:'98.4 °F',SpO2:'99%'},symptoms:['Left knee pain'],complaint:'Knee pain 6 months',exam:'Mild effusion.',diagnosis:'Mild Osteoarthritis — Left Knee',medicines:[{name:'Ibuprofen',dosage:'400mg',freq:'As needed',dur:'2 weeks',inst:'With food'}],labs:[],labNotes:'',advice:'Weight loss, quadriceps exercises.',followUp:'2025-02-20'}],next:{date:'2025-01-22',session:'AM',type:'Physical'}},
-    {id:'8',name:'Zainab Tariq',age:38,status:'pending',priority:'emergency',service:'Cardiology',day:'Friday',session:'AM',type:'Physical',uploadedFiles:[{name:'Holter Report.pdf',type:'pdf',date:'2025-01-13',size:'4.5 MB',desc:'Intermittent SVT'}],visitHistory:[{date:'2024-12-20',doctor:'Dr. Ahmed',field:'Cardiology',vitals:{BP:'122/78',Pulse:'92',Temp:'98.6 °F',SpO2:'99%'},symptoms:['Palpitations','Chest tightness'],complaint:'Recurrent palpitations 2 months',exam:'Irregular rhythm during episode.',diagnosis:'Paroxysmal SVT',medicines:[{name:'Diltiazem',dosage:'120mg',freq:'Twice daily',dur:'Ongoing',inst:'With meals'}],labs:[{name:'Holter Monitor',sample:'N/A',priority:'Urgent',inst:'24-hour recording'}],labNotes:'Consider EP referral.',advice:'Avoid triggers. Valsalva during episodes.',followUp:'2025-01-20'}],next:{date:'2025-01-24',session:'AM',type:'Physical'}},
-    {id:'9',name:'Nadeem Baig',age:33,status:'pending',priority:'normal',service:'Lab Technician',day:'Friday',session:'PM',type:'Physical',uploadedFiles:[],visitHistory:[],next:{date:'2025-01-24',session:'PM',type:'Physical'}},
-    {id:'10',name:'Maryam Javed',age:29,status:'pending',priority:'normal',service:'Physiotherapy',day:'Saturday',session:'AM',type:'Physical',uploadedFiles:[{name:'Spine MRI.pdf',type:'pdf',date:'2025-01-10',size:'6.3 MB',desc:'Disc bulge L4-L5'}],visitHistory:[],next:{date:'2025-01-25',session:'AM',type:'Physical'}}
-];
-function getInitials(n){return n.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
+/* ═══════════════════════════════════════
+   MOBILE SIDEBAR TOGGLE
+   ═══════════════════════════════════════ */
+(function(){
+    var sidebar = document.getElementById('hocSidebar');
+    var overlay = document.getElementById('hocSbOverlay');
+    var hamburger = document.getElementById('mobHamburgerBtn');
 
-/* ===== START SESSION — Patient goes to Dashboard + auto-opens ===== */
-function startSession(id){
-    const p = patients.find(x => x.id === id);
-    if (!p || p.status === 'canceled' || p.status === 'in-session') return;
+    function openSidebar(){
+        sidebar.classList.add('open');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeSidebar(){
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
 
-    const KEY = 'hoc_auto_start';
-    const genderGuess = (p.visitHistory && p.visitHistory.length && p.visitHistory[0].field === 'Neurology') ? 'Female' : 'Male';
+    hamburger.addEventListener('click', openSidebar);
+    overlay.addEventListener('click', closeSidebar);
+    document.addEventListener('keydown', function(e){
+        if(e.key === 'Escape'){ closeSidebar(); closeModal(); }
+    });
+    window.addEventListener('resize', function(){
+        if(window.innerWidth > 1024) closeSidebar();
+    });
+})();
 
-    /* Ye data Dashboard padh ke ga */
-    const payload = {
-        patientName: p.name,
-        patientAge: p.age + ' yrs, ' + genderGuess,
-        patientId: 'WP-' + p.id,
-        time: p.session === 'AM' ? '10:00 AM' : '02:00 PM',
-        date: p.next.date,
-        type: p.type,
-        service: p.service,
-        priority: p.priority,
-        avatarColor: p.service === 'Cardiology' ? '#10b981' : p.service === 'Lab Technician' ? '#14b8a6' : p.service === 'Physiotherapy' ? '#f97316' : p.service === 'Dermatology' ? '#0ea5e9' : '#f43f5e',
-        uploadedFiles: p.uploadedFiles || [],
-        history: p.visitHistory || [],
-        trigger: true
+/* ═══════════════════════════════════════
+   ACTIVE NAV HIGHLIGHT
+   ═══════════════════════════════════════ */
+(function(){
+    var currentPage = window.location.pathname.split('/').pop() || '';
+    document.querySelectorAll('.sb-nav a').forEach(function(link) {
+        var href = link.getAttribute('href');
+        if (href && href.indexOf(currentPage) !== -1) {
+            document.querySelectorAll('.sb-nav a').forEach(function(a) { a.classList.remove('active'); });
+            link.classList.add('active');
+        }
+    });
+})();
+
+/* ═══════════════════════════════════════
+   DATE DISPLAY
+   ═══════════════════════════════════════ */
+document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+/* ═══════════════════════════════════════
+   SERVICE CLASS HELPER
+   ═══════════════════════════════════════ */
+function svcCls(s){
+    var map = {
+        'cardiology':'svc-cardio',
+        'lab technician':'svc-lab',
+        'physiotherapy':'svc-physio',
+        'dermatology':'svc-derma',
+        'neurology':'svc-neuro'
     };
-
-    localStorage.setItem(KEY, JSON.stringify(payload));
-    p.status = 'in-session';
-
-    const row = document.querySelector(`.patient-row[data-id="${id}"]`);
-    if (row) { row.classList.add('row-started'); setTimeout(() => row.classList.remove('row-started'), 700); }
-
-    render();
-    showToast(`${p.name} — opening Dashboard, session will auto-start`, 'success');
-
-    setTimeout(function(){ window.location.href = 'doctor-dashboard 2.html'; }, 1000);
+    return map[s.toLowerCase().trim()] || 'svc-general';
 }
 
-function cancelPatient(id){
-    const p = patients.find(x => x.id === id);
-    if (!p || p.status === 'canceled') return;
-    p.status = 'canceled'; render();
-    showToast(`${p.name}'s appointment has been canceled`, 'error');
+/* ═══════════════════════════════════════
+   LOCALSTORAGE HELPERS
+   ═══════════════════════════════════════ */
+function readApts(){try{return JSON.parse(localStorage.getItem('hoc_appointments'))||[];}catch(e){return[];}}
+function writeApts(arr){
+    localStorage.setItem('hoc_appointments',JSON.stringify(arr));
+    if(window._hocDb){
+        arr.forEach(function(apt){
+            if(!apt.id) return;
+            window._hocDb.collection('Appointments').doc(apt.id).set(apt,{merge:true}).catch(function(e){console.warn('Firestore write',e);});
+        });
+    }
+    try{window.dispatchEvent(new Event('storage-updated'));}catch(e){}
+}
+function hocDoctorId(){return window.HOC_DOCTOR_ID||localStorage.getItem('hoc_doctor_id')||'';}
+function hocDoctorName(){
+    try{return JSON.parse(localStorage.getItem('hoc_user')||'{}').name||'';}catch(e){return'';}
+}
+function hocDoctorSpec(){
+    try{
+        var u=JSON.parse(localStorage.getItem('hoc_user')||'{}');
+        return u.service||u.specialization||u.department||'';
+    }catch(e){return'';}
+}
+
+/* ═══════════════════════════════════════
+   LOAD PATIENTS FROM LOCALSTORAGE
+   ═══════════════════════════════════════ */
+function loadFromStorage(){
+    var apts = readApts();
+    var docId = hocDoctorId();
+    if(!docId) return [];
+    var relevant = apts.filter(function(a){
+        if(typeof hocApptBelongsToDoctor==='function' && !hocApptBelongsToDoctor(a,docId)) return false;
+        return a.status==='staff-approved'||a.status==='confirmed'||a.status==='in-progress'||a.status==='completed'||a.status==='rejected';
+    });
+    var days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    return relevant.map(function(a){
+        var d = new Date(a.createdAt||Date.now());
+        var dayName = days[d.getDay()===0?6:d.getDay()-1];
+        var uiStatus = 'pending';
+        if(a.status==='confirmed') uiStatus='confirmed';
+        if(a.status==='in-progress') uiStatus='in-session';
+        if(a.status==='completed') uiStatus='in-session';
+        if(a.status==='rejected') uiStatus='canceled';
+
+        var visitHistory = [];
+        if(a.prescription){
+            visitHistory.push({
+                date: a.doctorEndedAt ? new Date(a.doctorEndedAt).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}) : new Date(a.createdAt).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}),
+                doctor: a.doctorName||'Dr. Ahmed',
+                field: a.doctorSpec||'General',
+                vitals:{},
+                symptoms: a.symptoms ? a.symptoms.split(',').map(function(s){return s.trim();}) : [],
+                complaint: a.symptoms||'',
+                exam:'',
+                diagnosis: a.prescription.diagnosis||'',
+                medicines: (a.prescription.medicines||[]).map(function(m){return{name:m.name,dosage:m.dosage||m.dose||'',freq:m.frequency||m.freq||'',dur:m.duration||m.dur||'',inst:''};}).filter(function(m){return m.name;}),
+                labs: (a.labTests||[]).map(function(t){return{name:t,sample:'Blood',priority:'Routine',inst:''};}).concat(
+                    (a.labResults||[]).filter(function(lr){return lr.status==='completed';}).map(function(lr){return{name:lr.test+' (Result: '+lr.result+')',sample:'Blood',priority:'Done',inst:''};})
+                ),
+                labNotes:'',
+                advice: a.prescription.notes||'',
+                followUp:''
+            });
+        }
+        return {
+            id: a.id,
+            aptId: a.id,
+            name: a.patientName||'Patient',
+            age: a.patientAge||0,
+            status: uiStatus,
+            priority: 'normal',
+            service: a.doctorSpec||'General',
+            day: dayName,
+            session: (a.time&&a.time.includes('PM'))?'PM':'AM',
+            type: a.visitType||'Online',
+            uploadedFiles:[],
+            visitHistory: visitHistory,
+            labResults: a.labResults||[],
+            labTests: a.labTests||[],
+            next:{date:a.date||'',session:(a.time&&a.time.includes('PM'))?'PM':'AM',type:a.visitType||'Online'},
+            doctorName: a.doctorName||'',
+            symptoms: a.symptoms||'',
+            fee: a.fee||0,
+            createdAt: a.createdAt
+        };
+    });
+}
+
+/* ═══════════════════════════════════════
+   PATIENT DATA
+   ═══════════════════════════════════════ */
+var patients = [];
+
+/* ═══════════════════════════════════════
+   AUTO-REFRESH EVERY 10 SECONDS
+   ═══════════════════════════════════════ */
+function hocInitWeeklyServiceFilter(){
+    var sel=document.getElementById('svcFilter');
+    if(!sel) return;
+    var svc=hocDoctorSpec();
+    if(typeof hocMapToService==='function') svc=hocMapToService(svc)||svc;
+    sel.innerHTML='';
+    var optAll=document.createElement('option');
+    optAll.value=''; optAll.textContent=svc?('My service: '+svc):'My service only';
+    sel.appendChild(optAll);
+    if(svc){
+        var opt=document.createElement('option');
+        opt.value=svc; opt.textContent=svc; sel.appendChild(opt);
+        sel.value=svc;
+    }
+}
+
+function refreshWeeklyPlan(){
+    patients = loadFromStorage();
+    if(typeof hocApplyDoctorSidebarProfile==='function') hocApplyDoctorSidebarProfile();
+    render();
+}
+window.addEventListener('storage-updated', refreshWeeklyPlan);
+setInterval(refreshWeeklyPlan, 10000);
+
+/* ═══════════════════════════════════════
+   UTILITY: Initials
+   ═══════════════════════════════════════ */
+function getInitials(n){return n.split(' ').map(function(w){return w[0];}).join('').toUpperCase().slice(0,2);}
+
+/* ═══════════════════════════════════════
+   ACTIONS
+   ═══════════════════════════════════════ */
+function ensurePatientApt(p, status){
+    var apts=readApts();
+    var aptId=p.aptId||p.id;
+    var idx=apts.findIndex(function(a){return a.id===aptId;});
+    var docId=hocDoctorId();
+    var docName=hocDoctorName();
+    var docSpec=hocDoctorSpec();
+    if(idx===-1){
+        apts.push({
+            id:aptId,
+            patientName:p.name,
+            patientId:p.patientId||'',
+            doctorId:docId,
+            doctorName:docName||p.doctorName||'Doctor',
+            doctorSpec:docSpec||p.service||'',
+            service:p.service||docSpec||'',
+            date:(p.next&&p.next.date)||'',
+            time:p.session||'',
+            symptoms:p.symptoms||'',
+            visitType:p.type||'Online',
+            status:status,
+            createdAt:new Date().toISOString()
+        });
+        idx=apts.length-1;
+    }
+    apts[idx].status=status;
+    if(docId) apts[idx].doctorId=docId;
+    if(docName) apts[idx].doctorName=docName;
+    if(docSpec) apts[idx].doctorSpec=docSpec;
+    if(status==='in-progress') apts[idx].doctorStartedAt=new Date().toISOString();
+    if(status==='confirmed') apts[idx].doctorConfirmedAt=new Date().toISOString();
+    if(status==='rejected') apts[idx].rejectReason=apts[idx].rejectReason||'Doctor unavailable';
+    p.aptId=aptId;
+    writeApts(apts);
+    return apts[idx];
+}
+
+function startSession(id){
+    var p = patients.find(function(x){return x.id===id;});
+    if(!p||p.status==='canceled'||p.status==='in-session') return;
+    ensurePatientApt(p,'in-progress');
+    p.status='in-session';
+    try{sessionStorage.setItem('hoc_open_consult',p.aptId||p.id);}catch(e){}
+    var row=document.querySelector('.patient-row[data-id="'+id+'"]');
+    if(row){row.classList.add('row-started');setTimeout(function(){row.classList.remove('row-started');},700);}
+    render();
+    showToast(p.name+' — Redirecting to Dashboard to begin consultation','success');
+    setTimeout(function(){window.location.href='doctor-dashboard 2.html?consult='+(encodeURIComponent(p.aptId||p.id));},800);
+}
+
+function confirmApt(id){
+    var p=patients.find(function(x){return x.id===id;});
+    if(!p) return;
+    ensurePatientApt(p,'confirmed');
+    p.status='confirmed';
+    render();
+    showToast(p.name+' — Appointment confirmed. Ready to begin.','success');
+}
+
+function rejectApt(id){
+    var p=patients.find(function(x){return x.id===id;});
+    if(!p) return;
+    var reason=prompt('Reason for rejection (optional):');
+    if(reason===null) return;
+    ensurePatientApt(p,'rejected');
+    if(reason){var apts=readApts();var idx=apts.findIndex(function(a){return a.id===(p.aptId||p.id);});if(idx!==-1){apts[idx].rejectReason=reason;writeApts(apts);}}
+    p.status='canceled';
+    render();
+    showToast(p.name+' — Appointment rejected.','error');
+}
+
+function pushInAppNotification(title, body, meta){
+    try{
+        var list=JSON.parse(localStorage.getItem('hoc_inapp_notifications')||'[]');
+        list.unshift({title:title,body:body,meta:meta||{},ts:Date.now()});
+        localStorage.setItem('hoc_inapp_notifications',JSON.stringify(list.slice(0,200)));
+    }catch(e){}
 }
 
 function sendAllReminders(){
-    const list = patients.filter(p => p.status === 'pending');
-    if (!list.length) { showToast('No pending patients to remind', 'warn'); return; }
-    let msg = `HealthOnCall — Appointment Reminders from Dr. Ahmed\n\n`;
-    list.forEach((p, i) => { msg += `${i+1}. ${p.name} (${p.age}y) — ${p.service}\n   Date: ${p.next.date} | ${p.session} Session | ${p.type}\n\n`; });
-    msg += `Please confirm your availability.\n\n— HealthOnCall Clinic`;
-    window.open('https://wa.me/923001234567?text=' + encodeURIComponent(msg), '_blank');
-    showToast(`WhatsApp opened — reminders for ${list.length} patients`, 'success');
+    var list=patients.filter(function(p){return p.status==='pending';});
+    if(!list.length){showToast('No pending patients to remind','warn');return;}
+    var summary=list.map(function(p,i){return (i+1)+'. '+p.name+' — '+p.service+' ('+p.next.date+')';}).join('\n');
+    pushInAppNotification('Batch reminders queued','Pending patients:\n'+summary,{type:'reminder_batch',count:list.length});
+    showToast('In-app reminders queued for '+list.length+' patient(s). Open Chat on app from Dashboard.','success');
 }
 
-function sendWA(id){
-    const p = patients.find(x => x.id === id); if (!p) return;
-    let msg = `Hello ${p.name},\n\nDr. Ahmed from HealthOnCall.\n\n${p.service} appointment:\nDate: ${p.next.date}\nTime: ${p.session} Session (${p.type})\n\nPlease confirm.\n\n— HealthOnCall Clinic`;
-    window.open('https://wa.me/923001234567?text=' + encodeURIComponent(msg), '_blank');
-    showToast(`WhatsApp opened for ${p.name}`, 'success');
+function sendAppChatReminder(id){
+    var p=patients.find(function(x){return x.id===id;});
+    if(!p) return;
+    var body='Appointment: '+p.service+'\nDate: '+p.next.date+'\n'+p.session+' session ('+p.type+')\nPlease confirm in the HealthOnCall app.';
+    pushInAppNotification('Reminder: '+p.name,body,{patientId:p.id,type:'reminder'});
+    showToast('In-app message queued for '+p.name+' — use Dashboard "Chat on app" to reply.','success');
 }
 
+/* ═══════════════════════════════════════
+   AI INSIGHTS
+   ═══════════════════════════════════════ */
 function updateAi(){
-    const pending = patients.filter(p => p.status === 'pending');
-    const inSession = patients.filter(p => p.status === 'in-session');
-    const confirmed = patients.filter(p => p.status === 'confirmed');
-    const emer = patients.filter(p => p.priority === 'emergency' && p.status !== 'canceled');
-    const ret = patients.filter(p => p.visitHistory && p.visitHistory.length > 0);
-    const noFiles = patients.filter(p => p.status === 'pending' && (!p.uploadedFiles || !p.uploadedFiles.length));
-    let t = '';
-    if (pending.length) t += `<strong>${pending.length} pending</strong> — click Start Session. `;
-    if (inSession.length) t += `<strong>${inSession.length} in session</strong> — active on Dashboard. `;
-    if (confirmed.length) t += `<strong>${confirmed.length} ready</strong> — can start. `;
-    if (emer.length) t += `<strong>${emer.length} emergency</strong> — prioritize first. `;
-    if (ret.length) t += `<strong>${ret.length} returning</strong> — review history. `;
-    if (noFiles.length) t += `<strong>${noFiles.length} without files</strong> — request reports. `;
-    if (!t) t = 'All caught up!';
-    let tipHtml = '';
-    if (pending.length > 0) tipHtml = '<div class="ai-tip"><i class="fas fa-bolt"></i> Start Session = patient appears on Dashboard with consultation modal auto-opened.</div>';
-    else if (inSession.length > 0) tipHtml = '<div class="ai-tip"><i class="fas fa-arrow-right"></i> Switch to Dashboard to continue active session.</div>';
-    document.getElementById('aiText').innerHTML = t + tipHtml;
-    document.getElementById('aiBanner').style.display = '';
-    const dot = document.getElementById('navDot');
-    if (dot) { const ac = pending.length + confirmed.length; dot.style.display = ac > 0 ? 'block' : 'none'; dot.textContent = ac; }
+    var pending=patients.filter(function(p){return p.status==='pending';});
+    var inSession=patients.filter(function(p){return p.status==='in-session';});
+    var confirmed=patients.filter(function(p){return p.status==='confirmed';});
+    var emer=patients.filter(function(p){return p.priority==='emergency'&&p.status!=='canceled';});
+    var ret=patients.filter(function(p){return p.visitHistory&&p.visitHistory.length>0;});
+    var noFiles=patients.filter(function(p){return p.status==='pending'&&(!p.uploadedFiles||!p.uploadedFiles.length);});
+    var t='';
+    if(pending.length) t+='<strong>'+pending.length+' pending</strong> — click Start Session. ';
+    if(inSession.length) t+='<strong>'+inSession.length+' in session</strong> — active on Dashboard. ';
+    if(confirmed.length) t+='<strong>'+confirmed.length+' ready</strong> — can start. ';
+    if(emer.length) t+='<strong>'+emer.length+' emergency</strong> — prioritize first. ';
+    if(ret.length) t+='<strong>'+ret.length+' returning</strong> — review history. ';
+    if(noFiles.length) t+='<strong>'+noFiles.length+' without files</strong> — request reports. ';
+    if(!t) t='All caught up!';
+    var tipHtml='';
+    if(pending.length>0) tipHtml='<div class="ai-tip"><i class="fas fa-bolt"></i> Start Session = patient appears on Dashboard with consultation modal auto-opened.</div>';
+    else if(inSession.length>0) tipHtml='<div class="ai-tip"><i class="fas fa-arrow-right"></i> Switch to Dashboard to continue active session.</div>';
+    document.getElementById('aiText').innerHTML=t+tipHtml;
+    document.getElementById('aiBanner').style.display='';
+    var dot=document.getElementById('navDot');
+    if(dot){var ac=pending.length+confirmed.length;dot.style.display=ac>0?'block':'none';dot.textContent=ac;}
 }
 
+/* ═══════════════════════════════════════
+   RENDER
+   ═══════════════════════════════════════ */
 function render(){
-    const s = document.getElementById('search').value.toLowerCase().trim();
-    const f = document.getElementById('filter').value;
-    const sf = document.getElementById('svcFilter').value;
-    const list = document.getElementById('list');
-    list.innerHTML = '';
-    let counts = {total:0, pending:0, confirmed:0, emergency:0};
-    let any = false;
-    const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-    days.forEach((day, di) => {
-        let data = patients.filter(p => p.day === day && p.name.toLowerCase().includes(s) && (f ? p.status === f : true) && (sf ? p.service === sf : true));
-        if (!data.length) return; any = true;
-        const section = document.createElement('section'); section.className = 'day-section'; section.style.animationDelay = (di * .06) + 's';
-        section.innerHTML = `<div class="day-heading"><div class="day-bar"></div><h3>${day}</h3><span class="day-count">${data.length}</span><div class="day-line"></div></div>`;
-        data.forEach(p => {
-            counts.total++; if (p.status === 'pending') counts.pending++; if (p.status === 'confirmed' || p.status === 'in-session') counts.confirmed++; if (p.priority === 'emergency') counts.emergency++;
-            const isOnline = p.type.toLowerCase() === 'online'; const vc = p.visitHistory ? p.visitHistory.length : 0; const fc = p.uploadedFiles ? p.uploadedFiles.length : 0;
-            const isInSession = p.status === 'in-session'; const isConfirmed = p.status === 'confirmed'; const isCanceled = p.status === 'canceled';
-            let actionBtns = '';
-            if (isInSession) actionBtns = `<button class="btn btn-view" onclick="viewPatient('${p.id}')"><i class="fas fa-eye"></i> View</button><span class="btn-done"><i class="fas fa-circle" style="font-size:8px;color:var(--indigo);animation:pulse 1.5s infinite;"></i> In Session</span><button class="btn btn-wa" onclick="sendWA('${p.id}')"><i class="fab fa-whatsapp"></i> WA</button>`;
-            else if (isConfirmed) actionBtns = `<button class="btn btn-view" onclick="viewPatient('${p.id}')"><i class="fas fa-eye"></i> View</button><button class="btn btn-start" onclick="startSession('${p.id}')"><i class="fas fa-play"></i> Start Session</button><button class="btn btn-wa" onclick="sendWA('${p.id}')"><i class="fab fa-whatsapp"></i> WA</button>`;
-            else if (isCanceled) actionBtns = `<button class="btn btn-view" onclick="viewPatient('${p.id}')"><i class="fas fa-eye"></i> View</button><button class="btn btn-cancel" disabled><i class="fas fa-ban"></i> Canceled</button>`;
-            else actionBtns = `<button class="btn btn-view" onclick="viewPatient('${p.id}')"><i class="fas fa-eye"></i> View</button><button class="btn btn-start" onclick="startSession('${p.id}')"><i class="fas fa-play"></i> Start Session</button><button class="btn btn-cancel" onclick="cancelPatient('${p.id}')"><i class="fas fa-times"></i> Cancel</button><button class="btn btn-wa" onclick="sendWA('${p.id}')"><i class="fab fa-whatsapp"></i> WA</button>`;
-            let statusBadge = isInSession ? '<span class="badge badge-in-session"><i class="fas fa-circle" style="font-size:5px;"></i> In Session</span>' : isConfirmed ? '<span class="badge badge-confirmed"><i class="fas fa-circle" style="font-size:5px;"></i> Ready</span>' : isCanceled ? '<span class="badge badge-canceled"><i class="fas fa-circle" style="font-size:5px;"></i> Canceled</span>' : '<span class="badge badge-pending"><i class="fas fa-circle" style="font-size:5px;"></i> Pending</span>';
-            let extraBadges = isInSession ? '<span class="session-badge"><i class="fas fa-circle"></i> Active on Dashboard</span>' : isConfirmed ? '<span class="moved-badge"><i class="fas fa-arrow-right" style="font-size:8px;margin-right:3px;"></i>Ready</span>' : '';
-            const row = document.createElement('div'); row.className = `patient-row st-${p.status}`; row.setAttribute('data-id', p.id);
-            row.innerHTML = `<div class="pr-info"><div class="pr-avatar av-${p.status}">${getInitials(p.name)}${p.priority === 'emergency' && !isCanceled ? '<div class="em-dot"><i class="fas fa-bolt"></i></div>' : ''}</div><div class="pr-details"><div class="pr-name">${p.name}<span class="svc-badge ${svcCls(p.service)}">${p.service}</span>${vc > 0 ? `<span class="returning-badge"><i class="fas fa-rotate" style="font-size:8px;margin-right:3px;"></i>${vc} visit${vc > 1 ? 's' : ''}</span>` : `<span class="returning-badge" style="background:var(--sky-soft);color:var(--sky-dark);"><i class="fas fa-user-plus" style="font-size:8px;margin-right:3px;"></i>New</span>`}${extraBadges}</div><div class="pr-meta"><span><i class="fas fa-calendar"></i> ${p.next.date}</span><span><i class="fas fa-clock"></i> ${p.session}</span><span class="${isOnline ? 'online' : 'physical'}"><i class="fas ${isOnline ? 'fa-video' : 'fa-hospital'}"></i> ${p.type}</span><span><i class="fas fa-user"></i> ${p.age}y</span>${fc ? `<span class="files-badge"><i class="fas fa-paperclip"></i> ${fc}</span>` : ''}</div></div></div><div class="pr-badges">${statusBadge}${p.priority === 'emergency' && !isCanceled ? '<span class="badge badge-emergency"><i class="fas fa-bolt" style="font-size:9px;"></i> Emergency</span>' : ''}</div><div class="pr-actions">${actionBtns}</div>`;
+    var s=document.getElementById('search').value.toLowerCase().trim();
+    var f=document.getElementById('filter').value;
+    var sf=document.getElementById('svcFilter').value;
+    var list=document.getElementById('list');
+    list.innerHTML='';
+    var counts={total:0,pending:0,confirmed:0,emergency:0};
+    var any=false;
+    var days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+    days.forEach(function(day,di){
+        var data=patients.filter(function(p){
+            return p.day===day && p.name.toLowerCase().indexOf(s)!==-1 && (!f||p.status===f) && (!sf||p.service===sf);
+        });
+        if(!data.length) return;
+        any=true;
+        var section=document.createElement('section');
+        section.className='day-section';
+        section.style.animationDelay=(di*.06)+'s';
+        section.innerHTML='<div class="day-heading"><div class="day-bar"></div><h3>'+day+'</h3><span class="day-count">'+data.length+'</span><div class="day-line"></div></div>';
+
+        data.forEach(function(p){
+            counts.total++;
+            if(p.status==='pending') counts.pending++;
+            if(p.status==='confirmed'||p.status==='in-session') counts.confirmed++;
+            if(p.priority==='emergency') counts.emergency++;
+
+            var isOnline=p.type.toLowerCase()==='online';
+            var vc=p.visitHistory?p.visitHistory.length:0;
+            var fc=p.uploadedFiles?p.uploadedFiles.length:0;
+            var isInSession=p.status==='in-session';
+            var isConfirmed=p.status==='confirmed';
+            var isCanceled=p.status==='canceled';
+
+            var actionBtns='';
+            if(isInSession){
+                actionBtns='<button class="btn btn-view" onclick="viewPatient(\''+p.id+'\')"><i class="fas fa-folder-open"></i> History</button><span class="btn-done"><i class="fas fa-circle" style="font-size:8px;color:var(--indigo);animation:pulse 1.5s infinite;"></i> In Session</span><button class="btn btn-app-chat" onclick="sendAppChatReminder(\''+p.id+'\')" title="Chat on app"><i class="fas fa-comments"></i></button>';
+            } else if(isConfirmed){
+                actionBtns='<button class="btn btn-view" onclick="viewPatient(\''+p.id+'\')"><i class="fas fa-folder-open"></i> History</button><button class="btn btn-start" onclick="startSession(\''+p.id+'\')"><i class="fas fa-stethoscope"></i> Begin Consultation</button><button class="btn btn-app-chat" onclick="sendAppChatReminder(\''+p.id+'\')" title="Chat on app"><i class="fas fa-comments"></i></button>';
+            } else if(isCanceled){
+                actionBtns='<button class="btn btn-view" onclick="viewPatient(\''+p.id+'\')"><i class="fas fa-folder-open"></i> History</button><button class="btn btn-cancel" disabled><i class="fas fa-ban"></i> Rejected</button>';
+            } else {
+                actionBtns='<button class="btn btn-view" onclick="viewPatient(\''+p.id+'\')"><i class="fas fa-folder-open"></i> History</button><button class="btn btn-start" onclick="confirmApt(\''+p.id+'\')"><i class="fas fa-calendar-check"></i> Confirm</button><button class="btn btn-cancel" onclick="rejectApt(\''+p.id+'\')"><i class="fas fa-times"></i> Reject</button><button class="btn btn-app-chat" onclick="sendAppChatReminder(\''+p.id+'\')" title="Chat on app"><i class="fas fa-comments"></i></button>';
+            }
+
+            var statusBadge=isInSession?'<span class="badge badge-in-session"><i class="fas fa-circle" style="font-size:5px;"></i> In Session</span>':isConfirmed?'<span class="badge badge-confirmed"><i class="fas fa-circle" style="font-size:5px;"></i> Ready</span>':isCanceled?'<span class="badge badge-canceled"><i class="fas fa-circle" style="font-size:5px;"></i> Canceled</span>':'<span class="badge badge-pending"><i class="fas fa-circle" style="font-size:5px;"></i> Pending</span>';
+
+            var extraBadges=isInSession?'<span class="session-badge"><i class="fas fa-circle"></i> Active on Dashboard</span>':isConfirmed?'<span class="moved-badge"><i class="fas fa-arrow-right" style="font-size:8px;margin-right:3px;"></i>Ready</span>':'';
+
+            var visitBadge=vc>0?'<span class="returning-badge"><i class="fas fa-rotate" style="font-size:8px;margin-right:3px;"></i>'+vc+' visit'+(vc>1?'s':'')+'</span>':'<span class="returning-badge" style="background:var(--sky-soft);color:var(--sky-dark);"><i class="fas fa-user-plus" style="font-size:8px;margin-right:3px;"></i>New</span>';
+
+            var filesHtml=fc?'<span class="files-badge"><i class="fas fa-paperclip"></i> '+fc+'</span>':'';
+            var emDot=p.priority==='emergency'&&!isCanceled?'<div class="em-dot"><i class="fas fa-bolt"></i></div>':'';
+            var emBadge=p.priority==='emergency'&&!isCanceled?'<span class="badge badge-emergency"><i class="fas fa-bolt" style="font-size:9px;"></i> Emergency</span>':'';
+
+            var row=document.createElement('div');
+            row.className='patient-row st-'+p.status;
+            row.setAttribute('data-id',p.id);
+            row.innerHTML='<div class="pr-info"><div class="pr-avatar av-'+p.status+'">'+getInitials(p.name)+emDot+'</div><div class="pr-details"><div class="pr-name">'+p.name+'<span class="svc-badge '+svcCls(p.service)+'">'+p.service+'</span>'+visitBadge+extraBadges+'</div><div class="pr-meta"><span><i class="fas fa-calendar"></i> '+p.next.date+'</span><span><i class="fas fa-clock"></i> '+p.session+'</span><span class="'+(isOnline?'online':'physical')+'"><i class="fas '+(isOnline?'fa-video':'fa-hospital')+'"></i> '+p.type+'</span><span><i class="fas fa-user"></i> '+p.age+'y</span>'+filesHtml+'</div></div></div><div class="pr-badges">'+statusBadge+emBadge+'</div><div class="pr-actions">'+actionBtns+'</div>';
             section.appendChild(row);
         });
         list.appendChild(section);
     });
-    if (!any) list.innerHTML = `<div class="empty-state"><i class="fas fa-search"></i><p>No patients found</p><p class="sub">Try adjusting your search or filters</p></div>`;
-    aN('sumTotal', counts.total); aN('sumPending', counts.pending); aN('sumConfirmed', counts.confirmed); aN('sumEmergency', counts.emergency); updateAi();
-}
-function aN(id, t) { const el = document.getElementById(id); const c = parseInt(el.textContent) || 0; if (c === t) return; const s = performance.now(); function u(n) { const p = Math.min((n - s) / 400, 1); el.textContent = String(Math.round(c + (t - c) * (1 - Math.pow(1 - p, 3)))).padStart(2, '0'); if (p < 1) requestAnimationFrame(u); } requestAnimationFrame(u); }
 
-let activeId = null;
-function viewPatient(id) {
-    activeId = id; const p = patients.find(x => x.id === id); if (!p) return;
-    document.getElementById('modalTitle').textContent = p.name;
-    const vc = p.visitHistory ? p.visitHistory.length : 0; const last = vc ? p.visitHistory[0] : null;
-    let statusColor = p.status === 'in-session' ? 'var(--indigo-dark)' : p.status === 'confirmed' ? 'var(--accent-dark)' : p.status === 'canceled' ? 'var(--slate)' : 'var(--gold-dark)';
-    let statusLabel = p.status === 'in-session' ? 'IN SESSION' : p.status === 'confirmed' ? 'READY' : p.status.toUpperCase();
-    document.getElementById('mt-info').innerHTML = `<div class="info-grid"><div class="info-item"><label>Patient ID</label><p>WP-${p.id}</p></div><div class="info-item"><label>Age</label><p>${p.age} Years</p></div><div class="info-item"><label>Status</label><p style="color:${statusColor};">${statusLabel}</p></div><div class="info-item"><label>Service</label><p><span class="svc-badge ${svcCls(p.service)}" style="font-size:11px;">${p.service}</span></p></div><div class="info-item"><label>Visit Count</label><p>${vc} visit${vc !== 1 ? 's' : ''}</p></div><div class="info-item"><label>Next Visit</label><p>${p.next.date}</p></div><div class="info-item"><label>Session</label><p>${p.next.session} — <span class="${p.next.type.toLowerCase() === 'online' ? 'online' : 'physical'}" style="font-size:12px;"><i class="fas ${p.next.type.toLowerCase() === 'online' ? 'fa-video' : 'fa-hospital'}" style="font-size:10px;"></i> ${p.next.type}</span></p></div><div class="info-item"><label>Priority</label><p style="color:${p.priority === 'emergency' ? 'var(--rose-dark)' : 'var(--text)'};">${p.priority === 'emergency' ? '<i class="fas fa-bolt" style="margin-right:4px;"></i>' : ''}${p.priority.toUpperCase()}</p></div><div class="info-item"><label>Files</label><p>${p.uploadedFiles ? p.uploadedFiles.length : 0}</p></div></div>${last ? `<div class="sec-title"><div class="st-bar"></div><h4>Last Visit Summary</h4></div><div style="background:linear-gradient(135deg,#f0fdf9,#f0f9ff);border-left:4px solid var(--accent);border-radius:0 14px 14px 0;padding:18px 22px;font-size:13.5px;color:var(--text-sec);line-height:1.7;"><strong>${last.date}</strong> — ${last.doctor} (${last.field})<br><strong>Diagnosis:</strong> ${last.diagnosis}<br><strong>Medicines:</strong> ${last.medicines.map(m => m.name).join(', ')}</div>` : '<div class="no-data"><i class="fas fa-user-plus"></i>New patient</div>'}${p.status !== 'canceled' && p.status !== 'in-session' ? `<div style="margin-top:20px;text-align:center;"><button class="btn btn-start" style="padding:14px 32px;font-size:14px;" onclick="closeModal();startSession('${p.id}')"><i class="fas fa-play"></i> Start Session from Here</button></div>` : ''}`;
-    buildHistory(p); buildFiles(p); buildLabs(p); buildRx(p); switchTab('mt-info');
-    document.getElementById('modal').classList.add('show'); document.body.style.overflow = 'hidden';
+    if(!any) list.innerHTML='<div class="empty-state"><i class="fas fa-search"></i><p>No patients found</p><p class="sub">Try adjusting your search or filters</p></div>';
+
+    aN('sumTotal',counts.total);
+    aN('sumPending',counts.pending);
+    aN('sumConfirmed',counts.confirmed);
+    aN('sumEmergency',counts.emergency);
+    updateAi();
 }
-function closeModal() { document.getElementById('modal').classList.remove('show'); document.body.style.overflow = ''; activeId = null; }
-function switchTab(id) { document.querySelectorAll('.m-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id)); document.querySelectorAll('.mtc').forEach(c => c.classList.toggle('active', c.id === id)); }
-document.getElementById('mTabs').addEventListener('click', function(e) { const t = e.target.closest('.m-tab'); if (t) switchTab(t.dataset.tab); });
-function buildHistory(p) { const c = document.getElementById('mt-history'); if (!p.visitHistory || !p.visitHistory.length) { c.innerHTML = '<div class="no-data"><i class="fas fa-history"></i>No history.</div>'; return; } let h = `<div class="sec-title"><div class="st-bar"></div><h4>Timeline (${p.visitHistory.length})</h4></div><div class="timeline">`; p.visitHistory.forEach(v => { let vit = ''; if (v.vitals && Object.keys(v.vitals).length) { vit = '<div class="tl-vitals">'; Object.entries(v.vitals).forEach(([k, val]) => { vit += `<div class="tl-vital"><label>${k}</label><p>${val}</p></div>`; }); vit += '</div>'; } let sym = ''; if (v.symptoms && v.symptoms.length) sym = v.symptoms.map(s => `<span style="background:var(--accent-soft);color:var(--accent-dark);padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;display:inline-block;margin:2px;">${s}</span>`).join(''); let dotCls = '', dotIcon = 'fa-stethoscope'; if (v.field === 'Lab Technician') { dotCls = 'tl-lab'; dotIcon = 'fa-flask'; } else if (v.field === 'Physiotherapy') { dotCls = 'tl-physio'; dotIcon = 'fa-dumbbell'; } h += `<div class="tl-item"><div class="tl-dot ${dotCls}"><i class="fas ${dotIcon}"></i></div><div class="tl-date">${v.date} — ${v.doctor} (${v.field})</div><div class="tl-title">${v.diagnosis || 'Consultation'}</div><div class="tl-desc">${v.complaint || ''}</div>${vit}${sym ? '<div style="margin-top:8px;">' + sym + '</div>' : ''}${v.exam ? `<div class="tl-card"><h5><i class="fas fa-notes-medical" style="color:var(--accent);margin-right:6px;"></i>Exam</h5><div class="tl-desc">${v.exam}</div></div>` : ''}</div>`; if (v.medicines && v.medicines.length) { let m = ''; v.medicines.forEach((md, j) => { m += `<div class="tl-med"><span class="tl-med-num">${j + 1}.</span><strong>${md.name}</strong> — ${md.dosage} | ${md.freq} | ${md.dur}</div>`; }); h += `<div class="tl-item"><div class="tl-dot tl-rx"><i class="fas fa-pills"></i></div><div class="tl-date">Prescription</div><div class="tl-card"><h5><i class="fas fa-prescription-bottle-medical" style="color:var(--gold);margin-right:6px;"></i>Medicines</h5><div class="tl-meds">${m}</div></div>${v.advice ? `<div style="background:var(--accent-soft);border-radius:10px;padding:12px;font-size:12.5px;margin-top:8px;"><strong>Advice:</strong> ${v.advice}</div>` : ''}</div>`; } if (v.labs && v.labs.length) { let l = ''; v.labs.forEach(t => { l += `<div class="tl-lab-item"><i class="fas fa-flask"></i><strong>${t.name}</strong> — ${t.sample} — <span style="color:${t.priority === 'Urgent' ? 'var(--rose)' : 'var(--text-sec)'};">${t.priority}</span></div>`; }); h += `<div class="tl-item"><div class="tl-dot tl-lab"><i class="fas fa-vial"></i></div><div class="tl-date">Labs</div><div class="tl-card"><h5><i class="fas fa-flask" style="color:var(--teal);margin-right:6px;"></i>Tests</h5>${l}</div></div>`; } }); h += '</div>'; c.innerHTML = h; }
-function buildFiles(p) { const c = document.getElementById('mt-files'); if (!p.uploadedFiles || !p.uploadedFiles.length) { c.innerHTML = '<div class="no-data"><i class="fas fa-folder-open"></i>No files.</div>'; return; } let h = `<div class="sec-title"><div class="st-bar"></div><h4>Files (${p.uploadedFiles.length})</h4></div><div class="files-grid">`; p.uploadedFiles.forEach(f => { const cls = f.type === 'pdf' ? 'pdf' : f.type === 'img' ? 'img' : 'doc'; const icon = f.type === 'pdf' ? 'fa-file-pdf' : f.type === 'img' ? 'fa-file-image' : 'fa-file-word'; h += `<div class="file-card"><div class="f-icon ${cls}"><i class="fas ${icon}"></i></div><div class="f-info"><div class="fn">${f.name}</div><div class="fd">${f.size} | ${f.date}<br>${f.desc}</div></div></div>`; }); h += '</div>'; c.innerHTML = h; }
-function buildLabs(p) { const c = document.getElementById('mt-labs'); let all = []; if (p.visitHistory) p.visitHistory.forEach(v => { if (v.labs) v.labs.forEach(l => { all.push({...l, visitDate: v.date, doctor: v.doctor}); }); }); if (!all.length) { c.innerHTML = '<div class="no-data"><i class="fas fa-flask"></i>No labs.</div>'; return; } let h = `<div class="sec-title"><div class="st-bar"></div><h4>Labs (${all.length})</h4></div><table class="lab-table"><thead><tr><th>Visit</th><th>Doctor</th><th>Test</th><th>Sample</th><th>Priority</th></tr></thead><tbody>`; all.forEach(l => { h += `<tr><td>${l.visitDate}</td><td>${l.doctor}</td><td><strong>${l.name}</strong></td><td>${l.sample}</td><td style="color:${l.priority === 'Urgent' ? 'var(--rose-dark)' : 'var(--text-sec)'};font-weight:700;">${l.priority}</td></tr>`; }); h += '</tbody></table>'; c.innerHTML = h; }
-function buildRx(p) { const c = document.getElementById('mt-rx'); let rx = []; if (p.visitHistory) p.visitHistory.forEach(v => { if (v.medicines && v.medicines.length) rx.push(v); }); if (!rx.length) { c.innerHTML = '<div class="no-data"><i class="fas fa-prescription-bottle-medical"></i>No prescriptions.</div>'; return; } let h = ''; rx.forEach(v => { h += `<div class="rx-display"><div class="rx-head"><h3><i class="fas fa-heartbeat" style="margin-right:8px;"></i>HealthOnCall</h3><p>${v.doctor} — ${v.field} | ${v.date}</p></div><div class="rx-pat"><div><strong>Patient:</strong> ${p.name}</div><div><strong>Age:</strong> ${p.age} yrs</div></div>`; if (v.vitals && Object.keys(v.vitals).length) { h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;">'; Object.entries(v.vitals).forEach(([k, val]) => { h += `<div style="background:#fafbfc;border-radius:10px;padding:10px;text-align:center;"><div style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">${k}</div><div style="font-family:'Sora',sans-serif;font-weight:800;font-size:14px;margin-top:2px;">${val}</div></div>`; }); h += '</div>'; } h += `<div style="margin-bottom:12px;font-size:14px;"><strong>Diagnosis:</strong> <span style="color:var(--accent-dark);font-weight:800;">${v.diagnosis}</span></div><div class="rx-sec"><h5>Prescription</h5>`; v.medicines.forEach((m, j) => { if (!m.name) return; h += `<div class="rx-mrow"><span class="rx-mn">${j + 1}.</span><div><strong>${m.name}</strong> — ${m.dosage} | ${m.freq} | ${m.dur}</div></div>`; }); h += '</div>'; if (v.advice) h += `<div class="rx-advice-box"><strong>Advice:</strong> ${v.advice}</div>`; if (v.followUp) h += `<div style="font-size:13px;"><strong><i class="fas fa-calendar-check" style="margin-right:6px;color:var(--accent);"></i>Follow-up:</strong> ${v.followUp}</div>`; h += `<div class="rx-foot"><div class="rx-sig">${v.doctor}</div><p>${v.field} | HealthOnCall</p></div></div>`; }); c.innerHTML = h; }
-function showToast(msg, type = 'success') { const c = document.getElementById('toastContainer'); const t = document.createElement('div'); t.className = 'toast' + (type === 'warn' ? ' toast-warn' : type === 'error' ? ' toast-err' : ''); const icons = { success: 'fa-check-circle', warn: 'fa-exclamation-circle', error: 'fa-times-circle' }; t.innerHTML = `<i class="fas ${icons[type] || icons.success}"></i> ${msg}`; c.appendChild(t); requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('show'))); setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 500); }, 3500); }
-document.getElementById('search').addEventListener('input', render);
-document.getElementById('filter').addEventListener('change', render);
-document.getElementById('svcFilter').addEventListener('change', render);
-document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
-document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
-render();
-</script>
+
+function aN(id,target){
+    var el=document.getElementById(id);
+    var current=parseInt(el.textContent)||0;
+    if(current===target) return;
+    var start=performance.now();
+    function step(now){
+        var progress=Math.min((now-start)/400,1);
+        el.textContent=String(Math.round(current+(target-current)*(1-Math.pow(1-progress,3)))).padStart(2,'0');
+        if(progress<1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+}
+
+/* ═══════════════════════════════════════
+   PATIENT MODAL
+   ═══════════════════════════════════════ */
+var activeId=null;
+
+function viewPatient(id){
+    activeId=id;
+    var p=patients.find(function(x){return x.id===id;});
+    if(!p) return;
+    document.getElementById('modalTitle').textContent=p.name;
+    var vc=p.visitHistory?p.visitHistory.length:0;
+    var last=vc?p.visitHistory[0]:null;
+    var statusColor=p.status==='in-session'?'var(--indigo-dark)':p.status==='confirmed'?'var(--accent-dark)':p.status==='canceled'?'var(--slate)':'var(--gold-dark)';
+    var statusLabel=p.status==='in-session'?'IN SESSION':p.status==='confirmed'?'CONFIRMED — READY':p.status==='canceled'?'REJECTED':'PENDING CONFIRMATION';
+
+    var infoHtml='<div class="info-grid">';
+    infoHtml+='<div class="info-item"><label>Patient ID</label><p>WP-'+p.id+'</p></div>';
+    infoHtml+='<div class="info-item"><label>Age</label><p>'+p.age+' Years</p></div>';
+    infoHtml+='<div class="info-item"><label>Status</label><p style="color:'+statusColor+';">'+statusLabel+'</p></div>';
+    infoHtml+='<div class="info-item"><label>Service</label><p><span class="svc-badge '+svcCls(p.service)+'" style="font-size:11px;">'+p.service+'</span></p></div>';
+    infoHtml+='<div class="info-item"><label>Visit Count</label><p>'+vc+' visit'+(vc!==1?'s':'')+'</p></div>';
+    infoHtml+='<div class="info-item"><label>Next Visit</label><p>'+p.next.date+'</p></div>';
+    infoHtml+='<div class="info-item"><label>Session</label><p>'+p.next.session+' — <span class="'+(p.next.type.toLowerCase()==='online'?'online':'physical')+'" style="font-size:12px;"><i class="fas '+(p.next.type.toLowerCase()==='online'?'fa-video':'fa-hospital')+'" style="font-size:10px;"></i> '+p.next.type+'</span></p></div>';
+    infoHtml+='<div class="info-item"><label>Priority</label><p style="color:'+(p.priority==='emergency'?'var(--rose-dark)':'var(--text)')+';">'+(p.priority==='emergency'?'<i class="fas fa-bolt" style="margin-right:4px;"></i>':'')+p.priority.toUpperCase()+'</p></div>';
+    infoHtml+='<div class="info-item"><label>Files</label><p>'+(p.uploadedFiles?p.uploadedFiles.length:0)+'</p></div>';
+    infoHtml+='</div>';
+
+    if(last){
+        infoHtml+='<div class="sec-title"><div class="st-bar"></div><h4>Last Visit Summary</h4></div>';
+        infoHtml+='<div style="background:linear-gradient(135deg,#f0fdf9,#f0f9ff);border-left:4px solid var(--accent);border-radius:0 14px 14px 0;padding:18px 22px;font-size:13.5px;color:var(--text-sec);line-height:1.7;"><strong>'+last.date+'</strong> — '+last.doctor+' ('+last.field+')<br><strong>Diagnosis:</strong> '+last.diagnosis+'<br><strong>Medicines:</strong> '+(last.medicines||[]).map(function(m){return m.name;}).join(', ')+'</div>';
+    } else {
+        infoHtml+='<div class="no-data"><i class="fas fa-user-plus"></i>New patient</div>';
+    }
+
+    if(p.status!=='canceled'&&p.status!=='in-session'){
+        infoHtml+='<div style="margin-top:20px;text-align:center;"><button class="btn btn-start" style="padding:14px 32px;font-size:14px;" onclick="closeModal();startSession(\''+p.id+'\')"><i class="fas fa-play"></i> Start Session from Here</button></div>';
+    }
+
+    document.getElementById('mt-info').innerHTML=infoHtml;
+    buildHistory(p);
+    buildFiles(p);
+    buildLabs(p);
+    buildRx(p);
+    switchTab('mt-info');
+    document.getElementById('modal').classList.add('show');
+    document.body.style.overflow='hidden';
+}
+
+function closeModal(){
+    document.getElementById('modal').classList.remove('show');
+    document.body.style.overflow='';
+    activeId=null;
+}
+
+function switchTab(id){
+    var tabs=document.querySelectorAll('.m-tab');
+    var contents=document.querySelectorAll('.mtc');
+    for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle('active',tabs[i].getAttribute('data-tab')===id);
+    for(var j=0;j<contents.length;j++) contents[j].classList.toggle('active',contents[j].id===id);
+}
+
+document.getElementById('mTabs').addEventListener('click',function(e){
+    var t=e.target.closest('.m-tab');
+    if(t) switchTab(t.getAttribute('data-tab'));
+});
+
+document.getElementById('modalCloseBtn').addEventListener('click',closeModal);
+document.getElementById('modal').addEventListener('click',function(e){
+    if(e.target===this) closeModal();
+});
+
+/* ═══════════════════════════════════════
+   MODAL BUILDERS
+   ═══════════════════════════════════════ */
+function buildHistory(p){
+    var c=document.getElementById('mt-history');
+    if(!p.visitHistory||!p.visitHistory.length){c.innerHTML='<div class="no-data"><i class="fas fa-history"></i>No history.</div>';return;}
+    var h='<div class="sec-title"><div class="st-bar"></div><h4>Timeline ('+p.visitHistory.length+')</h4></div><div class="timeline">';
+    p.visitHistory.forEach(function(v){
+        var vit='';
+        if(v.vitals&&Object.keys(v.vitals).length){
+            vit='<div class="tl-vitals">';
+            var keys=Object.keys(v.vitals);
+            for(var k=0;k<keys.length;k++){
+                vit+='<div class="tl-vital"><label>'+keys[k]+'</label><p>'+v.vitals[keys[k]]+'</p></div>';
+            }
+            vit+='</div>';
+        }
+        var sym='';
+        if(v.symptoms&&v.symptoms.length){
+            sym=v.symptoms.map(function(s){return '<span style="background:var(--accent-soft);color:var(--accent-dark);padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;display:inline-block;margin:2px;">'+s+'</span>';}).join('');
+        }
+        var dotCls='',dotIcon='fa-stethoscope';
+        if(v.field==='Lab Technician'){dotCls='tl-lab';dotIcon='fa-flask';}
+        else if(v.field==='Physiotherapy'){dotCls='tl-physio';dotIcon='fa-dumbbell';}
+
+        h+='<div class="tl-item"><div class="tl-dot '+dotCls+'"><i class="fas '+dotIcon+'"></i></div><div class="tl-date">'+v.date+' — '+v.doctor+' ('+v.field+')</div><div class="tl-title">'+(v.diagnosis||'Consultation')+'</div><div class="tl-desc">'+(v.complaint||'')+'</div>'+vit+(sym?'<div style="margin-top:8px;">'+sym+'</div>':'');
+        if(v.exam) h+='<div class="tl-card"><h5><i class="fas fa-notes-medical" style="color:var(--accent);margin-right:6px;"></i>Exam</h5><div class="tl-desc">'+v.exam+'</div></div>';
+        h+='</div>';
+
+        if(v.medicines&&v.medicines.length){
+            var m='';
+            v.medicines.forEach(function(md,j){
+                if(!md.name) return;
+                m+='<div class="tl-med"><span class="tl-med-num">'+(j+1)+'.</span><strong>'+md.name+'</strong> — '+md.dosage+' | '+md.freq+' | '+md.dur+'</div>';
+            });
+            h+='<div class="tl-item"><div class="tl-dot tl-rx"><i class="fas fa-pills"></i></div><div class="tl-date">Prescription</div><div class="tl-card"><h5><i class="fas fa-prescription-bottle-medical" style="color:var(--gold);margin-right:6px;"></i>Medicines</h5><div class="tl-meds">'+m+'</div></div>'+(v.advice?'<div style="background:var(--accent-soft);border-radius:10px;padding:12px;font-size:12.5px;margin-top:8px;"><strong>Advice:</strong> '+v.advice+'</div>':'')+'</div>';
+        }
+        if(v.labs&&v.labs.length){
+            var l='';
+            v.labs.forEach(function(t){l+='<div class="tl-lab-item"><i class="fas fa-flask"></i><strong>'+t.name+'</strong> — '+t.sample+' — <span style="color:'+(t.priority==='Urgent'?'var(--rose)':'var(--text-sec)')+';">'+t.priority+'</span></div>';});
+            h+='<div class="tl-item"><div class="tl-dot tl-lab"><i class="fas fa-vial"></i></div><div class="tl-date">Labs</div><div class="tl-card"><h5><i class="fas fa-flask" style="color:var(--teal);margin-right:6px;"></i>Tests</h5>'+l+'</div></div>';
+        }
+    });
+    h+='</div>';
+    c.innerHTML=h;
+}
+
+function buildFiles(p){
+    var c=document.getElementById('mt-files');
+    if(!p.uploadedFiles||!p.uploadedFiles.length){c.innerHTML='<div class="no-data"><i class="fas fa-folder-open"></i>No files uploaded.</div>';return;}
+    var h='<div class="sec-title"><div class="st-bar"></div><h4>Files ('+p.uploadedFiles.length+')</h4></div><div class="files-grid">';
+    p.uploadedFiles.forEach(function(f){
+        var cls=f.type==='pdf'?'pdf':f.type==='img'?'img':'doc';
+        var icon=f.type==='pdf'?'fa-file-pdf':f.type==='img'?'fa-file-image':'fa-file-word';
+        h+='<div class="file-card"><div class="f-icon '+cls+'"><i class="fas '+icon+'"></i></div><div class="f-info"><div class="fn">'+f.name+'</div><div class="fd">'+f.size+' | '+f.date+'<br>'+f.desc+'</div></div></div>';
+    });
+    h+='</div>';
+    c.innerHTML=h;
+}
+
+function buildLabs(p){
+    var c=document.getElementById('mt-labs');
+    var all=[];
+    if(p.visitHistory) p.visitHistory.forEach(function(v){if(v.labs) v.labs.forEach(function(l){all.push({name:l.name,sample:l.sample,priority:l.priority,visitDate:v.visitDate||v.date,doctor:v.doctor});});});
+    var labResults=p.labResults||[];
+    if(!all.length&&!labResults.length){c.innerHTML='<div class="no-data"><i class="fas fa-flask"></i>No lab orders yet.</div>';return;}
+    var h='';
+    if(all.length){
+        h+='<div class="sec-title"><div class="st-bar"></div><h4>Lab Orders ('+all.length+')</h4></div>';
+        h+='<table class="lab-table"><thead><tr><th>Visit</th><th>Doctor</th><th>Test</th><th>Sample</th><th>Priority</th></tr></thead><tbody>';
+        all.forEach(function(l){
+            h+='<tr><td>'+l.visitDate+'</td><td>'+l.doctor+'</td><td><strong>'+l.name+'</strong></td><td>'+l.sample+'</td><td style="color:'+(l.priority==='Urgent'?'var(--rose-dark)':'var(--text-sec)')+';">'+l.priority+'</td></tr>';
+        });
+        h+='</tbody></table>';
+    }
+    if(labResults.length){
+        h+='<div class="sec-title" style="margin-top:20px;"><div class="st-bar"></div><h4>Lab Results</h4></div>';
+        h+='<table class="lab-table"><thead><tr><th>Test</th><th>Status</th><th>Result</th><th>Completed</th></tr></thead><tbody>';
+        labResults.forEach(function(lr){
+            var sc=lr.status==='completed'?'var(--accent-dark)':'var(--gold-dark)';
+            var sl=lr.status==='completed'?'<i class="fas fa-check-circle" style="margin-right:4px;"></i>Done':'<i class="fas fa-clock" style="margin-right:4px;"></i>Pending';
+            var cd=lr.completedAt?new Date(lr.completedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
+            h+='<tr><td><strong>'+lr.test+'</strong></td><td style="color:'+sc+';font-weight:700;">'+sl+'</td><td>'+(lr.result||'—')+'</td><td style="font-size:11px;color:var(--text-muted);">'+cd+'</td></tr>';
+        });
+        h+='</tbody></table>';
+    }
+    c.innerHTML=h;
+}
+
+function buildRx(p){
+    var c=document.getElementById('mt-rx');
+    var rx=[];
+    if(p.visitHistory) p.visitHistory.forEach(function(v){if(v.medicines&&v.medicines.length) rx.push(v);});
+    if(!rx.length){c.innerHTML='<div class="no-data"><i class="fas fa-prescription-bottle-medical"></i>No prescriptions.</div>';return;}
+    var h='';
+    rx.forEach(function(v){
+        h+='<div class="rx-display"><div class="rx-head"><h3><i class="fas fa-heartbeat" style="margin-right:8px;"></i>HealthOnCall</h3><p>'+v.doctor+' — '+v.field+' | '+v.date+'</p></div>';
+        h+='<div class="rx-pat"><div><strong>Patient:</strong> '+p.name+'</div><div><strong>Age:</strong> '+p.age+' yrs</div></div>';
+        if(v.vitals&&Object.keys(v.vitals).length){
+            h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;">';
+            var vk=Object.keys(v.vitals);
+            for(var i=0;i<vk.length;i++){
+                h+='<div style="background:#fafbfc;border-radius:10px;padding:10px;text-align:center;"><div style="font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">'+vk[i]+'</div><div style="font-family:Sora,sans-serif;font-weight:800;font-size:14px;margin-top:2px;">'+v.vitals[vk[i]]+'</div></div>';
+            }
+            h+='</div>';
+        }
+        h+='<div style="margin-bottom:12px;font-size:14px;"><strong>Diagnosis:</strong> <span style="color:var(--accent-dark);font-weight:800;">'+v.diagnosis+'</span></div>';
+        h+='<div class="rx-sec"><h5>Prescription</h5>';
+        v.medicines.forEach(function(m,j){
+            if(!m.name) return;
+            h+='<div class="rx-mrow"><span class="rx-mn">'+(j+1)+'.</span><div><strong>'+m.name+'</strong> — '+m.dosage+' | '+m.freq+' | '+m.dur+'</div></div>';
+        });
+        h+='</div>';
+        if(v.advice) h+='<div class="rx-advice-box"><strong>Advice:</strong> '+v.advice+'</div>';
+        if(v.followUp) h+='<div style="font-size:13px;"><strong><i class="fas fa-calendar-check" style="margin-right:6px;color:var(--accent);"></i>Follow-up:</strong> '+v.followUp+'</div>';
+        h+='<div class="rx-foot"><div class="rx-sig">'+v.doctor+'</div><p>'+v.field+' | HealthOnCall</p></div></div>';
+    });
+    c.innerHTML=h;
+}
+
+/* ═══════════════════════════════════════
+   TOAST NOTIFICATIONS
+   ═══════════════════════════════════════ */
+function showToast(msg,type){
+    type=type||'success';
+    var container=document.getElementById('toastContainer');
+    var t=document.createElement('div');
+    t.className='toast'+(type==='warn'?' toast-warn':type==='error'?' toast-err':'');
+    var icons={success:'fa-check-circle',warn:'fa-exclamation-circle',error:'fa-times-circle'};
+    t.innerHTML='<i class="fas '+(icons[type]||icons.success)+'"></i> '+msg;
+    container.appendChild(t);
+    requestAnimationFrame(function(){requestAnimationFrame(function(){t.classList.add('show');});});
+    setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.remove();},500);},3500);
+}
+
+/* ═══════════════════════════════════════
+   EVENT LISTENERS
+   ═══════════════════════════════════════ */
+document.getElementById('search').addEventListener('input',render);
+document.getElementById('filter').addEventListener('change',render);
+document.getElementById('svcFilter').addEventListener('change',render);
+
+/* ═══════════════════════════════════════
+   INITIAL RENDER
+   ═══════════════════════════════════════ */
+hocInitWeeklyServiceFilter();
+refreshWeeklyPlan();
 </body>
 </html>

@@ -3,547 +3,762 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩺</text></svg>">
     <title>HealthOnCall | Patient Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700,1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="../doc/hoc-theme-init.js"></script>
+<script src="../doc/hoc-clinical-shared.js"></script>
+<script src="../doc/hoc-notifications.js"></script>
+<script src="hoc-patient-common.js"></script>
+    <link rel="stylesheet" href="../doc/hoc-global-theme.css">
+    
+    <!-- Firebase Scripts -->
+    <script src="../doc/hoc-firebase-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    <script src="../doc/hoc-medical-reports.js"></script>
+    <script src="../doc/hoc-appointment-reminders.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+    var SafeStorage = {
+        _blocked: false, _memoryStore: {},
+        getItem: function(key) { if (this._blocked) return this._memoryStore[key] || null; try { return localStorage.getItem(key); } catch (e) { this._blocked = true; return this._memoryStore[key] || null; } },
+        setItem: function(key, value) { if (this._blocked) { this._memoryStore[key] = value; return; } try { localStorage.setItem(key, value); } catch (e) { this._blocked = true; this._memoryStore[key] = value; } },
+        removeItem: function(key) { if (this._blocked) { delete this._memoryStore[key]; return; } try { localStorage.removeItem(key); } catch (e) { this._blocked = true; delete this._memoryStore[key]; } }
+    };
+    
+    // Variable to cache doctor data to avoid fetching again and again
+    var doctorCache = {};
+
+    (function(){
+        var cfg=window.HOC_FIREBASE_CONFIG||{};
+        if(!firebase.apps.length) firebase.initializeApp(cfg);
+        window._hocDb = firebase.firestore(); window._hocFirebaseInit = true;
+
+        if (firebase.auth) {
+            firebase.auth().onAuthStateChanged(function (user) {
+                if (!user) {
+                    window.location.href = '../index.html';
+                    return;
+                }
+                window._hocDb.collection('Patients').where('uid', '==', user.uid).limit(1).get().then(function (q) {
+                    if (q.empty) return;
+                    var doc = q.docs[0];
+                    var d = doc.data();
+                    if (typeof hocSyncPatientSession === 'function') hocSyncPatientSession(d, doc.id);
+                });
+            });
+        }
+        
+        // Helper function to fetch doctor details (Phone Number)
+        async function loadDoctorDetails(apts) {
+            // Get unique doctor IDs from appointments
+            var docIds = [...new Set(apts.map(a => a.doctorId).filter(Boolean))];
+            
+            // Fetch missing doctors
+            for (var i = 0; i < docIds.length; i++) {
+                var id = docIds[i];
+                if (!doctorCache[id]) {
+                    try {
+                        var snap = await window._hocDb.collection('Doctors').doc(id).get();
+                        if (snap.exists) {
+                            doctorCache[id] = snap.data();
+                        }
+                    } catch (e) { console.error("Error fetching doctor:", e); }
+                }
+            }
+
+            // Merge phone number into appointment objects
+            return apts.map(a => {
+                if (a.doctorId && doctorCache[a.doctorId]) {
+                    return { ...a, doctorPhone: doctorCache[a.doctorId].phone };
+                }
+                return a;
+            });
+        }
+
+        var _hocLastApptState = {};
+        if (typeof HOC_syncLocalAppointmentsToFirestore === 'function') {
+            HOC_syncLocalAppointmentsToFirestore().then(function (r) {
+                if (r.synced > 0 && typeof showToast === 'function') showToast('Synced ' + r.synced + ' appointment(s) to cloud — staff Requests tab will update.', 'success');
+                if (r.failed > 0 && typeof showToast === 'function') showToast('Could not sync ' + r.failed + ' booking(s). Use Live Server http://127.0.0.1:5500', 'warning');
+            }).catch(function () {});
+        }
+        if (typeof HOC_subscribePatientAppointments === 'function') {
+            HOC_subscribePatientAppointments({
+                onData: async function (apts) {
+                    var nextState = {};
+                    apts.forEach(function (data) {
+                        nextState[data.id || data.appointmentId] = { status: data.status || '', hadRx: !!data.prescription };
+                    });
+                    Object.keys(nextState).forEach(function (id) {
+                        var prev = _hocLastApptState[id];
+                        var nw = nextState[id];
+                        if (prev) {
+                            if (prev.status !== 'staff-approved' && nw.status === 'staff-approved' && typeof showToast === 'function') {
+                                showToast('Staff approved your appointment. You can message your doctor in-app.', 'success');
+                            }
+                            if ((!prev.hadRx && nw.hadRx) && typeof showToast === 'function') {
+                                showToast('New prescription ready — view or download PDF below.', 'success');
+                            }
+                        }
+                    });
+                    _hocLastApptState = nextState;
+                    apts.sort(function (a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
+                    apts = await loadDoctorDetails(apts);
+                    SafeStorage.setItem('hoc_appointments', JSON.stringify(apts));
+                    AppStorage.appointments = apts;
+                    if (typeof renderAll === 'function') renderAll();
+                },
+                onErr: function (err) { console.warn('Firestore listener:', err); }
+            });
+        } else {
+            window._hocDb.collection('Appointments').where('patientId', '==', typeof HOC_getPatientId === 'function' ? HOC_getPatientId() : '').onSnapshot(async function (snap) {
+                var apts = []; var nextState = {};
+                snap.forEach(function (d) {
+                    var data = d.data(); if (!data.id) data.id = d.id; apts.push(data); nextState[d.id] = { status: data.status || '', hadRx: !!data.prescription };
+                });
+                Object.keys(nextState).forEach(function (id) {
+                    var prev = _hocLastApptState[id]; var nw = nextState[id];
+                    if (prev) {
+                        if (prev.status !== 'staff-approved' && nw.status === 'staff-approved' && typeof showToast === 'function') { showToast('Staff approved your appointment. You can message your doctor in-app.', 'success'); }
+                        if ((!prev.hadRx && nw.hadRx) && typeof showToast === 'function') { showToast('New prescription ready — view or download PDF below.', 'success'); }
+                    }
+                });
+                _hocLastApptState = nextState;
+                apts.sort(function (a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
+                apts = await loadDoctorDetails(apts);
+                SafeStorage.setItem('hoc_appointments', JSON.stringify(apts));
+                AppStorage.appointments = apts;
+                if (typeof renderAll === 'function') renderAll();
+            }, function (err) { console.warn('Firestore listener:', err); });
+        }
+    })();
+
+    var AppStorage={appointments:[],loadFromStorage:function(){try{var s=SafeStorage.getItem('hoc_appointments');if(s)this.appointments=JSON.parse(s);}catch(e){this.appointments=[];}},saveToStorage:function(){SafeStorage.setItem('hoc_appointments',JSON.stringify(this.appointments));},bookAppointment:function(d){var aptId='APT-'+Date.now();var uid=(typeof firebase!=='undefined'&&firebase.auth&&firebase.auth().currentUser)?firebase.auth().currentUser.uid:(d.patientUid||'');var a={id:aptId,appointmentId:aptId,patientName:d.patientName||(typeof HOC_getPatientName==='function'?HOC_getPatientName():'Patient'),patientId:d.patientId||(typeof HOC_getPatientId==='function'?HOC_getPatientId():''),patientUid:uid||'',doctorId:d.doctorId||'',doctorName:d.doctorName||'',doctorSpec:d.doctorSpec||'',service:d.service||'',date:d.date||'',time:d.time||'',symptoms:d.symptoms||'',visitType:d.visitType||'Online',address:d.address||'',fee:d.fee||0,notes:d.notes||'',status:'requested',rejectReason:'',prescription:null,labTests:[],labResults:[],createdAt:new Date().toISOString()};if(typeof HOC_pushAppointmentToCloud==='function'){return HOC_pushAppointmentToCloud(a).then(function(row){this.appointments.push(row);this.saveToStorage();return row;}.bind(this));}if(window._hocDb){return window._hocDb.collection('Appointments').doc(a.id).set(a).then(function(){this.appointments.push(a);this.saveToStorage();return a;}.bind(this));}return Promise.reject(new Error('Sign in and use Live Server (http://) to book.'));}};
+    function getAppointments(){AppStorage.loadFromStorage();return AppStorage.appointments;}
+    function statusBadgeHTML(s){var m={'Pending':'<span class="badge badge-pending">Pending</span>','requested':'<span class="badge badge-pending">Pending</span>','staff-approved':'<span class="badge badge-staff-approved">Staff Approved</span>','confirmed':'<span class="badge badge-confirmed">Confirmed</span>','in-progress':'<span class="badge badge-in-progress">In Progress</span>','completed':'<span class="badge badge-completed">Completed</span>','rejected':'<span class="badge badge-cancelled">Rejected</span>'};return m[s]||'<span class="badge badge-pending">'+(s||'')+'</span>';}
+    function flowProgressHTML(s){var al=['staff-approved','confirmed','in-progress','completed'];var idx=al.indexOf(s);var st=[{l:'Booked',a:true},{l:'Staff',a:idx>=0},{l:'Doctor',a:idx>=1},{l:'Done',a:idx>=3}];var h='<div style="display:flex;gap:4px;align-items:center;">';st.forEach(function(x,i){var c=x.a?'#10b981':'#1e293b';var t=x.a?'#059669':'#64748b';h+='<div style="flex:1;text-align:center;"><div style="height:4px;background:'+c+';border-radius:3px;margin-bottom:4px;"></div><div style="font-size:9px;font-weight:700;color:'+t+';">'+x.l+'</div></div>';if(i<3)h+='<i class="fas fa-chevron-right" style="font-size:8px;color:#1e293b;flex-shrink:0;"></i>';});return h+'</div>';}
+    function timeAgo(d){if(!d)return'';var diff=Date.now()-new Date(d).getTime();var m=Math.floor(diff/60000);if(m<1)return'Just now';if(m<60)return m+' min ago';var h=Math.floor(m/60);if(h<24)return h+'h ago';return Math.floor(h/24)+'d ago';}
+    function hocLogout(){if(typeof hocLogoutAndGoHome==='function'){hocLogoutAndGoHome();return}SafeStorage.removeItem('hoc_current_role');try{localStorage.setItem('hoc_manual_logout','1')}catch(e){}location.href='../index.html?signedout=1';}
+    var flowTracker={}; function getFlowTracker(){try{var s=SafeStorage.getItem('hoc_flow_tracker');if(s)flowTracker=JSON.parse(s);}catch(e){flowTracker={};}return flowTracker;} function saveFlowTracker(){SafeStorage.setItem('hoc_flow_tracker',JSON.stringify(flowTracker));} AppStorage.loadFromStorage(); window.AppStorage=AppStorage; getFlowTracker();
+    </script>
+
     <style>
-        :root {
-            --sidebar-bg: #0b1120;
-            --sidebar-hover: rgba(16,185,129,0.08);
-            --sidebar-active-bg: rgba(16,185,129,0.15);
-            --accent: #10b981;
-            --accent-glow: rgba(16,185,129,0.25);
-            --accent-soft: #d1fae5;
-            --accent-dark: #059669;
-            --gold: #f59e0b;
-            --gold-soft: #fef3c7;
-            --gold-dark: #92400e;
-            --rose: #f43f5e;
-            --rose-soft: #ffe4e6;
-            --rose-dark: #9f1239;
-            --sky: #0ea5e9;
-            --sky-soft: #e0f2fe;
-            --sky-dark: #075985;
-            --indigo: #6366f1;
-            --indigo-soft: #e0e7ff;
-            --indigo-dark: #3730a3;
-            --violet: #8b5cf6;
-            --violet-soft: #ede9fe;
-            --slate: #64748b;
-            --slate-soft: #f1f5f9;
-            --bg: #f0f4f8;
-            --bg-gradient: linear-gradient(135deg, #f0f4f8 0%, #e8eef5 50%, #f0f4f8 100%);
-            --card: #ffffff;
-            --card-border: rgba(0,0,0,0.04);
-            --text: #0f172a;
-            --text-secondary: #475569;
-            --text-muted: #94a3b8;
-            --border: #e2e8f0;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
-            --shadow-md: 0 8px 30px rgba(0,0,0,0.06);
-            --shadow-lg: 0 20px 60px rgba(0,0,0,0.1);
-            --radius: 18px;
-            --radius-lg: 24px;
-            --transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
-        }
-        body.dark-mode {
-            --bg: #020617;
-            --bg-gradient: linear-gradient(135deg, #020617 0%, #0a0f1e 50%, #020617 100%);
-            --card: #0f172a;
-            --card-border: rgba(255,255,255,0.06);
-            --text: #f1f5f9;
-            --text-secondary: #cbd5e1;
-            --text-muted: #64748b;
-            --border: #1e293b;
-            --slate-soft: #1e293b;
-            --sky-soft: rgba(14,165,233,.1);
-            --indigo-soft: rgba(99,102,241,.1);
-            --violet-soft: rgba(139,92,246,.1);
-        }
-        *{margin:0;padding:0;box-sizing:border-box;}
-        body{font-family:'DM Sans',sans-serif;background:var(--bg-gradient);color:var(--text);min-height:100vh;display:flex;overflow-x:hidden;transition:background .5s,color .4s;}
-        h1,h2,h3,h4,h5,h6{font-family:'Sora',sans-serif;}
+        :root{ --bg:#f0f4f8;--bg-gradient:linear-gradient(160deg,#eef2f7 0%,#f5f7fa 40%,#eef6f1 100%); --card:#ffffff;--card-border:rgba(0,0,0,0.06);--text:#0f172a;--text-secondary:#334155;--text-muted:#94a3b8;--border:#e2e8f0; --slate-soft:#f1f5f9;--sky-soft:rgba(14,165,233,0.07);--indigo-soft:rgba(99,102,241,0.07);--violet-soft:rgba(139,92,246,0.07); --gold-soft:rgba(245,158,11,0.07);--accent:#10b981;--accent-dark:#059669;--accent-soft:rgba(16,185,129,0.08); --sky:#0ea5e9;--indigo:#6366f1;--violet:#8b5cf6;--gold:#f59e0b;--rose:#f43f5e;--rose-soft:rgba(244,63,94,0.07); --sidebar-bg:#0b1120;--sidebar-width:280px; --transition:all 0.2s ease;--shadow-sm:0 1px 3px rgba(0,0,0,0.04);--shadow-md:0 4px 12px rgba(0,0,0,0.06);--shadow-lg:0 12px 32px rgba(0,0,0,0.10);--radius-lg:16px; }
+        body.dark-mode{ --bg:#020617;--bg-gradient:linear-gradient(160deg,#020617 0%,#0a0f1e 50%,#020617 100%); --card:#0f172a;--card-border:rgba(255,255,255,0.06);--text:#f1f5f9;--text-secondary:#cbd5e1;--text-muted:#64748b;--border:#1e293b; --slate-soft:#1e293b;--accent-soft:rgba(16,185,129,0.10);--shadow-sm:0 1px 3px rgba(0,0,0,0.2);--shadow-md:0 4px 12px rgba(0,0,0,0.3);--shadow-lg:0 12px 32px rgba(0,0,0,0.4); }
+        *{margin:0;padding:0;box-sizing:border-box;} html{scroll-behavior:smooth;} body{font-family:'DM Sans',sans-serif;background:var(--bg-gradient);color:var(--text);min-height:100vh;display:flex;overflow-x:hidden;} h1,h2,h3,h4,h5,h6{font-family:'Sora',sans-serif;}
+        
+        /* Sidebar & Layout CSS */
+        .bg-blobs{position:fixed;top:0;left:var(--sidebar-width);right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;} .bg-blobs .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.25;animation:blobFloat 20s ease-in-out infinite;} .blob-1{width:350px;height:350px;background:#10b981;top:-80px;right:5%;} .blob-2{width:280px;height:280px;background:#0ea5e9;bottom:15%;left:8%;animation-delay:-7s;} .blob-3{width:220px;height:220px;background:#f59e0b;top:50%;right:25%;animation-delay:-14s;} @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1);}25%{transform:translate(30px,-40px) scale(1.1);}50%{transform:translate(-20px,20px) scale(.95);}75%{transform:translate(15px,35px) scale(1.05);}}
+        .sidebar{width:var(--sidebar-width);height:100vh;position:fixed;left:0;top:0;background:var(--sidebar-bg);z-index:1000;display:flex;flex-direction:column;overflow:hidden;} .sidebar::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,185,129,0.06) 0%,transparent 40%);pointer-events:none;} .sidebar-brand{padding:28px 24px 24px;} .sidebar-brand .logo-icon{width:44px;height:44px;background:linear-gradient(135deg,#10b981,#0ea5e9);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;color:white;margin-bottom:14px;} .sidebar-brand h2{font-size:20px;font-weight:800;color:#f1f5f9;} .sidebar-brand h2 span{color:#10b981;} .sidebar-brand p{font-size:10px;color:#64748b;letter-spacing:1.2px;text-transform:uppercase;}
+        .sidebar-nav{flex:1;padding:0 14px;display:flex;flex-direction:column;gap:3px;overflow-y:auto;} .nav-label{font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:1.5px;padding:18px 14px 8px;}
+        .sidebar-nav a{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;text-decoration:none;color:#94a3b8;font-weight:500;font-size:14px;transition:var(--transition);} .sidebar-nav a i{width:20px;text-align:center;font-size:15px;} .sidebar-nav a:hover{color:#e2e8f0;background:rgba(255,255,255,0.04);} .sidebar-nav a:hover i{color:#10b981;} .sidebar-nav a.active{color:#f1f5f9;background:rgba(16,185,129,0.10);font-weight:600;} .sidebar-nav a.active i{color:#10b981;} .sidebar-nav a.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:22px;background:#10b981;border-radius:0 4px 4px 0;} .sidebar-nav a.nav-danger:hover{color:#f43f5e;background:rgba(244,63,94,0.08);} .sidebar-nav a.nav-danger:hover i{color:#f43f5e;}
+        .sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,0.05);} .user-card{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.03);} .user-avatar{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#6366f1);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px;overflow:hidden;} .user-avatar img{width:100%;height:100%;object-fit:cover;} .user-info .user-name{color:#e2e8f9;font-weight:600;font-size:13px;} .user-info .user-role{color:#64748b;font-size:11px;}
+        .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;opacity:0;transition:opacity .3s;} .sidebar-overlay.active{display:block;opacity:1;}
+        .mobile-topbar{display:none;position:fixed;top:0;left:0;right:0;z-index:900;background:var(--card);border-bottom:1px solid var(--border);padding:12px 16px;align-items:center;gap:12px;} .hamburger{width:42px;height:42px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);font-size:18px;} .m-logo-icon{width:34px;height:34px;background:linear-gradient(135deg,#10b981,#0ea5e9);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:white;} .m-logo-text{font-family:'Sora',sans-serif;font-weight:800;font-size:17px;color:var(--text);} .m-logo-text span{color:#10b981;} .m-notif{margin-left:auto;width:42px;height:42px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);font-size:16px;position:relative;} .m-dot{position:absolute;top:9px;right:9px;width:7px;height:7px;background:#f43f5e;border-radius:50%;display:none;} .m-dot.active{display:block;}
+        
+        .main{margin-left:var(--sidebar-width);flex:1;padding:28px 36px;position:relative;z-index:1;min-height:100vh;} .top-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;gap:20px;} .greeting-section h1{font-size:26px;font-weight:800;letter-spacing:-.8px;line-height:1.2;} .greeting-section h1 span{color:#059669;} body.dark-mode .greeting-section h1 span{color:#10b981;} .greeting-section .date-line{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:13px;margin-top:5px;} .search-box{position:relative;width:280px;} .search-box i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;} .search-box input{width:100%;padding:12px 16px 12px 40px;border:1.5px solid var(--border);border-radius:12px;background:var(--card);font-size:13px;color:var(--text);outline:none;box-shadow:var(--shadow-sm);} .search-box input:focus{border-color:#10b981;box-shadow:0 0 0 4px rgba(16,185,129,0.12);} .notif-btn{width:44px;height:44px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;color:var(--text-secondary);font-size:16px;} .notif-btn .dot{position:absolute;top:9px;right:9px;width:8px;height:8px;background:#f43f5e;border-radius:50%;display:none;} .notif-btn .dot.active{display:block;}
+        .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:26px;} .stat-card{background:var(--card);border-radius:var(--radius-lg);padding:20px;position:relative;overflow:hidden;border:1px solid var(--card-border);box-shadow:var(--shadow-sm);cursor:default;transition:var(--transition);} .stat-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);} .stat-card .stat-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:14px;} .stat-card.s1 .stat-icon{background:var(--sky-soft);color:#0ea5e9;} .stat-card.s2 .stat-icon{background:var(--gold-soft);color:#f59e0b;} .stat-card.s3 .stat-icon{background:var(--accent-soft);color:#10b981;} .stat-card.s4 .stat-icon{background:var(--violet-soft);color:#8b5cf6;} .stat-card .stat-number{font-family:'Sora',sans-serif;font-size:28px;font-weight:800;line-height:1;margin-bottom:3px;} .stat-card .stat-label{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;} .stat-card .stat-bar{position:absolute;bottom:0;left:0;right:0;height:3px;} .stat-card.s1 .stat-bar{background:linear-gradient(90deg,#0ea5e9,#38bdf8);} .stat-card.s2 .stat-bar{background:linear-gradient(90deg,#f59e0b,#fbbf24);} .stat-card.s3 .stat-bar{background:linear-gradient(90deg,#10b981,#34d399);} .stat-card.s4 .stat-bar{background:linear-gradient(90deg,#8b5cf6,#a78bfa);}
+        .content-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;} .section-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--card-border);box-shadow:var(--shadow-sm);overflow:hidden;margin-bottom:20px;} .section-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);} .section-header-left{display:flex;align-items:center;gap:10px;} .section-header-left .sh-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;} .sh-apt{background:var(--sky-soft);color:#0ea5e9;} .sh-presc{background:var(--violet-soft);color:#8b5cf6;} .sh-service{background:var(--indigo-soft);color:#6366f1;} .sh-notif{background:var(--gold-soft);color:#f59e0b;} .section-header-left h3{font-size:14px;font-weight:700;} .see-all{font-size:11px;font-weight:700;color:#059669;text-decoration:none;cursor:pointer;} body.dark-mode .see-all{color:#10b981;} .section-body{padding:10px 16px 14px;}
+        .apt-row{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:14px;margin-bottom:4px;} .apt-row:hover{background:var(--slate-soft);} .apt-doc-avatar{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:white;font-family:'Sora',sans-serif;} .av-nurse{background:linear-gradient(135deg,#10b981,#059669);} .av-physio{background:linear-gradient(135deg,#0ea5e9,#2563eb);} .av-lab{background:linear-gradient(135deg,#8b5cf6,#6d28d9);} .av-general{background:linear-gradient(135deg,#f59e0b,#d97706);} .apt-info{flex:1;min-width:0;} .apt-info .apt-name{font-weight:700;font-size:14px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;} .apt-info .apt-meta span{font-size:11.5px;color:var(--text-muted);font-weight:500;display:inline-flex;align-items:center;gap:3px;} .apt-flow-mini{padding:2px 0 2px 56px;margin:-2px 0 2px;} .apt-symptoms{font-size:11px;color:var(--text-muted);padding:2px 0 0 56px;margin-top:-2px;line-height:1.4;} .apt-actions{padding:4px 0 6px 56px;} .apt-lab-result{font-size:11px;color:#059669;background:var(--accent-soft);display:inline-block;margin:2px 0 2px 56px;padding:4px 10px;border-radius:8px;}
+        .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;} .badge::before{content:'';width:5px;height:5px;border-radius:50%;} .badge-confirmed{background:rgba(16,185,129,0.10);color:#059669;} .badge-confirmed::before{background:#10b981;} .badge-pending{background:var(--gold-soft);color:#d97706;} .badge-pending::before{background:#f59e0b;} .badge-completed{background:var(--slate-soft);color:#64748b;} .badge-completed::before{background:#94a3b8;} .badge-cancelled{background:var(--rose-soft);color:#e11d48;} .badge-cancelled::before{background:#f43f5e;} .badge-staff-approved{background:var(--sky-soft);color:#0284c7;} .badge-staff-approved::before{background:#0ea5e9;} .badge-in-progress{background:var(--indigo-soft);color:#4f46e5;} .badge-in-progress::before{background:#6366f1;}
+        .btn{padding:8px 14px;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:var(--transition);display:inline-flex;align-items:center;gap:5px;text-decoration:none;} .btn-view{background:var(--indigo-soft);color:#4f46e5;} body.dark-mode .btn-view{color:#818cf8;} .btn-view:hover{background:#6366f1;color:white;} .btn-chat{background:linear-gradient(135deg,#059669,#10b981);color:white;} .btn-chat:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(16,185,129,0.3);}
+        .services-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;} .service-chip{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:12px;background:var(--slate-soft);} .service-chip i{font-size:14px;width:18px;text-align:center;color:#10b981;} .service-chip span{font-size:12px;font-weight:600;color:var(--text-secondary);}
+        .notif-row{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:14px;margin-bottom:4px;} .notif-row:hover{background:var(--slate-soft);} .notif-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:5px;} .notif-dot.unread{background:#10b981;} .notif-dot.read{background:var(--border);} .notif-content .nc-title{font-weight:700;font-size:13px;margin-bottom:1px;} .notif-content .nc-desc{font-size:12px;color:var(--text-muted);line-height:1.45;} .notif-content .nc-time{font-size:10px;color:var(--text-muted);margin-top:3px;}
+        .presc-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:14px;margin-bottom:4px;gap:10px;} .presc-row:hover{background:var(--slate-soft);} .presc-info{display:flex;align-items:center;gap:12px;flex:1;min-width:0;} .presc-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--violet-soft);color:#8b5cf6;} .presc-text .pt-name{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;} .presc-text .pt-doc{font-size:11px;color:var(--text-muted);margin-top:1px;}
+        .modal-overlay{position:fixed;inset:0;background:rgba(11,17,32,0.5);backdrop-filter:blur(12px);display:none;justify-content:center;align-items:flex-start;z-index:2000;padding:16px;overflow-y:auto;} .modal-overlay.show{display:flex;} .modal-box{background:var(--card);width:100%;max-width:600px;border-radius:24px;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,0.2);transform:scale(.92);opacity:0;transition:all .4s cubic-bezier(.34,1.56,.64,1);margin:auto;} .modal-overlay.show .modal-box{transform:scale(1);opacity:1;} .modal-header{padding:22px 24px 0;display:flex;justify-content:space-between;gap:12px;} .modal-close{width:38px;height:38px;border:none;border-radius:10px;background:#f1f5f9;color:#64748b;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;} .modal-close:hover{background:var(--rose-soft);color:#f43f5e;} .modal-body{padding:18px 24px 24px;max-height:65vh;overflow-y:auto;} .modal-footer{display:flex;justify-content:flex-end;gap:10px;padding:0 24px 22px;} .btn-modal-close{background:var(--slate-soft);color:var(--text-secondary);} .btn-modal-dl{background:linear-gradient(135deg,#059669,#10b981);color:white;}
+        .empty-state{text-align:center;padding:36px 16px;color:var(--text-muted);} .empty-state i{font-size:32px;margin-bottom:10px;opacity:.25;display:block;} .empty-state p{font-size:13px;font-weight:500;} .rx-diagnosis{background:var(--slate-soft);border-radius:12px;padding:12px 16px;border-left:4px solid #10b981;margin-bottom:12px;} .rx-diagnosis span{font-weight:700;color:#059669;font-size:13px;} body.dark-mode .rx-diagnosis span{color:#10b981;} .rx-section{margin-bottom:14px;} .rx-section-title{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;} .rx-med-row{display:grid;grid-template-columns:2fr 1fr 1.5fr 1fr;gap:4px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;} .rx-med-row .med-name{font-weight:600;word-break:break-word;} .rx-med-row .med-val{color:var(--text-secondary);} .rx-notes{background:var(--slate-soft);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text-secondary);line-height:1.5;} .rx-lab-tag{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600;margin:2px 4px 2px 0;} .rx-lab-done{background:var(--accent-soft);color:#059669;} .rx-lab-pending{background:var(--gold-soft);color:#d97706;}
+        .toast-container{position:fixed;top:16px;right:16px;z-index:5000;display:flex;flex-direction:column;gap:8px;pointer-events:none;} .toast{background:var(--card);border-radius:12px;padding:12px 18px;display:flex;align-items:center;gap:10px;box-shadow:0 16px 40px rgba(0,0,0,0.12);border-left:4px solid #10b981;font-size:13px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);max-width:320px;pointer-events:auto;word-break:break-word;} .toast.show{transform:translateX(0);} .toast .t-success{color:#10b981;} .toast .t-info{color:#0ea5e9;} .toast .t-warning{color:#f59e0b;} .toast .t-error{color:#f43f5e;}
 
-        .bg-blobs{position:fixed;top:0;left:280px;right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;}
-        .bg-blobs .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.3;animation:blobFloat 20s ease-in-out infinite;transition:opacity .5s;}
-        body.dark-mode .bg-blobs .blob{opacity:.1;}
-        .blob-1{width:350px;height:350px;background:#10b981;top:-80px;right:5%;animation-delay:0s;}
-        .blob-2{width:280px;height:280px;background:#0ea5e9;bottom:15%;left:8%;animation-delay:-7s;}
-        .blob-3{width:220px;height:220px;background:#f59e0b;top:50%;right:25%;animation-delay:-14s;}
-        @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1);}25%{transform:translate(30px,-40px) scale(1.1);}50%{transform:translate(-20px,20px) scale(.95);}75%{transform:translate(15px,35px) scale(1.05);}}
+        /* ===== CHAT & VIDEO STYLES ===== */
+        .chat-window{position:fixed;bottom:24px;right:24px;width:400px;height:580px;background:var(--card);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.25);z-index:2000;display:none;flex-direction:column;overflow:hidden;border:1px solid var(--card-border);} .chat-window.active{display:flex;animation:chatSlideUp .3s ease;} @keyframes chatSlideUp{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+        .chat-header{background:linear-gradient(135deg,#059669,#10b981);color:white;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;} .chat-header .back-btn{background:rgba(255,255,255,0.15);border:none;color:white;width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--transition);} .back-btn:hover{background:rgba(255,255,255,0.3);} .chat-header .doc-info{flex:1;} .chat-header .doc-info h4{font-size:15px;font-weight:700;line-height:1.2;} .chat-header .doc-info p{font-size:10px;opacity:0.8;display:flex;align-items:center;gap:4px;} .chat-header .online-dot{width:6px;height:6px;background:#34d399;border-radius:50%;display:inline-block;} 
+        /* In-chat Video / Audio (pill style — only inside chat) */
+        .chat-header-actions{display:flex;gap:10px;align-items:center;flex-shrink:0;}
+        .hoc-call-pill{border:none;border-radius:999px;padding:8px 16px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:var(--transition);background:#E8EAF6;color:#283593;box-shadow:0 1px 2px rgba(40,53,147,.12);}
+        .hoc-call-pill i{font-size:13px;}
+        .hoc-call-pill:hover{background:#c5cae9;color:#1a237e;transform:translateY(-1px);box-shadow:0 4px 12px rgba(40,53,147,.2);}
+        body.dark-mode .hoc-call-pill{background:rgba(99,102,241,.25);color:#e8eaf6;}
+        body.dark-mode .hoc-call-pill:hover{background:rgba(99,102,241,.4);color:#fff;}
+        .chat-close{background:rgba(255,255,255,0.15);border:none;color:white;width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--transition);} .chat-close:hover{background:rgba(255,255,255,0.3);}
+        
+        .chat-list{flex:1;overflow-y:auto;background:var(--card);} .chat-list-header{padding:16px 20px;text-align:center;border-bottom:1px solid var(--border);} .chat-list-header h3{font-size:16px;color:var(--text);margin-bottom:2px;} .chat-list-header p{font-size:11px;color:var(--text-muted);} .doc-list-item{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border);cursor:pointer;transition:var(--transition);} .doc-list-item:hover{background:var(--slate-soft);} .doc-list-avatar{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#0ea5e9,#6366f1);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;font-family:'Sora',sans-serif;flex-shrink:0;} .doc-list-info h5{font-size:13px;font-weight:700;color:var(--text);} .doc-list-info p{font-size:11px;color:var(--text-muted);margin-top:2px;}
+        .chat-body{flex:1;padding:16px 20px;overflow-y:auto;background:#f0f2f5;display:flex;flex-direction:column;gap:6px;} body.dark-mode .chat-body{background:#020617;} .chat-body::-webkit-scrollbar{width:4px;} .chat-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.1);border-radius:4px;}
+        .chat-msg{max-width:80%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.4;word-wrap:break-word;position:relative;box-shadow:0 1px 2px rgba(0,0,0,0.05);}
+        .chat-msg.sent{background:#dcf8c6;color:#0f172a;align-self:flex-end;border-bottom-right-radius:4px;} body.dark-mode .chat-msg.sent{background:#059669;color:white;}
+        .chat-msg.received{background:white;color:#0f172a;align-self:flex-start;border-bottom-left-radius:4px;} body.dark-mode .chat-msg.received{background:#1e293b;color:#f1f5f9;}
+        .chat-msg .msg-sender{font-size:10px;font-weight:700;color:#0ea5e9;margin-bottom:3px;display:block;} .chat-msg.sent .msg-sender{color:#059669;} body.dark-mode .chat-msg.sent .msg-sender{color:#34d399;}
+        .chat-msg .msg-time{font-size:9px;opacity:.6;margin-top:4px;display:block;text-align:right;}
+        .chat-footer{padding:10px 16px;background:var(--card);border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;} .chat-footer input{flex:1;border:1.5px solid var(--border);border-radius:20px;padding:10px 18px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:var(--bg);color:var(--text);transition:var(--transition);} .chat-footer input:focus{border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,0.1);} .chat-footer button{background:linear-gradient(135deg,#059669,#10b981);color:white;border:none;border-radius:50%;width:40px;height:40px;cursor:pointer;font-size:14px;transition:var(--transition);display:flex;align-items:center;justify-content:center;} .chat-footer button:hover{transform:scale(1.05);}
+        .chat-empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-muted);text-align:center;padding:20px;} .chat-empty-state i{font-size:48px;margin-bottom:12px;opacity:.2;} .chat-empty-state p{font-size:13px;}
 
-        /* ===== SIDEBAR ===== */
-        .sidebar{width:280px;height:100vh;position:fixed;left:0;top:0;background:var(--sidebar-bg);z-index:1000;display:flex;flex-direction:column;overflow:hidden;transition:background .5s;}
-        .sidebar::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,185,129,.07) 0%,transparent 40%,transparent 60%,rgba(14,165,233,.05) 100%);pointer-events:none;}
-        .sidebar-brand{padding:32px 28px 28px;position:relative;}
-        .sidebar-brand .logo-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;color:white;margin-bottom:16px;box-shadow:0 8px 24px rgba(16,185,129,.3);}
-        .sidebar-brand h2{font-size:22px;font-weight:800;color:#f1f5f9;letter-spacing:-.5px;}
-        .sidebar-brand h2 span{color:var(--accent);}
-        .sidebar-brand p{font-size:11px;color:var(--text-muted);margin-top:4px;font-weight:500;letter-spacing:1px;text-transform:uppercase;}
-        .sidebar-nav{flex:1;padding:0 16px;display:flex;flex-direction:column;gap:4px;position:relative;}
-        .nav-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;padding:20px 16px 8px;}
-        .sidebar-nav a{display:flex;align-items:center;gap:14px;padding:13px 18px;border-radius:14px;text-decoration:none;color:#94a3b8;font-weight:500;font-size:14.5px;transition:var(--transition);position:relative;overflow:hidden;}
-        .sidebar-nav a i{width:20px;text-align:center;font-size:16px;transition:var(--transition);}
-        .sidebar-nav a:hover{color:#e2e8f0;background:var(--sidebar-hover);}
-        .sidebar-nav a:hover i{color:var(--accent);}
-        .sidebar-nav a.active{color:#f1f5f9;background:var(--sidebar-active-bg);font-weight:600;}
-        .sidebar-nav a.active i{color:var(--accent);}
-        .sidebar-nav a.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:24px;background:var(--accent);border-radius:0 4px 4px 0;}
-        .sidebar-nav .nav-badge{margin-left:auto;background:var(--rose);color:white;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;min-width:20px;text-align:center;}
-        .sidebar-footer{padding:20px 24px;border-top:1px solid rgba(255,255,255,.05);position:relative;}
-        .sidebar-footer .user-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.03);transition:var(--transition);}
-        .sidebar-footer .user-card:hover{background:rgba(255,255,255,.06);}
-        .user-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--sky),var(--indigo));display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;font-family:'Sora',sans-serif;overflow:hidden;}
-        .user-avatar img{width:100%;height:100%;object-fit:cover;}
-        .user-info .user-name{color:#e2e8f9;font-weight:600;font-size:14px;}
-        .user-info .user-role{color:var(--text-muted);font-size:11px;}
+        /* ===== VIDEO CALL STYLES ===== */
+        .video-call-overlay{position:fixed;inset:0;background:#0f172a;z-index:5000;display:none;flex-direction:column;align-items:center;justify-content:center;}
+        .video-call-overlay.active{display:flex;}
+        .remote-video-placeholder{width:100%;height:100%;position:absolute;top:0;left:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at center, #334155 0%, #0f172a 100%);}
+        .remote-avatar-lg{width:140px;height:140px;border-radius:50%;background:var(--accent-soft);border:4px solid rgba(255,255,255,0.1);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:700;box-shadow:0 20px 50px rgba(0,0,0,0.5);animation:breathe 4s infinite ease-in-out;}
+        @keyframes breathe{0%,100%{transform:scale(1);}50%{transform:scale(1.05);}}
+        .remote-name-tag{position:absolute;bottom:100px;background:rgba(0,0,0,0.5);backdrop-filter:blur(10px);padding:8px 20px;border-radius:30px;color:white;font-size:16px;font-weight:600;}
+        
+        .local-video-container{position:absolute;bottom:120px;right:40px;width:180px;height:130px;background:#334155;border-radius:16px;overflow:hidden;border:2px solid rgba(255,255,255,0.2);box-shadow:0 10px 30px rgba(0,0,0,0.5);transition:all 0.3s;}
+        .local-video-container:hover{transform:scale(1.1);}
+        .local-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);} /* Mirror effect */
+        .local-video-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:12px;}
+        
+        .call-controls{position:absolute;bottom:40px;display:flex;gap:20px;align-items:center;background:rgba(255,255,255,0.1);backdrop-filter:blur(15px);padding:16px 30px;border-radius:50px;border:1px solid rgba(255,255,255,0.1);}
+        .call-btn{width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;transition:var(--transition);background:rgba(255,255,255,0.15);color:white;}
+        .call-btn:hover{background:rgba(255,255,255,0.3);transform:translateY(-3px);}
+        .call-btn.btn-end{background:var(--rose);width:64px;height:64px;font-size:24px;box-shadow:0 10px 25px rgba(244, 63, 94, 0.4);}
+        .call-btn.btn-end:hover{background:#e11d48;transform:translateY(-3px) scale(1.05);}
+        .call-btn.active-state{background:white;color:var(--text);}
+        .video-call-overlay.audio-only .local-video-container{display:none!important;}
+        .video-call-overlay.audio-only #btnCam{display:none!important;}
 
-        /* ===== MAIN ===== */
-        .main{margin-left:280px;flex:1;padding:32px 40px;position:relative;z-index:1;min-height:100vh;}
-
-        /* ===== TOP HEADER ===== */
-        .top-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;gap:24px;flex-wrap:wrap;}
-        .greeting-section h1{font-size:28px;font-weight:800;letter-spacing:-.8px;color:var(--text);line-height:1.2;}
-        .greeting-section h1 span{color:var(--accent-dark);}
-        .greeting-section .date-line{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:13.5px;margin-top:6px;font-weight:500;}
-        .greeting-section .date-line i{color:var(--accent);font-size:13px;}
-        .header-actions{display:flex;align-items:center;gap:14px;}
-        .search-box{position:relative;width:300px;}
-        .search-box i{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;transition:var(--transition);}
-        .search-box input{width:100%;padding:13px 18px 13px 44px;border:1.5px solid var(--border);border-radius:14px;background:var(--card);font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;transition:var(--transition);box-shadow:var(--shadow-sm);}
-        .search-box input::placeholder{color:var(--text-muted);}
-        .search-box input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-glow),var(--shadow-md);}
-        .search-box input:focus+i{color:var(--accent);}
-        .notif-btn{width:48px;height:48px;border-radius:14px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:var(--transition);box-shadow:var(--shadow-sm);color:var(--text-secondary);font-size:17px;}
-        .notif-btn:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 4px var(--accent-glow);}
-        .notif-btn .dot{position:absolute;top:10px;right:10px;width:8px;height:8px;background:var(--rose);border-radius:50%;border:2px solid var(--card);}
-
-        /* ===== STATS GRID ===== */
-        .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:30px;}
-        .stat-card{background:var(--card);border-radius:var(--radius-lg);padding:24px;position:relative;overflow:hidden;border:1px solid var(--card-border);transition:var(--transition);box-shadow:var(--shadow-sm);cursor:default;}
-        .stat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);}
-        .stat-card .stat-icon{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:16px;}
-        .stat-card.s1 .stat-icon{background:var(--sky-soft);color:var(--sky);}
-        .stat-card.s2 .stat-icon{background:var(--gold-soft);color:var(--gold);}
-        .stat-card.s3 .stat-icon{background:var(--accent-soft);color:var(--accent);}
-        .stat-card.s4 .stat-icon{background:var(--violet-soft);color:var(--violet);}
-        .stat-card .stat-number{font-family:'Sora',sans-serif;font-size:32px;font-weight:800;color:var(--text);line-height:1;margin-bottom:4px;}
-        .stat-card .stat-label{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;}
-        .stat-card .stat-bar{position:absolute;bottom:0;left:0;right:0;height:3px;}
-        .stat-card.s1 .stat-bar{background:linear-gradient(90deg,#0ea5e9,#38bdf8);}
-        .stat-card.s2 .stat-bar{background:linear-gradient(90deg,#f59e0b,#fbbf24);}
-        .stat-card.s3 .stat-bar{background:linear-gradient(90deg,#10b981,#34d399);}
-        .stat-card.s4 .stat-bar{background:linear-gradient(90deg,#8b5cf6,#a78bfa);}
-        .stat-card::after{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,transparent 40%,rgba(255,255,255,.03) 50%,transparent 60%);transform:translateX(-100%);transition:transform .8s ease;}
-        .stat-card:hover::after{transform:translateX(100%);}
-
-        /* ===== CONTENT GRID ===== */
-        .content-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:24px;}
-
-        .section-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--card-border);box-shadow:var(--shadow-sm);overflow:hidden;transition:var(--transition);margin-bottom:24px;}
-        .section-card:hover{box-shadow:var(--shadow-md);}
-        .section-header{display:flex;align-items:center;justify-content:space-between;padding:22px 26px;border-bottom:1px solid var(--border);}
-        .section-header-left{display:flex;align-items:center;gap:12px;}
-        .section-header-left .sh-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
-        .sh-icon.sh-apt{background:var(--sky-soft);color:var(--sky);}
-        .sh-icon.sh-report{background:var(--accent-soft);color:var(--accent);}
-        .sh-icon.sh-service{background:var(--indigo-soft);color:var(--indigo);}
-        .sh-icon.sh-notif{background:var(--gold-soft);color:var(--gold);}
-        .sh-icon.sh-presc{background:var(--violet-soft);color:var(--violet);}
-        body.dark-mode .sh-icon.sh-apt{background:rgba(14,165,233,.12);}
-        body.dark-mode .sh-icon.sh-report{background:rgba(16,185,129,.12);}
-        body.dark-mode .sh-icon.sh-service{background:rgba(99,102,241,.12);}
-        body.dark-mode .sh-icon.sh-notif{background:rgba(245,158,11,.12);}
-        body.dark-mode .sh-icon.sh-presc{background:rgba(139,92,246,.12);}
-        .section-header-left h3{font-size:15px;font-weight:700;color:var(--text);}
-        .section-header .see-all{font-size:12px;font-weight:700;color:var(--accent-dark);text-decoration:none;cursor:pointer;transition:var(--transition);display:flex;align-items:center;gap:4px;}
-        .section-header .see-all:hover{color:var(--accent);gap:6px;}
-        .section-body{padding:14px 20px 18px;}
-
-        /* Appointment rows */
-        .apt-row{display:flex;align-items:center;gap:16px;padding:14px 16px;border-radius:16px;transition:var(--transition);margin-bottom:6px;}
-        .apt-row:hover{background:var(--slate-soft);}
-        .apt-doc-avatar{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:white;font-family:'Sora',sans-serif;flex-shrink:0;}
-        .apt-doc-avatar.av-nurse{background:linear-gradient(135deg,#10b981,#059669);}
-        .apt-doc-avatar.av-physio{background:linear-gradient(135deg,#0ea5e9,#2563eb);}
-        .apt-doc-avatar.av-lab{background:linear-gradient(135deg,#8b5cf6,#6d28d9);}
-        .apt-doc-avatar.av-general{background:linear-gradient(135deg,#f59e0b,#d97706);}
-        .apt-doc-avatar.av-speech{background:linear-gradient(135deg,#f43f5e,#be123c);}
-        .apt-info{flex:1;min-width:0;}
-        .apt-info .apt-name{font-weight:700;font-size:14.5px;color:var(--text);margin-bottom:2px;}
-        .apt-info .apt-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-        .apt-info .apt-meta span{font-size:12px;color:var(--text-muted);font-weight:500;display:inline-flex;align-items:center;gap:4px;}
-        .apt-info .apt-meta span i{font-size:10px;}
-
-        .badge{display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;font-size:11.5px;font-weight:700;letter-spacing:.3px;white-space:nowrap;}
-        .badge::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0;}
-        .badge-confirmed{background:var(--accent-soft);color:#065f46;}
-        .badge-confirmed::before{background:var(--accent);}
-        .badge-pending{background:var(--gold-soft);color:var(--gold-dark);}
-        .badge-pending::before{background:var(--gold);}
-        .badge-completed{background:var(--slate-soft);color:var(--slate);}
-        .badge-completed::before{background:#94a3b8;}
-        .badge-cancelled{background:var(--rose-soft);color:var(--rose-dark);}
-        .badge-cancelled::before{background:var(--rose);}
-
-        /* Report rows */
-        .report-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:16px;transition:var(--transition);margin-bottom:6px;}
-        .report-row:hover{background:var(--slate-soft);}
-        .report-info{display:flex;align-items:center;gap:14px;flex:1;min-width:0;}
-        .report-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
-        .ri-blood{background:var(--rose-soft);color:var(--rose);}
-        .ri-xray{background:var(--sky-soft);color:var(--sky);}
-        .ri-ecg{background:var(--accent-soft);color:var(--accent);}
-        .ri-urine{background:var(--gold-soft);color:var(--gold);}
-        .ri-scan{background:var(--violet-soft);color:var(--violet);}
-        .report-text .rt-name{font-weight:700;font-size:14px;color:var(--text);}
-        .report-text .rt-date{font-size:12px;color:var(--text-muted);margin-top:2px;}
-
-        .btn{padding:9px 16px;border:none;border-radius:11px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:var(--transition);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;position:relative;overflow:hidden;}
-        .btn-view{background:var(--indigo-soft);color:var(--indigo-dark);}
-        body.dark-mode .btn-view{color:var(--indigo);}
-        .btn-view:hover{background:var(--indigo);color:white;transform:translateY(-1px);box-shadow:0 4px 12px rgba(99,102,241,.25);}
-        .btn-download{background:var(--accent-soft);color:var(--accent-dark);}
-        body.dark-mode .btn-download{color:var(--accent);}
-        .btn-download:hover{background:var(--accent);color:white;transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,185,129,.25);}
-        .btn-chat{background:linear-gradient(135deg,#128c7e,#25d366);color:white;box-shadow:0 4px 12px rgba(37,211,102,.2);}
-        .btn-chat:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(37,211,102,.3);}
-
-        .report-actions{display:flex;gap:6px;flex-shrink:0;}
-
-        /* Services grid */
-        .services-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-        .service-chip{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px;background:var(--slate-soft);transition:var(--transition);cursor:default;}
-        .service-chip:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm);}
-        .service-chip i{font-size:16px;width:20px;text-align:center;}
-        .service-chip span{font-size:13px;font-weight:600;color:var(--text-secondary);}
-
-        /* Notification rows */
-        .notif-row{display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border-radius:16px;transition:var(--transition);margin-bottom:6px;}
-        .notif-row:hover{background:var(--slate-soft);}
-        .notif-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:5px;}
-        .notif-dot.unread{background:var(--accent);box-shadow:0 0 8px var(--accent-glow);}
-        .notif-dot.read{background:var(--border);}
-        .notif-content .nc-title{font-weight:700;font-size:14px;color:var(--text);margin-bottom:2px;}
-        .notif-content .nc-desc{font-size:12.5px;color:var(--text-muted);line-height:1.5;}
-        .notif-content .nc-time{font-size:11px;color:var(--text-muted);margin-top:4px;font-weight:500;}
-
-        /* Prescriptions */
-        .presc-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:16px;transition:var(--transition);margin-bottom:6px;}
-        .presc-row:hover{background:var(--slate-soft);}
-        .presc-info{display:flex;align-items:center;gap:14px;flex:1;}
-        .presc-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--violet-soft);color:var(--violet);}
-        body.dark-mode .presc-icon{background:rgba(139,92,246,.12);}
-        .presc-text .pt-name{font-weight:700;font-size:14px;color:var(--text);}
-        .presc-text .pt-doc{font-size:12px;color:var(--text-muted);margin-top:2px;}
-
-        /* ===== MODAL ===== */
-        .modal-overlay{position:fixed;inset:0;background:rgba(11,17,32,.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;justify-content:center;align-items:center;z-index:2000;padding:20px;}
-        .modal-overlay.show{display:flex;}
-        .modal-box{background:var(--card);width:100%;max-width:620px;border-radius:28px;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,.2);transform:scale(.92) translateY(20px);opacity:0;transition:all .4s cubic-bezier(.34,1.56,.64,1);}
-        .modal-overlay.show .modal-box{transform:scale(1) translateY(0);opacity:1;}
-        .modal-header{padding:26px 30px 0;display:flex;align-items:flex-start;justify-content:space-between;}
-        .modal-header-left h3{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.3px;}
-        .modal-header-left p{font-size:13px;color:var(--text-muted);margin-top:4px;}
-        .modal-close{width:40px;height:40px;border:none;border-radius:12px;background:#f1f5f9;color:var(--text-muted);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:var(--transition);flex-shrink:0;}
-        body.dark-mode .modal-close{background:rgba(255,255,255,.06);}
-        .modal-close:hover{background:var(--rose-soft);color:var(--rose);}
-        .modal-body{padding:22px 30px 30px;max-height:65vh;overflow-y:auto;}
-        .modal-body::-webkit-scrollbar{width:6px;}
-        .modal-body::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;}
-        .report-detail-box{background:var(--slate-soft);border-radius:18px;padding:22px;margin-bottom:20px;border-left:4px solid var(--accent);}
-        body.dark-mode .report-detail-box{background:rgba(255,255,255,.03);}
-        .rd-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
-        .rd-row:last-child{border:none;}
-        .rd-label{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;}
-        .rd-value{font-size:14px;font-weight:600;color:var(--text);}
-        .rd-value.abnormal{color:var(--rose);}
-        .rd-value.normal{color:var(--accent-dark);}
-        .modal-footer{display:flex;justify-content:flex-end;gap:12px;padding:0 30px 26px;}
-        .btn-modal-close{background:var(--slate-soft);color:var(--text-secondary);}
-        body.dark-mode .btn-modal-close{background:rgba(255,255,255,.06);color:var(--text-muted);}
-        .btn-modal-close:hover{background:var(--border);color:var(--text);}
-        .btn-modal-dl{background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:white;box-shadow:0 4px 14px rgba(16,185,129,.25);}
-        .btn-modal-dl:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(16,185,129,.35);}
-
-        /* Empty state */
-        .empty-state{text-align:center;padding:40px 20px;color:var(--text-muted);}
-        .empty-state i{font-size:36px;margin-bottom:12px;opacity:.25;display:block;}
-        .empty-state p{font-size:14px;font-weight:500;}
-
-        /* ===== TOAST ===== */
-        .toast-container{position:fixed;top:24px;right:24px;z-index:5000;display:flex;flex-direction:column;gap:10px;}
-        .toast{background:var(--card);border-radius:14px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.12);border-left:4px solid var(--accent);font-size:14px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);min-width:300px;}
-        body.dark-mode .toast{background:var(--card);}
-        .toast.show{transform:translateX(0);}
-        .toast i{font-size:18px;}
-        .toast .t-success{color:var(--accent);}
-        .toast .t-info{color:var(--sky);}
-
-        /* Ripple */
-        .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.3);transform:scale(0);animation:rippleAnim .6s ease-out;pointer-events:none;}
-        @keyframes rippleAnim{to{transform:scale(4);opacity:0;}}
-
-        /* ===== RESPONSIVE ===== */
-        @media(max-width:1200px){.stats-grid{grid-template-columns:repeat(2,1fr);}.content-grid{grid-template-columns:1fr;}.services-grid{grid-template-columns:1fr 1fr;}}
-        @media(max-width:768px){.sidebar{transform:translateX(-100%);}.main{margin-left:0;padding:20px;}.top-header{flex-direction:column;align-items:flex-start;}.search-box{width:100%;}.stats-grid{grid-template-columns:1fr 1fr;gap:12px;}.report-actions{flex-direction:column;gap:4px;}.services-grid{grid-template-columns:1fr;}}
-        @media(max-width:480px){.stats-grid{grid-template-columns:1fr;}}
-        html{scroll-behavior:smooth;}
-        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+        @media(max-width:768px){ .chat-window{bottom:0;right:0;left:0;width:100%;height:100%;border-radius:0;} .local-video-container{width:100px;height:75px;bottom:100px;right:20px;} }
+        @media(max-width:1024px){ .stats-grid{grid-template-columns:repeat(2,1fr);} .content-grid{grid-template-columns:1fr;} .main{padding:24px 20px;} }
+        @media(max-width:768px){ .sidebar{transform:translateX(-100%);} .sidebar.open{transform:translateX(0);} .mobile-topbar{display:flex!important;} .main{margin-left:0;padding:76px 16px 16px;} .bg-blobs{left:0;} .top-header{flex-direction:column;align-items:stretch;} .search-box{width:100%;} .notif-btn{display:none;} }
+        @media(max-width:480px){ .stats-grid{grid-template-columns:1fr;} }
+        .hoc-chat-fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;box-shadow:0 10px 30px rgba(16,185,129,.45);cursor:pointer;z-index:1500;display:flex;align-items:center;justify-content:center;font-size:20px;transition:transform .2s;}
+        .hoc-chat-fab:hover{transform:scale(1.06);}
+        .hoc-chat-fab-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#ef4444;color:#fff;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+        .hoc-chat-fab-badge.show{display:flex;}
+        @media(max-width:768px){.hoc-chat-fab{bottom:88px;right:16px;width:52px;height:52px;}}
     </style>
+    <link rel="stylesheet" href="../doc/SIDEBAR.CSS">
+    <link rel="stylesheet" href="../doc/shared sidebar footer.css">
+    <script src="../doc/hoc-sidebar.js" defer></script>
 </head>
 <body>
+    <script src="hoc-patient-common.js"></script>
+    <script>try{HOC_applyThemeFromStorage();}catch(e){}</script>
+    <div class="bg-blobs"><div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div></div>
+    <div class="sidebar-overlay" id="hocSbOverlay"></div>
+    <div class="mobile-topbar" id="mobTopbar"> <button class="hamburger" id="hocHamburger"><i class="fas fa-bars"></i></button> <div style="display:flex;align-items:center;gap:10px;"><div class="m-logo-icon"><i class="fas fa-heartbeat"></i></div><div class="m-logo-text">Health<span>OnCall</span></div></div> <button class="m-notif" aria-label="Notifications"><i class="fas fa-bell"></i><span class="m-dot" id="mobileNotifDot"></span></button> </div>
 
-<div class="bg-blobs">
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-    <div class="blob blob-3"></div>
-</div>
+    <aside class="sidebar" id="hocSidebar">
+        <div class="sidebar-brand"><div class="logo-icon"><i class="fas fa-heartbeat"></i></div><h2>Health<span>OnCall</span></h2><p>Patient Portal</p></div>
+        <nav class="sidebar-nav"> <div class="nav-label">Menu</div> <a href="Patient Dashboard Home Page p1.html" class="active"><i class="fas fa-th-large"></i> Home</a> <a href="book-appointment.html"><i class="fas fa-calendar-plus"></i> Book Appointment</a> <a href="Patient Dashboard Home Page p1.html#messages" onclick="try{setTimeout(function(){document.getElementById('messages')&&document.getElementById('messages').scrollIntoView({behavior:'smooth'});},200);}catch(e){}"><i class="fas fa-comments"></i> Messages</a> <a href="assistant 1.html"><i class="fas fa-robot"></i> AI Assistant</a> <a href="feedback 1.html"><i class="fas fa-star"></i> Feedback</a> <div class="nav-label">Account</div> <a href="setting 1.html"><i class="fas fa-cog"></i> Settings</a> <a href="logout 1.html" class="nav-danger"><i class="fas fa-sign-out-alt"></i> Logout</a> </nav>
+        <div class="sidebar-footer"> <div class="user-card"><div class="user-avatar"><img src="https://ui-avatars.com/api/?name=Esha+Maham&background=0ea5e9&color=fff&bold=true&size=80" alt="Esha"></div><div class="user-info"><div class="user-name">Esha Maham</div><div class="user-role">Patient</div></div></div> </div>
+    </aside>
 
-<!-- Sidebar -->
-<aside class="sidebar">
-    <div class="sidebar-brand">
-        <div class="logo-icon"><i class="fas fa-heartbeat"></i></div>
-        <h2>Health<span>OnCall</span></h2>
-        <p>Patient Portal</p>
-    </div>
-    <nav class="sidebar-nav">
-        <div class="nav-label">Menu</div>
-        <a href="Patient Dashboard Home Page p1.html" class="active"><i class="fas fa-th-large"></i> Home</a>
-        <a href="find doc 1.html"><i class="fas fa-search"></i> Find Specialist</a>
-        <a href="services 1.html"><i class="fas fa-calendar-plus"></i> services</a>
-        <a href="assistant 1.html"><i class="fas fa-robot"></i> AI Assistant</a>
-        <a href="feedback 1.html"><i class="fas fa-star"></i> Feedback</a>
-        <div class="nav-label">Account</div>
-        <a href="setting 1.html"><i class="fas fa-cog"></i> Settings</a>
-        <a href="logout 1.html"><i class="fas fa-sign-out-alt"></i> Logout</a>
-    </nav>
-    <div class="sidebar-footer">
-        <div class="user-card">
-            <div class="user-avatar" id="sidebarAvatar"><img src="https://ui-avatars.com/api/?name=Esha+Maham&background=0ea5e9&color=fff&bold=true&size=80" alt=""></div>
-            <div class="user-info">
-                <div class="user-name" id="sidebarName">Esha Maham</div>
-                <div class="user-role">Patient</div>
+    <main class="main" id="mainContent">
+        <header class="top-header"> <div class="greeting-section"><h1>Welcome back, <span>Esha</span></h1><div class="date-line"><i class="fas fa-calendar-alt"></i><span id="todayDate"></span></div></div> <div style="display:flex;align-items:center;gap:12px;"> <div class="search-box"><input type="text" id="globalSearch" placeholder="Search appointments..." oninput="renderAll()"><i class="fas fa-search"></i></div> <button class="notif-btn" id="notifBtn" aria-label="Notifications"><i class="fas fa-bell"></i><span class="dot" id="notifDot"></span></button> </div> </header>
+        
+        <section class="stats-grid"> <div class="stat-card s1"><div class="stat-icon"><i class="fas fa-calendar-check"></i></div><div class="stat-number" id="statTotal">0</div><div class="stat-label">Total Appointments</div><div class="stat-bar"></div></div> <div class="stat-card s2"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-number" id="statUpcoming">0</div><div class="stat-label">Pending / Approved</div><div class="stat-bar"></div></div> <div class="stat-card s3"><div class="stat-icon"><i class="fas fa-file-medical-alt"></i></div><div class="stat-number" id="statReports">0</div><div class="stat-label">Prescriptions</div><div class="stat-bar"></div></div> <div class="stat-card s4"><div class="stat-icon"><i class="fas fa-bell"></i></div><div class="stat-number" id="statNotifs">0</div><div class="stat-label">Notifications</div><div class="stat-bar"></div></div> </section>
+
+        <div class="content-grid">
+            <div class="left-col"> <div class="section-card"><div class="section-header"><div class="section-header-left"><div class="sh-icon sh-apt"><i class="fas fa-calendar-alt"></i></div><h3>My Appointments</h3></div></div><div class="section-body" id="appointmentsList"></div></div> <div class="section-card"><div class="section-header"><div class="section-header-left"><div class="sh-icon sh-presc"><i class="fas fa-prescription-bottle-alt"></i></div><h3>Prescriptions</h3></div></div><div class="section-body" id="prescriptionsList"></div></div> <div class="section-card"><div class="section-header"><div class="section-header-left"><div class="sh-icon sh-presc" style="background:#e0f2fe;color:#0284c7;"><i class="fas fa-file-medical-alt"></i></div><h3>Medical Reports</h3></div><label class="btn btn-view" style="cursor:pointer;margin:0;padding:8px 14px;font-size:11px;"><i class="fas fa-cloud-upload-alt"></i> Upload<input type="file" id="hocReportFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="hocUploadMedicalReport(event)"></label></div><div class="section-body"><input type="text" id="hocReportDesc" placeholder="Short description (optional)" style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);margin-bottom:12px;font-size:12px;"><div id="medicalReportsList"></div></div></div> </div>
+            <div class="right-col"> <div class="section-card"><div class="section-header"><div class="section-header-left"><div class="sh-icon sh-service"><i class="fas fa-concierge-bell"></i></div><h3>Services Used</h3></div></div><div class="section-body"><div class="services-grid" id="servicesGrid"></div></div></div> <div class="section-card"><div class="section-header"><div class="section-header-left"><div class="sh-icon sh-notif"><i class="fas fa-bell"></i></div><h3>Notifications</h3></div><a class="see-all" onclick="markDashboardAptNotifsRead()">Mark all read</a></div><div class="section-body" id="notificationsList"></div></div> <div class="section-card" id="messages"> <div class="section-header"><div class="section-header-left"><div class="sh-icon" style="background:var(--accent-soft);color:#10b981;"><i class="fas fa-comments"></i></div><h3>Messages &amp; care team</h3></div></div> <div class="section-body" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"> <button class="btn btn-view" style="padding:13px;justify-content:center;border-radius:12px;font-size:12px;" onclick="location.href='book-appointment.html'"><i class="fas fa-calendar-plus"></i> Book visit</button> <button class="btn btn-chat" style="padding:13px;justify-content:center;border-radius:12px;font-size:12px;" onclick="handlePatientChat()"><i class="fas fa-user-md"></i> Chat doctor</button> <button class="btn btn-view" style="padding:13px;justify-content:center;border-radius:12px;font-size:12px;grid-column:1/-1;background:linear-gradient(135deg,rgba(14,165,233,.12),rgba(13,148,136,.1));color:#0369a1;border:1.5px solid rgba(14,165,233,.25);" onclick="handleLabTechChat()"><i class="fas fa-flask"></i> Chat lab technician</button> <p style="grid-column:1/-1;font-size:11px;color:var(--text-muted);line-height:1.45;margin:4px 0 0;">In-app messaging replaces external chat. Use after staff has approved an appointment so your doctor appears in the list.</p> </div> </div> </div>
+        </div>
+    </main>
+
+    <!-- CHAT WINDOW WITH VIDEO BUTTONS -->
+    <div class="chat-window" id="patientChatWindow">
+        <!-- Chat Header (Hidden initially) -->
+        <div class="chat-header" id="chatHeaderMain" style="display:none;">
+            <button class="back-btn" onclick="showChatDoctorList()"><i class="fas fa-arrow-left"></i></button>
+            <div class="doc-info"><h4 id="chatDoctorName">Doctor</h4><p><span class="online-dot"></span> Online</p></div>
+            
+            <!-- Call Actions -->
+            <div class="chat-header-actions">
+                <button type="button" class="hoc-call-pill" onclick="startVideoCall()" aria-label="Video call"><i class="fas fa-video"></i> Video</button>
+                <button type="button" class="hoc-call-pill" onclick="startAudioCall()" aria-label="Audio call"><i class="fas fa-phone"></i> Audio</button>
             </div>
+            
+            <button class="chat-close" onclick="closeChatWindow()"><i class="fas fa-times"></i></button>
         </div>
-    </div>
-</aside>
-
-<!-- Main -->
-<main class="main">
-
-    <!-- Header -->
-    <header class="top-header">
-        <div class="greeting-section">
-            <h1>Welcome back, <span>Esha</span></h1>
-            <div class="date-line">
-                <i class="fas fa-calendar-alt"></i>
-                <span id="todayDate"></span>
-            </div>
-        </div>
-        <div class="header-actions">
-            <div class="search-box">
-                <input type="text" id="globalSearch" placeholder="Search appointments, reports...">
-                <i class="fas fa-search"></i>
-            </div>
-            <button class="notif-btn" onclick="markNotifRead()" aria-label="Notifications">
-                <i class="fas fa-bell"></i>
-                <span class="dot" id="notifDot"></span>
-            </button>
-        </div>
-    </header>
-
-    <!-- Stats -->
-    <section class="stats-grid">
-        <div class="stat-card s1">
-            <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
-            <div class="stat-number" id="statTotal">00</div>
-            <div class="stat-label">Total Appointments</div>
-            <div class="stat-bar"></div>
-        </div>
-        <div class="stat-card s2">
-            <div class="stat-icon"><i class="fas fa-clock"></i></div>
-            <div class="stat-number" id="statUpcoming">00</div>
-            <div class="stat-label">Upcoming</div>
-            <div class="stat-bar"></div>
-        </div>
-        <div class="stat-card s3">
-            <div class="stat-icon"><i class="fas fa-file-medical-alt"></i></div>
-            <div class="stat-number" id="statReports">00</div>
-            <div class="stat-label">Medical Reports</div>
-            <div class="stat-bar"></div>
-        </div>
-        <div class="stat-card s4">
-            <div class="stat-icon"><i class="fas fa-bell"></i></div>
-            <div class="stat-number" id="statNotifs">00</div>
-            <div class="stat-label">Notifications</div>
-            <div class="stat-bar"></div>
-        </div>
-    </section>
-
-    <!-- Content Grid -->
-    <div class="content-grid">
-
-        <!-- Left Column -->
-        <div class="left-col">
-
-            <!-- Recent Appointments -->
-            <div class="section-card">
-                <div class="section-header">
-                    <div class="section-header-left">
-                        <div class="sh-icon sh-apt"><i class="fas fa-calendar-alt"></i></div>
-                        <h3>Recent Appointments</h3>
-                    </div>
-                    <a class="see-all" onclick="showToast('Viewing all appointments','info')">View All <i class="fas fa-arrow-right"></i></a>
-                </div>
-                <div class="section-body" id="appointmentsList"></div>
-            </div>
-
-            <!-- Medical Reports -->
-            <div class="section-card">
-                <div class="section-header">
-                    <div class="section-header-left">
-                        <div class="sh-icon sh-report"><i class="fas fa-file-medical"></i></div>
-                        <h3>Medical Reports</h3>
-                    </div>
-                    <a class="see-all" onclick="showToast('Viewing all reports','info')">View All <i class="fas fa-arrow-right"></i></a>
-                </div>
-                <div class="section-body" id="reportsList"></div>
-            </div>
-
-            <!-- Prescriptions -->
-            <div class="section-card">
-                <div class="section-header">
-                    <div class="section-header-left">
-                        <div class="sh-icon sh-presc"><i class="fas fa-prescription-bottle-alt"></i></div>
-                        <h3>Prescriptions</h3>
-                    </div>
-                </div>
-                <div class="section-body" id="prescriptionsList"></div>
-            </div>
+        
+        <!-- Step 1: Doctor Selection List -->
+        <div id="chatDoctorList" class="chat-list">
+            <div class="chat-list-header"><h3>Select Doctor</h3><p>Who do you want to chat with?</p></div>
+            <div id="doctorListItems"></div>
         </div>
 
-        <!-- Right Column -->
-        <div class="right-col">
-
-            <!-- Services Used -->
-            <div class="section-card">
-                <div class="section-header">
-                    <div class="section-header-left">
-                        <div class="sh-icon sh-service"><i class="fas fa-concierge-bell"></i></div>
-                        <h3>Services Used</h3>
-                    </div>
-                </div>
-                <div class="section-body">
-                    <div class="services-grid" id="servicesGrid"></div>
-                </div>
-            </div>
-
-            <!-- Notifications -->
-            <div class="section-card">
-                <div class="section-header">
-                    <div class="section-header-left">
-                        <div class="sh-icon sh-notif"><i class="fas fa-bell"></i></div>
-                        <h3>Notifications</h3>
-                    </div>
-                    <a class="see-all" onclick="markAllRead()">Mark all read</a>
-                </div>
-                <div class="section-body" id="notificationsList"></div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="section-card">
-                <div class="section-header">
-                    <div class="section-header-left">
-                        <div class="sh-icon" style="background:var(--accent-soft);color:var(--accent);"><i class="fas fa-bolt"></i></div>
-                        <h3>Quick Actions</h3>
-                    </div>
-                </div>
-                <div class="section-body" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                    <button class="btn btn-view" style="padding:14px;justify-content:center;border-radius:14px;" onclick="showToast('Opening booking page...','info')">
-                        <i class="fas fa-calendar-plus"></i> Book Now
-                    </button>
-                    <button class="btn btn-chat" style="padding:14px;justify-content:center;border-radius:14px;" onclick="openWhatsApp()">
-                        <i class="fab fa-whatsapp"></i> Chat with Us
-                    </button>
-                    <button class="btn btn-download" style="padding:14px;justify-content:center;border-radius:14px;" onclick="showToast('Downloading health summary...','success')">
-                        <i class="fas fa-download"></i> Health Summary
-                    </button>
-                    <button class="btn" style="padding:14px;justify-content:center;border-radius:14px;background:var(--rose-soft);color:var(--rose-dark);" onclick="showToast('Opening emergency line...','info')">
-                        <i class="fas fa-phone-alt"></i> Emergency
-                    </button>
-                </div>
-            </div>
-        </div>
-
-    </div>
-</main>
-
-<!-- Report Modal -->
-<div class="modal-overlay" id="reportModal">
-    <div class="modal-box">
-        <div class="modal-header">
-            <div class="modal-header-left">
-                <h3 id="modalReportTitle">Report</h3>
-                <p id="modalReportDate"></p>
-            </div>
-            <button class="modal-close" onclick="closeModal()" aria-label="Close"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="modal-body" id="modalReportBody"></div>
-        <div class="modal-footer">
-            <button class="btn btn-modal-close" onclick="closeModal()">Close</button>
-            <button class="btn btn-modal-dl" onclick="downloadReport()"><i class="fas fa-download"></i> Download PDF</button>
+        <!-- Step 2: Chat Messages Area -->
+        <div class="chat-body" id="chatMessages" style="display:none;"></div>
+        
+        <!-- Step 3: Chat Input -->
+        <div class="chat-footer" id="chatFooter" style="display:none;">
+            <input type="text" id="chatInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter')sendChatMessage()">
+            <button onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
-</div>
 
-<!-- Toast -->
-<div class="toast-container" id="toastContainer"></div>
+    <!-- VIDEO CALL OVERLAY -->
+    <div class="video-call-overlay" id="videoCallOverlay">
+        <div class="remote-video-placeholder">
+            <div class="remote-avatar-lg" id="videoRemoteAvatar">DR</div>
+            <div class="remote-name-tag" id="videoRemoteName">Dr. Name</div>
+        </div>
+        
+        <div class="local-video-container">
+            <video id="localVideoElement" class="local-video" autoplay muted playsinline></video>
+            <div id="localVideoPlaceholder" class="local-video-placeholder"><i class="fas fa-video-slash"></i></div>
+        </div>
 
-<script>
-    /* ===== DATE ===== */
-    document.getElementById('todayDate').innerText = new Date().toLocaleDateString('en-US', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-    });
+        <div class="call-controls">
+            <button class="call-btn" id="btnMic" onclick="toggleMic()"><i class="fas fa-microphone"></i></button>
+            <button class="call-btn" id="btnCam" onclick="toggleCam()"><i class="fas fa-video"></i></button>
+            <button class="call-btn btn-end" onclick="endCall()"><i class="fas fa-phone-slash"></i></button>
+        </div>
+    </div>
 
-    /* ===== DATA ===== */
-    const appointments = [
-        { id: 1, doc: 'Dr. Sarah Johnson', type: 'Home Nursing', date: 'Oct 12, 2026', time: '10:00 AM', status: 'confirmed', avatar: 'nurse', color: '#10b981' },
-        { id: 2, doc: 'Dr. Michael Chen', type: 'Physiotherapy', date: 'Oct 15, 2026', time: '2:30 PM', status: 'pending', avatar: 'physio', color: '#0ea5e9' },
-        { id: 3, doc: 'Dr. Alice Brown', type: 'Lab Tests', date: 'Oct 18, 2026', time: '9:00 AM', 
-        // Dashboard file mein ye daalo
-const FILES = { doctor: 'doctor-dashboard.html', patient: 'patient-dashboard.html', staff: 'staff-dashboard.html' };
-const thisFile = location.pathname.split('/').pop();
-let myRole = 'patient';
-for (const [r, f] of Object.entries(FILES)) { if (thisFile === f) { myRole = r; break; } }
+    <!-- Prescription Modal -->
+    <div class="modal-overlay" id="rxModal"><div class="modal-box"><div class="modal-header"><div><h3 id="rxModalTitle">Prescription</h3><p id="rxModalDate"></p></div><button class="modal-close" onclick="closeRxModal()"><i class="fas fa-times"></i></button></div><div class="modal-body" id="rxModalBody"></div><div class="modal-footer"><button class="btn btn-modal-close" onclick="closeRxModal()">Close</button><button class="btn btn-modal-dl" onclick="downloadPrescriptionPDF()"><i class="fas fa-download"></i> Download PDF</button></div></div></div>
+    
+    <div class="modal-overlay" id="labReportModal"><div class="modal-box" style="max-width:720px"><div class="modal-header"><div><h3 id="labReportModalTitle">Laboratory Report</h3><p id="labReportModalMeta"></p></div><button class="modal-close" onclick="closeLabReportModal()"><i class="fas fa-times"></i></button></div><div class="modal-body" id="labReportModalBody"></div><div class="modal-footer"><button class="btn btn-modal-close" onclick="closeLabReportModal()">Close</button></div></div></div>
+    <div class="toast-container" id="toastContainer"></div>
+    <button type="button" class="hoc-chat-fab" onclick="handlePatientChat()" title="Open messages" aria-label="Open messages"><i class="fas fa-comment-dots"></i><span class="hoc-chat-fab-badge" id="hocChatFabBadge">0</span></button>
 
-function hocLogout() { localStorage.removeItem('hoc_current_role'); location.href = 'register.html'; }
+    <script>
+    document.getElementById('todayDate').innerText = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    var sidebar = document.getElementById('hocSidebar'); var overlay = document.getElementById('hocSbOverlay'); var hamburger = document.getElementById('hocHamburger');
+    function hocToggleSidebar(){sidebar.classList.toggle('open');overlay.classList.toggle('active');document.body.style.overflow=sidebar.classList.contains('open')?'hidden':'';} function hocCloseSidebar(){sidebar.classList.remove('open');overlay.classList.remove('active');document.body.style.overflow='';}
+    hamburger.addEventListener('click',hocToggleSidebar); overlay.addEventListener('click',hocCloseSidebar); document.addEventListener('keydown',function(e){if(e.key==='Escape'){hocCloseSidebar();closeChatWindow();endCall();}});
 
-document.addEventListener('DOMContentLoaded', () => {
-    const sb = document.querySelector('aside') || document.querySelector('.sidebar');
-    if (!sb) return;
-    const html = `<div style="margin:6px 10px;padding:8px;border-radius:10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05)">
-      <div style="font-size:8.5px;font-weight:700;color:rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px"><i class="fa-solid fa-arrow-right-arrow-left" style="font-size:8px"></i> Switch Portal</div>
-      ${['doctor','patient','staff'].map(r => {
-        const isCur = r === myRole;
-        const icons = { doctor: 'fa-user-doctor', patient: 'fa-hospital-user', staff: 'fa-user-gear' };
-        const colors = { doctor: '#60a5fa', patient: '#34d399', staff: '#fbbf24' };
-        const labels = { doctor: 'Doctor', patient: 'Patient', staff: 'Staff' };
-        return `<a href="${isCur ? '#' : FILES[r]}" style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-size:11.5px;color:${isCur ? colors[r] : 'rgba(255,255,255,.3)'};text-decoration:none;margin-bottom:3px;cursor:${isCur?'default':'pointer'};${isCur?'background:rgba(255,255,255,.03)':''}" ${isCur?'':`onclick="location.href='${FILES[r]}'"`}>
-          <div style="width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;background:rgba(${r==='doctor'?'59,130,246':r==='patient'?'16,185,129':'245,158,11'},${isCur?.2:.08});color:${colors[r]}"><i class="fa-solid ${icons[r]}"></i></div>
-          <div style="flex:1;line-height:1.2">${labels[r]}<span style="display:block;font-size:9px;color:rgba(255,255,255,${isCur?'.2':'.15'})">${isCur?'You are here':'Switch to '+labels[r].toLowerCase()+' view'}</span></div>
-          ${isCur?'<span style="font-size:9px;color:#34d399">&#10003;</span>':''}
-        </a>`;
-      }).join('')}
-    </div>`;
-    const logo = sb.querySelector('[class*="logo"]') || sb.firstElementChild;
-    if (logo && logo.nextElementSibling) logo.nextElementSibling.insertAdjacentHTML('afterend', html);
-    else sb.insertAdjacentHTML('afterbegin', html);
+    /* ===== CHAT LOGIC ===== */
+    var activeChatAptId = null; var chatUnsubscribe = null;
+    var activeChatMode = 'doctor'; /* doctor | lab */
+    var localStream = null; // For video call
 
-    document.querySelectorAll('a, button').forEach(el => {
-        if (/(logout|sign\s*out)/i.test(el.textContent) && !el.onclick) {
-            el.setAttribute('onclick', 'hocLogout()');
-            if (el.tagName === 'A') el.removeAttribute('href');
+    function handlePatientChat() {
+        activeChatMode = 'doctor';
+        var apts = getAppointments();
+        var activeApts = apts.filter(function(a) { return a.status === 'staff-approved' || a.status === 'confirmed' || a.status === 'in-progress' || a.status === 'completed'; });
+        if (activeApts.length === 0) { showToast('No confirmed appointments yet to chat.', 'warning'); return; }
+
+        // Show Chat Window & List
+        document.getElementById('patientChatWindow').classList.add('active');
+        document.getElementById('chatDoctorList').style.display = 'block';
+        document.getElementById('chatHeaderMain').style.display = 'none';
+        document.getElementById('chatMessages').style.display = 'none';
+        document.getElementById('chatFooter').style.display = 'none';
+        var hdrAct = document.querySelector('#chatHeaderMain .chat-header-actions');
+        if(hdrAct) hdrAct.style.display = 'flex';
+
+        var listHtml = '';
+        activeApts.forEach(function(a) {
+            var initials = (a.doctorName || 'DR').split(' ').map(function(w){return w[0];}).join('').slice(0,2);
+            listHtml += '<div class="doc-list-item" onclick="selectDoctorForChat(\''+a.id+'\')">' +
+                            '<div class="doc-list-avatar">' + initials + '</div>' +
+                            '<div class="doc-list-info"><h5>' + a.doctorName + '</h5><p>' + a.doctorSpec + '</p></div>' +
+                            '<i class="fas fa-chevron-right" style="color:var(--text-muted);"></i>' +
+                        '</div>';
+        });
+        document.getElementById('doctorListItems').innerHTML = listHtml;
+    }
+
+    function handleLabTechChat() {
+        if (!window._hocDb) { showToast('Firebase not available', 'error'); return; }
+        activeChatMode = 'lab';
+        activeChatAptId = 'LAB';
+        document.getElementById('patientChatWindow').classList.add('active');
+        document.getElementById('chatDoctorList').style.display = 'none';
+        document.getElementById('chatHeaderMain').style.display = 'flex';
+        document.getElementById('chatMessages').style.display = 'flex';
+        document.getElementById('chatFooter').style.display = 'flex';
+        document.getElementById('chatDoctorName').textContent = 'Lab team · home visit';
+        var hdrAct = document.querySelector('#chatHeaderMain .chat-header-actions');
+        if(hdrAct) hdrAct.style.display = 'none';
+        document.getElementById('chatInput').value = '';
+        document.getElementById('chatInput').focus();
+        openLabFirestoreChat();
+    }
+
+    function openLabFirestoreChat() {
+        document.getElementById('chatMessages').innerHTML = '<div class="chat-empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading…</p></div>';
+        if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; }
+        var labId = typeof hocGetLabChatRoomId === 'function' ? hocGetLabChatRoomId(HOC_getPatientId()) : 'lab_p1';
+        if (window._hocDb && typeof hocClearChatUnread === 'function') hocClearChatUnread(window._hocDb, labId, 'patient');
+        var ref = window._hocDb.collection('Chats').doc(labId).collection('Messages').orderBy('timestamp', 'asc');
+        chatUnsubscribe = ref.onSnapshot(function(snapshot) {
+            var html = '';
+            snapshot.forEach(function(doc) {
+                var msg = doc.data();
+                var pid=(typeof HOC_getPatientId==='function'?HOC_getPatientId():'p1');
+                var isSent = (msg.role === 'patient') || (typeof hocPatientIdsMatch === 'function' ? hocPatientIdsMatch(msg.senderId, pid) : msg.senderId === pid);
+                var timeStr = msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'}) : '';
+                html += '<div class="chat-msg ' + (isSent ? 'sent' : 'received') + '">' +
+                            (!isSent ? '<span class="msg-sender">' + (msg.senderName || 'Lab') + '</span>' : '') +
+                            (msg.text || '') +
+                            '<span class="msg-time">' + timeStr + '</span>' +
+                        '</div>';
+            });
+            var msgDiv = document.getElementById('chatMessages');
+            if (html === '') {
+                msgDiv.innerHTML = '<div class="chat-empty-state"><i class="fas fa-comments"></i><p>No messages yet.<br>Say hello to your lab technician.</p></div>';
+            } else {
+                msgDiv.innerHTML = html;
+                msgDiv.scrollTop = msgDiv.scrollHeight;
+            }
+        }, function(err) {
+            console.error("Lab chat error:", err);
+            showToast('Chat: check Firestore rules for Chats/'+labId+'/Messages', 'error');
+        });
+    }
+
+    function selectDoctorForChat(aptId) {
+        activeChatMode = 'doctor';
+        var apts = getAppointments();
+        var apt = apts.find(function(a) { return a.id === aptId; });
+        if(!apt) return;
+
+        // Switch UI to Chat Mode
+        document.getElementById('chatDoctorList').style.display = 'none';
+        document.getElementById('chatHeaderMain').style.display = 'flex';
+        document.getElementById('chatMessages').style.display = 'flex';
+        document.getElementById('chatFooter').style.display = 'flex';
+        var hdrAct = document.querySelector('#chatHeaderMain .chat-header-actions');
+        if(hdrAct) hdrAct.style.display = 'flex';
+        document.getElementById('chatInput').focus();
+        
+        openChatWindow(apt);
+    }
+
+    function showChatDoctorList() {
+        if(chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; }
+        activeChatAptId = null;
+        activeChatMode = 'doctor';
+        handlePatientChat(); // Go back to list
+    }
+
+    function getChatRoomId(apt) {
+        var pid = apt.patientId || (typeof HOC_getPatientId==='function'?HOC_getPatientId():'p1');
+        if (typeof hocGetDoctorChatRoomId === 'function') return hocGetDoctorChatRoomId(pid, apt.doctorId || '');
+        return 'pt_'+String(pid)+'_doc_'+(apt.doctorId||'').replace(/[^a-zA-Z0-9_-]/g,'_');
+    }
+
+    function openChatWindow(apt) {
+        if (!window._hocDb) { showToast('Firebase not available — open via Live Server (http://127.0.0.1:5500)', 'error'); return; }
+        activeChatAptId = apt.id;
+        document.getElementById('chatDoctorName').textContent = apt.doctorName || 'Doctor';
+        var hdrAct = document.querySelector('#chatHeaderMain .chat-header-actions');
+        if(hdrAct) hdrAct.style.display = 'flex';
+        document.getElementById('chatMessages').innerHTML = '<div class="chat-empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></div>';
+
+        var chatRoomId = getChatRoomId(apt);
+        if (window._hocDb && typeof hocClearChatUnread === 'function') hocClearChatUnread(window._hocDb, chatRoomId, 'patient');
+        var chatRef = window._hocDb.collection('Chats').doc(chatRoomId).collection('Messages').orderBy('timestamp');
+
+        if(chatUnsubscribe) chatUnsubscribe();
+
+        chatUnsubscribe = chatRef.onSnapshot(function(snapshot) {
+            var html = '';
+            var lastDate = '';
+            var myPid = typeof HOC_getPatientId==='function'?HOC_getPatientId():'p1';
+            snapshot.forEach(function(doc) {
+                var msg = doc.data();
+                var isSent = (msg.role === 'patient') || (typeof hocPatientIdsMatch === 'function' ? hocPatientIdsMatch(msg.senderId, myPid) : msg.senderId === myPid);
+                var timeStr = msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'}) : '';
+                
+                html += '<div class="chat-msg ' + (isSent ? 'sent' : 'received') + '">' +
+                            (!isSent ? '<span class="msg-sender">' + (msg.senderName || 'Doctor') + '</span>' : '') +
+                            msg.text + 
+                            '<span class="msg-time">' + timeStr + '</span>' +
+                        '</div>';
+            });
+            var msgDiv = document.getElementById('chatMessages');
+            if(html === '') {
+                msgDiv.innerHTML = '<div class="chat-empty-state"><i class="fas fa-comments"></i><p>No messages yet.<br>Say hello!</p></div>';
+            } else {
+                msgDiv.innerHTML = html;
+                msgDiv.scrollTop = msgDiv.scrollHeight;
+            }
+        }, function(err) {
+            console.error("Chat error:", err);
+            showToast('Chat rule error: Allow Chats in Firebase.', 'error');
+        });
+    }
+
+    function sendChatMessage() {
+        var input = document.getElementById('chatInput');
+        var text = input.value.trim();
+        if(!text) return;
+        if (activeChatMode === 'lab') {
+            if (!window._hocDb) { showToast('Firebase not available', 'error'); return; }
+            var labDocId = typeof hocGetLabChatRoomId === 'function' ? hocGetLabChatRoomId(HOC_getPatientId()) : 'lab_p1';
+            var pn = typeof HOC_getPatientName==='function'?HOC_getPatientName():'Patient';
+            var normPid = typeof hocNormalizePatientChatKey === 'function' ? hocNormalizePatientChatKey(HOC_getPatientId()) : HOC_getPatientId();
+            window._hocDb.collection('Chats').doc(labDocId).collection('Messages').add({
+                text: text,
+                senderId: normPid,
+                senderName: pn,
+                role: 'patient',
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(function() {
+                input.value = '';
+                return window._hocDb.collection('Chats').doc(labDocId).set({
+                    type: 'lab',
+                    patientId: normPid,
+                    patientName: pn,
+                    doctorName: 'Lab team',
+                    lastMessage: text.slice(0, 200),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'active'
+                }, { merge: true });
+            }).then(function() {
+                if (typeof hocChatNotifyRecipient === 'function') {
+                    return hocChatNotifyRecipient(window._hocDb, labDocId, { patientId: normPid, patientName: pn, senderName: pn }, 'patient', text);
+                }
+            }).catch(function(err) { showToast('Failed to send.', 'error'); });
+            return;
         }
-    });
-});
+        if (!window._hocDb) { showToast('Firebase not available', 'error'); return; }
+        if(!activeChatAptId) return;
+
+        var apts = getAppointments();
+        var apt = apts.find(function(a) { return a.id === activeChatAptId; });
+        if(!apt) return;
+
+        var chatRoomId = getChatRoomId(apt);
+        var pid = typeof HOC_getPatientId==='function'?HOC_getPatientId():'p1';
+        var normPid = typeof hocNormalizePatientChatKey === 'function' ? hocNormalizePatientChatKey(apt.patientId || pid) : (apt.patientId || pid);
+        var pn = typeof HOC_getPatientName==='function'?HOC_getPatientName():'Patient';
+        window._hocDb.collection('Chats').doc(chatRoomId).collection('Messages').add({
+            text: text,
+            senderId: normPid,
+            senderName: pn,
+            role: 'patient',
+            receiverId: apt.doctorId || apt.doctorName,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function() {
+            input.value = '';
+            return window._hocDb.collection('Chats').doc(chatRoomId).set({
+                type: 'doctor',
+                patientId: normPid,
+                patientName: apt.patientName || pn,
+                doctorId: apt.doctorId || '',
+                doctorName: apt.doctorName || 'Doctor',
+                lastMessage: text.slice(0, 200),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                status: 'active'
+            }, { merge: true });
+        }).then(function() {
+            if (typeof hocChatNotifyRecipient === 'function') {
+                return hocChatNotifyRecipient(window._hocDb, chatRoomId, { patientId: normPid, patientName: pn, doctorId: apt.doctorId || '', doctorName: apt.doctorName || 'Doctor', senderName: pn }, 'patient', text);
+            }
+        }).catch(function(err) { showToast('Failed to send message.', 'error'); });
+    }
+
+    function closeChatWindow() {
+        document.getElementById('patientChatWindow').classList.remove('active');
+        if(chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; }
+        activeChatAptId = null;
+        activeChatMode = 'doctor';
+    }
+
+    /* ===== VIDEO CALL LOGIC ===== */
+    function startVideoCall() {
+        endCall();
+        var overlay = document.getElementById('videoCallOverlay');
+        if (overlay) overlay.classList.remove('audio-only');
+        document.getElementById('videoCallOverlay').classList.add('active');
+        
+        // Get doctor name from current chat context if available
+        var apts = getAppointments();
+        var apt = apts.find(function(a){ return a.id === activeChatAptId; });
+        if(apt) {
+            document.getElementById('videoRemoteName').textContent = apt.doctorName;
+            document.getElementById('videoRemoteAvatar').textContent = apt.doctorName.substring(0,2).toUpperCase();
+        }
+        
+        // Access webcam
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                .then(function(stream) {
+                    localStream = stream;
+                    document.getElementById('localVideoElement').srcObject = stream;
+                    document.getElementById('localVideoPlaceholder').style.display = 'none';
+                })
+                .catch(function(err) {
+                    console.warn("Camera access denied", err);
+                    // Fallback UI if no camera
+                    document.getElementById('localVideoPlaceholder').innerHTML = '<i class="fas fa-video-slash"></i><br><span style="font-size:10px">Cam Off</span>';
+                });
+        }
+        
+        // System Message (Optional)
+        if(activeChatAptId) {
+             // Could send a system message to Firestore saying "Video Call Started"
+        }
+    }
+
+    function startAudioCall() {
+        endCall();
+        var overlay = document.getElementById('videoCallOverlay');
+        if (!overlay) return;
+        overlay.classList.add('active', 'audio-only');
+        var apts = getAppointments();
+        var apt = apts.find(function(a){ return a.id === activeChatAptId; });
+        if (apt) {
+            document.getElementById('videoRemoteName').textContent = apt.doctorName || 'Doctor';
+            document.getElementById('videoRemoteAvatar').textContent = (apt.doctorName || 'DR').substring(0, 2).toUpperCase();
+        } else {
+            document.getElementById('videoRemoteName').textContent = 'Doctor';
+            document.getElementById('videoRemoteAvatar').textContent = 'DR';
+        }
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+                .then(function(stream) {
+                    localStream = stream;
+                    showToast('Audio call connected — use controls to mute or end.', 'success');
+                })
+                .catch(function(err) {
+                    console.warn('Mic access denied', err);
+                    showToast('Microphone not available.', 'error');
+                    overlay.classList.remove('active', 'audio-only');
+                });
+        } else {
+            showToast('Browser does not support audio calls.', 'warning');
+            overlay.classList.remove('active', 'audio-only');
+        }
+    }
+
+    function endCall() {
+        var overlay = document.getElementById('videoCallOverlay');
+        if (overlay) overlay.classList.remove('active', 'audio-only');
+        if(localStream) {
+            localStream.getTracks().forEach(function(track) { track.stop(); });
+            localStream = null;
+        }
+        document.getElementById('localVideoElement').srcObject = null;
+        var ph = document.getElementById('localVideoPlaceholder');
+        if (ph) {
+            ph.style.display = 'flex';
+            ph.innerHTML = '<i class="fas fa-video-slash"></i>';
+        }
+        var bMic = document.getElementById('btnMic');
+        if (bMic) { bMic.classList.remove('active-state'); bMic.innerHTML = '<i class="fas fa-microphone"></i>'; }
+        var bCam = document.getElementById('btnCam');
+        if (bCam) { bCam.classList.remove('active-state'); bCam.innerHTML = '<i class="fas fa-video"></i>'; }
+    }
+
+    function toggleMic() {
+        var btn = document.getElementById('btnMic');
+        btn.classList.toggle('active-state');
+        if(btn.classList.contains('active-state')) {
+            btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+            if(localStream) localStream.getAudioTracks()[0].enabled = false;
+        } else {
+            btn.innerHTML = '<i class="fas fa-microphone"></i>';
+            if(localStream) localStream.getAudioTracks()[0].enabled = true;
+        }
+    }
+
+    function toggleCam() {
+        var overlay = document.getElementById('videoCallOverlay');
+        if (overlay && overlay.classList.contains('audio-only')) return;
+        var btn = document.getElementById('btnCam');
+        btn.classList.toggle('active-state');
+        if(btn.classList.contains('active-state')) {
+            btn.innerHTML = '<i class="fas fa-video-slash"></i>';
+            if(localStream) localStream.getVideoTracks()[0].enabled = false;
+        } else {
+            btn.innerHTML = '<i class="fas fa-video"></i>';
+            if(localStream) localStream.getVideoTracks()[0].enabled = true;
+        }
+    }
+
+    /* ===== PRESCRIPTION PDF ===== */
+    var currentRxModalAptId = null;
+    function downloadPrescriptionPDF() {
+        if(!currentRxModalAptId) return;
+        var apts = getAppointments();
+        var apt = apts.find(function(a) { return a.id === currentRxModalAptId; });
+        if(!apt || !apt.prescription) return;
+        var rx = apt.prescription;
+        const { jsPDF } = window.jspdf; const doc = new jsPDF();
+        doc.setFontSize(22); doc.setTextColor(5, 150, 105); doc.text("HealthOnCall", 20, 20);
+        doc.setFontSize(10); doc.setTextColor(100); doc.text("Prescription Report", 20, 27);
+        doc.setDrawColor(5, 150, 105); doc.line(20, 30, 190, 30);
+        doc.setFontSize(12); doc.setTextColor(0); doc.text("Patient: " + apt.patientName, 20, 40);
+        doc.text("Doctor: " + apt.doctorName + " (" + apt.doctorSpec + ")", 20, 48);
+        doc.text("Date: " + apt.date + " at " + apt.time, 20, 56);
+        doc.setFontSize(14); doc.setTextColor(5, 150, 105); doc.text("Diagnosis", 20, 70);
+        doc.setFontSize(12); doc.setTextColor(0); doc.text(rx.diagnosis || "N/A", 20, 78);
+        var y = 90;
+        if(rx.medicines && rx.medicines.length > 0) {
+            doc.setFontSize(14); doc.setTextColor(5, 150, 105); doc.text("Medicines", 20, y); y += 8;
+            doc.setFontSize(10); doc.setTextColor(100); doc.text("Name", 20, y); doc.text("Dosage", 80, y); doc.text("Frequency", 120, y); doc.text("Duration", 160, y); y += 5; doc.line(20, y, 190, y); y += 6;
+            doc.setTextColor(0); doc.setFontSize(11);
+            rx.medicines.forEach(function(med) { doc.text(med.name || "-", 20, y); doc.text(med.dosage || "-", 80, y); doc.text(med.frequency || "-", 120, y); doc.text(med.duration || "-", 160, y); y += 8; });
+        }
+        if(rx.notes) { y += 5; doc.setFontSize(14); doc.setTextColor(5, 150, 105); doc.text("Doctor Notes", 20, y); y += 8; doc.setFontSize(11); doc.setTextColor(0); doc.text(rx.notes, 20, y); }
+        doc.save("Prescription_" + apt.patientName + "_" + apt.date + ".pdf");
+        showToast('PDF Downloaded successfully!', 'success');
+    }
+
+    function avatarClass(s){s=(s||'').toLowerCase();if(s.includes('nurs'))return'av-nurse';if(s.includes('physio'))return'av-physio';if(s.includes('lab'))return'av-lab';if(s.includes('general'))return'av-general';if(s.includes('cardio'))return'av-general';if(s.includes('derma'))return'av-general';if(s.includes('speech'))return'av-speech';return'av-general';}
+    var newUpdateIds = new Set();
+
+    function renderAll(){
+        var search=(document.getElementById('globalSearch').value||'').toLowerCase(); var apts=getAppointments();
+        if(search){apts=apts.filter(function(a){return(a.doctorName||'').toLowerCase().includes(search)||(a.symptoms||'').toLowerCase().includes(search)||(a.status||'').toLowerCase().includes(search);});}
+        apts.sort(function(a,b){return new Date(b.createdAt)-new Date(a.createdAt);}); var total=apts.length; var pending=apts.filter(function(a){return a.status==='Pending'||a.status==='requested'||a.status==='staff-approved'||a.status==='confirmed'||a.status==='in-progress';}).length; var prescriptions=apts.filter(function(a){return a.status==='completed'&&a.prescription;}).length; var notifs=apts.filter(function(a){return a.status==='Pending'||a.status==='requested'||a.status==='staff-approved';}).length; animateNumber('statTotal',total);animateNumber('statUpcoming',pending);animateNumber('statReports',prescriptions);animateNumber('statNotifs',notifs);
+        var aptHtml=''; if(apts.length===0){aptHtml='<div class="empty-state"><i class="fas fa-calendar-xmark"></i><p>No appointments yet. Book a doctor to get started!</p></div>';} else{apts.forEach(function(a){ var isNew=newUpdateIds.has(a.id); var initials=(a.doctorName||'DR').split(' ').map(function(w){return w[0];}).join('').slice(0,2); aptHtml+='<div class="apt-row'+(isNew?' new-update':'')+'" data-id="'+a.id+'"><div class="apt-doc-avatar '+avatarClass(a.doctorSpec)+'">'+initials+'</div><div class="apt-info"><div class="apt-name">'+(a.doctorName||'Unknown')+'</div><div class="apt-meta"><span><i class="fas fa-stethoscope"></i> '+(a.doctorSpec||'Specialist')+'</span><span><i class="fas fa-calendar"></i> '+(a.date||'')+' at '+(a.time||'')+'</span></div></div>'+statusBadgeHTML(a.status)+'</div>'; if(a.symptoms)aptHtml+='<div class="apt-symptoms"><i class="fas fa-notes-medical" style="margin-right:3px;color:#10b981;font-size:9px;"></i>'+a.symptoms+'</div>'; aptHtml+='<div class="apt-flow-mini">'+flowProgressHTML(a.status)+'</div>'; if(a.status==='rejected'&&a.rejectReason)aptHtml+='<div class="apt-symptoms" style="color:#f43f5e;"><i class="fas fa-info-circle" style="margin-right:3px;"></i>Reason: '+a.rejectReason+'</div>'; if(a.status==='completed'&&a.prescription)aptHtml+='<div class="apt-actions"><button class="btn btn-view" onclick="openRxModal(\''+a.id+'\')"><i class="fas fa-eye"></i> View</button><button class="btn btn-chat" style="margin-left:8px;" onclick="currentRxModalAptId=\''+a.id+'\';downloadPrescriptionPDF()"><i class="fas fa-download"></i> PDF</button></div>'; if(a.status==='completed'&&a.labResults&&a.labResults.length>0){a.labResults.forEach(function(lr){if(lr.status==='completed'&&lr.result)aptHtml+='<div class="apt-lab-result"><i class="fas fa-flask" style="margin-right:3px;"></i><strong>'+lr.test+':</strong> '+lr.result+'</div>';});} if(patientHasLabReport(a)){aptHtml+='<div class="apt-actions"><button class="btn btn-view" onclick="openLabReportModal(\''+a.id+'\')"><i class="fas fa-file-medical"></i> Lab report</button></div>';} if((a.status==='confirmed'||a.status==='staff-approved'||a.status==='in-progress')){aptHtml+='<div class="apt-actions" style="padding-top:4px;"><button type="button" class="btn btn-chat" style="width:100%;justify-content:center;border-radius:8px;" onclick="handlePatientChat()"><i class="fas fa-comment-medical"></i> Message in app</button></div>';} });} document.getElementById('appointmentsList').innerHTML=aptHtml; setTimeout(function(){newUpdateIds.clear();},3000);
+        var prescApts=getAppointments().filter(function(a){return a.status==='completed'&&a.prescription;}); var prescHtml=''; if(prescApts.length===0){prescHtml='<div class="empty-state"><i class="fas fa-file-medical"></i><p>No prescriptions yet</p></div>';} else{prescApts.forEach(function(a){prescHtml+='<div class="presc-row"><div class="presc-info"><div class="presc-icon"><i class="fas fa-prescription-bottle-alt"></i></div><div class="presc-text"><div class="pt-name">'+a.prescription.diagnosis+'</div><div class="pt-doc">'+a.doctorName+' &bull; '+a.date+'</div></div></div><button class="btn btn-view" onclick="openRxModal(\''+a.id+'\')"><i class="fas fa-eye"></i> View</button></div>';});} document.getElementById('prescriptionsList').innerHTML=prescHtml;
+        var specs={};apts.forEach(function(a){if(a.doctorSpec)specs[a.doctorSpec]=true;}); var servIcons={'Home Nursing':'fa-user-nurse','Physiotherapy':'fa-dumbbell','Lab Tests':'fa-flask-vial','General Physician':'fa-stethoscope','Cardiologist':'fa-heart-pulse','Dermatologist':'fa-hand-dots'}; var servHtml='';Object.keys(specs).forEach(function(s){servHtml+='<div class="service-chip"><i class="fas '+(servIcons[s]||'fa-medical')+'"></i><span>'+s+'</span></div>';}); if(!servHtml)servHtml='<div class="empty-state"><i class="fas fa-concierge-bell"></i><p>No services used yet</p></div>'; document.getElementById('servicesGrid').innerHTML=servHtml;
+        var notifHtml=''; var pendingApts=getAppointments().filter(function(a){return a.status==='Pending'||a.status==='requested';}); var approvedApts=getAppointments().filter(function(a){return a.status==='staff-approved';}); var completedApts=getAppointments().filter(function(a){return a.status==='completed'&&a.prescription;}); var labDoneApts=getAppointments().filter(function(a){return a.status==='completed'&&a.labResults&&a.labResults.some(function(lr){return lr.status==='completed';});}); pendingApts.forEach(function(a){notifHtml+='<div class="notif-row"><div class="notif-dot unread"></div><div class="notif-content"><div class="nc-title">Appointment Pending</div><div class="nc-desc">Your appointment with '+a.doctorName+' is waiting for staff approval.</div><div class="nc-time">'+timeAgo(a.createdAt)+'</div></div></div>';}); approvedApts.forEach(function(a){notifHtml+='<div class="notif-row"><div class="notif-dot unread"></div><div class="notif-content"><div class="nc-title">Appointment Approved</div><div class="nc-desc">Staff approved your appointment with '+a.doctorName+'.</div><div class="nc-time">'+timeAgo(a.createdAt)+'</div></div></div>';}); completedApts.forEach(function(a){notifHtml+='<div class="notif-row"><div class="notif-dot read"></div><div class="notif-content"><div class="nc-title">Prescription Ready</div><div class="nc-desc">'+a.doctorName+' has sent your prescription.</div><div class="nc-time">'+timeAgo(a.createdAt)+'</div></div></div>';}); labDoneApts.forEach(function(a){a.labResults.forEach(function(lr){if(lr.status==='completed')notifHtml+='<div class="notif-row"><div class="notif-dot read"></div><div class="notif-content"><div class="nc-title">Lab Result: '+lr.test+'</div><div class="nc-desc">Result: '+lr.result+'</div><div class="nc-time">'+timeAgo(lr.completedAt)+'</div></div></div>';});}); if(!notifHtml)notifHtml='<div class="empty-state"><i class="fas fa-bell-slash"></i><p>No notifications</p></div>'; document.getElementById('notificationsList').innerHTML=notifHtml;
+    }
+
+    function openRxModal(aptId){ currentRxModalAptId = aptId; var apt=getAppointments().find(function(a){return a.id===aptId;});if(!apt||!apt.prescription)return;var rx=apt.prescription;document.getElementById('rxModalTitle').textContent='Prescription';document.getElementById('rxModalDate').textContent=apt.doctorName+' \u2022 '+apt.date;var html='<div class="rx-diagnosis"><span>'+rx.diagnosis+'</span></div>';if(rx.medicines&&rx.medicines.length){html+='<div class="rx-section"><div class="rx-section-title">Medicines</div><div class="rx-med-row" style="font-weight:700;font-size:9px;color:var(--text-muted);"><span>Medicine</span><span>Dosage</span><span>Frequency</span><span>Duration</span></div>';rx.medicines.forEach(function(m){html+='<div class="rx-med-row"><span class="med-name">'+m.name+'</span><span class="med-val">'+m.dosage+'</span><span class="med-val">'+m.frequency+'</span><span class="med-val">'+m.duration+'</span></div>';});html+='</div>';}if(rx.notes)html+='<div class="rx-section"><div class="rx-section-title">Doctor Notes</div><div class="rx-notes">'+rx.notes+'</div></div>';if(rx.labTests&&rx.labTests.length){html+='<div class="rx-section"><div class="rx-section-title">Lab Tests Ordered</div>';rx.labTests.forEach(function(t,i){var lr=apt.labResults&&apt.labResults[i];var done=lr&&lr.status==='completed';html+='<span class="rx-lab-tag '+(done?'rx-lab-done':'rx-lab-pending')+'"><i class="fas '+(done?'fa-check-circle':'fa-clock')+'"></i> '+t+'</span>';});html+='</div>';}document.getElementById('rxModalBody').innerHTML=html;document.getElementById('rxModal').classList.add('show');document.body.style.overflow='hidden';}
+    function closeRxModal(){document.getElementById('rxModal').classList.remove('show');document.body.style.overflow='';}
+    function patientHasLabReport(a){return!!(a&&a.labReport&&(Object.keys(a.labReport.results||{}).length||a.labReport.summary));}
+    function openLabReportModal(aptId){var apt=getAppointments().find(function(a){return a.id===aptId;});if(!apt||!patientHasLabReport(apt))return;var lr=apt.labReport,fmt=lr.format||'chgt',isIdc=fmt==='idc',headerColor=isIdc?'#1e3a5f':'#0d9488',brandTitle=isIdc?'IDC Diagnostic Report':'Clinical Laboratory Report';document.getElementById('labReportModalTitle').textContent=brandTitle;document.getElementById('labReportModalMeta').textContent=(apt.doctorName||'HealthOnCall')+' \u2022 '+(lr.panel||'Lab panel')+' \u2022 '+(lr.reportId||'');var html='<div style="background:white;padding:24px;border-radius:16px;"><h2 style="color:'+headerColor+';text-align:center;border-bottom:3px solid '+headerColor+';padding-bottom:10px;font-family:Sora,sans-serif;">'+brandTitle+'</h2><p style="text-align:center;font-size:11px;color:#64748b;margin:10px 0 16px;">'+(isIdc?'IDC-style formal report':'Chughtai-inspired formal report')+'</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0;font-size:13px;"><div><strong>Patient:</strong> '+(apt.patientName||(typeof HOC_getPatientName==='function'?HOC_getPatientName():'Patient'))+'</div><div><strong>Date:</strong> '+(lr.generatedAt?new Date(lr.generatedAt).toLocaleDateString('en-PK'):(apt.date||''))+'</div><div><strong>Panel:</strong> '+(lr.panel||'—')+'</div><div><strong>Report ID:</strong> '+(lr.reportId||'—')+'</div></div><table style="width:100%;border-collapse:collapse;margin-top:12px;"><tr style="background:#f1f5f9;text-align:left;"><th style="padding:10px;">Test</th><th style="padding:10px;">Result</th></tr>';var results=lr.results||{};Object.keys(results).forEach(function(k){html+='<tr style="border-bottom:1px solid #eee;"><td style="padding:10px;">'+k+'</td><td style="padding:10px;font-weight:700;">'+results[k]+'</td></tr>';});if(!Object.keys(results).length&&lr.summary)html+='<tr><td colspan="2" style="padding:12px;">'+lr.summary+'</td></tr>';html+='</table><div style="margin-top:18px;padding:12px;background:#f8fafc;border-radius:10px;font-size:11px;color:#64748b;"><i class="fas fa-shield-halved"></i> Verified laboratory report — view only</div></div>';document.getElementById('labReportModalBody').innerHTML=html;document.getElementById('labReportModal').classList.add('show');document.body.style.overflow='hidden';}
+    function closeLabReportModal(){document.getElementById('labReportModal').classList.remove('show');document.body.style.overflow='';}
+
+    function animateNumber(id,target){var el=document.getElementById(id);if(!el)return;var current=parseInt(el.textContent)||0;if(current===target){el.textContent=target<10?'0'+target:target;return;}var step=target>current?1:-1;var timer=setInterval(function(){current+=step;el.textContent=current<10?'0'+current:current;if(current===target)clearInterval(timer);},60);}
+    function markDashboardAptNotifsRead(){document.querySelectorAll('.notif-dot.unread').forEach(function(d){d.classList.remove('unread');d.classList.add('read');});showToast('Appointment alerts marked read','info');}
+    function showToast(msg,type){type=type||'success';var c=document.getElementById('toastContainer');var t=document.createElement('div');t.className='toast';var icon=type==='success'?'fa-check-circle':type==='error'?'fa-times-circle':type==='warning'?'fa-exclamation-circle':'fa-info-circle';var color=type==='success'?'#10b981':type==='error'?'#f43f5e':type==='warning'?'#f59e0b':'#0ea5e9';t.style.borderLeftColor=color;t.innerHTML='<i class="fas '+icon+' t-'+type+'" style="flex-shrink:0;"></i><span>'+msg+'</span>';c.appendChild(t);setTimeout(function(){t.classList.add('show');},50);setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.remove();},500);},3000);}
+
+    renderAll(); setInterval(function(){renderAll();},2000);
+
+    var _hocPatientUid = '';
+    function hocRefreshMedicalReports(){
+        if(typeof HOCMedicalReports==='undefined')return;
+        HOCMedicalReports.bootstrap();
+        var pid=typeof HOC_getPatientId==='function'?HOC_getPatientId():'';
+        HOCMedicalReports.listPatientReports(pid).then(function(rows){
+            HOCMedicalReports.renderPatientList('medicalReportsList',rows);
+        });
+    }
+    function hocUploadMedicalReport(ev){
+        var file=ev.target.files&&ev.target.files[0];if(!file)return;
+        if(typeof HOCMedicalReports==='undefined'){showToast('Upload module not loaded','error');return;}
+        HOCMedicalReports.bootstrap();
+        var pid=typeof HOC_getPatientId==='function'?HOC_getPatientId():'';
+        var desc=document.getElementById('hocReportDesc')?document.getElementById('hocReportDesc').value.trim():'';
+        showToast('Uploading report…','info');
+        HOCMedicalReports.uploadPatientReport(file,{patientId:pid,patientUid:_hocPatientUid,description:desc,consentGiven:true})
+            .then(function(){showToast('Report uploaded to secure storage','success');ev.target.value='';if(document.getElementById('hocReportDesc'))document.getElementById('hocReportDesc').value='';hocRefreshMedicalReports();})
+            .catch(function(e){showToast(e.message||'Upload failed','error');});
+    }
+    function hocDeleteMedicalReport(id,path){
+        if(!confirm('Delete this medical report?'))return;
+        HOCMedicalReports.deleteReport(id,path).then(function(){showToast('Report deleted','success');hocRefreshMedicalReports();});
+    }
+    if(typeof firebase!=='undefined'&&firebase.auth){
+        firebase.auth().onAuthStateChanged(function(user){
+            if(!user)return;_hocPatientUid=user.uid;
+            if(typeof HOCAppointmentReminders!=='undefined'&&window._hocDb){
+                var pid=typeof HOC_getPatientId==='function'?HOC_getPatientId():'';
+                HOCAppointmentReminders.runForPatient(window._hocDb,pid,user.uid);
+            }
+            hocRefreshMedicalReports();
+        });
+    } else { hocRefreshMedicalReports(); }
+
+    window.addEventListener('storage',function(e){ if(e.key==='hoc_appointments'){ renderAll(); }});
+    (function(){try{var n=typeof HOC_getPatientName==='function'?HOC_getPatientName():'Patient';var f=n.split(' ')[0]||n;var h=document.querySelector('.greeting-section h1');if(h)h.innerHTML='Welcome back, <span>'+f+'</span>';var av=document.querySelector('.user-avatar img');if(av&&n)av.src='https://ui-avatars.com/api/?name='+encodeURIComponent(n)+'&background=0ea5e9&color=fff&bold=true&size=80';var un=document.querySelector('.user-info .user-name');if(un)un.textContent=n;}catch(e){}});
+    function hocOpenChatFromHash(){if(location.hash==='#openChat'){setTimeout(function(){try{handlePatientChat();}catch(x){}},400);}if(location.hash==='#messages'){setTimeout(function(){var el=document.getElementById('messages');if(el)el.scrollIntoView({behavior:'smooth'});},300);}}
+    window.addEventListener('hashchange',hocOpenChatFromHash); hocOpenChatFromHash();
+    document.getElementById('rxModal').addEventListener('click',function(e){if(e.target===this)closeRxModal();});
+    document.getElementById('labReportModal').addEventListener('click',function(e){if(e.target===this)closeLabReportModal();});
+    </script>
+</body>
+</html>

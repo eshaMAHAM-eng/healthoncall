@@ -1,245 +1,335 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="../STORE.JS.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings | HealthOnCall</title>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="shared sidebar footer.css">
+    <script src="hoc-theme-init.js"></script>
+    <link rel="stylesheet" href="hoc-global-theme.css">
+    <script src="hoc-firebase-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="hoc-clinical-shared.js"></script>
+    <script src="hoc-notifications.js"></script>
+    <script src="hoc-doctor-notifications-boot.js"></script>
     <style>
         :root {
-            --sidebar-bg: #0b1120;
-            --sidebar-hover: rgba(16,185,129,0.08);
-            --sidebar-active-bg: rgba(16,185,129,0.15);
-            --accent: #10b981;
-            --accent-glow: rgba(16,185,129,0.25);
-            --accent-soft: #d1fae5;
-            --accent-dark: #059669;
-            --gold: #f59e0b;
-            --gold-soft: #fef3c7;
-            --gold-dark: #92400e;
-            --rose: #f43f5e;
-            --rose-soft: #ffe4e6;
-            --rose-dark: #9f1239;
-            --sky: #0ea5e9;
-            --sky-soft: #e0f2fe;
-            --indigo: #6366f1;
-            --indigo-soft: #e0e7ff;
-            --slate: #64748b;
-            --slate-soft: #f1f5f9;
-            --bg: #f0f4f8;
-            --bg-gradient: linear-gradient(135deg,#f0f4f8 0%,#e8eef5 50%,#f0f4f8 100%);
-            --card: #ffffff;
-            --card-border: rgba(0,0,0,0.04);
-            --text: #0f172a;
-            --text-secondary: #475569;
-            --text-muted: #94a3b8;
-            --border: #e2e8f0;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04),0 1px 2px rgba(0,0,0,0.02);
-            --shadow-md: 0 8px 30px rgba(0,0,0,0.06);
-            --shadow-lg: 0 20px 60px rgba(0,0,0,0.1);
-            --radius: 18px;
-            --radius-lg: 24px;
-            --transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+            --accent:#10b981;--accent-glow:rgba(16,185,129,.25);--accent-soft:#d1fae5;--accent-dark:#059669;
+            --gold:#f59e0b;--gold-soft:#fef3c7;--gold-dark:#92400e;
+            --rose:#f43f5e;--rose-soft:#ffe4e6;--rose-dark:#9f1239;
+            --sky:#0ea5e9;--sky-soft:#e0f2fe;--sky-dark:#075985;
+            --indigo:#6366f1;--indigo-soft:#e0e7ff;--indigo-dark:#3730a3;
+            --teal:#14b8a6;--teal-soft:#ccfbf1;--teal-dark:#0f766e;
+            --orange:#f97316;--orange-soft:#fff7ed;--orange-dark:#9a3412;
+            --slate:#64748b;--slate-soft:#f1f5f9;
+            --bg:#f0f4f8;--bg-gradient:linear-gradient(135deg,#f0f4f8 0%,#e8eef5 50%,#f0f4f8 100%);
+            --card:#ffffff;--card-border:rgba(0,0,0,.04);
+            --text:#0f172a;--text-sec:#475569;--text-muted:#94a3b8;--border:#e2e8f0;
+            --shadow-sm:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.02);
+            --shadow-md:0 8px 30px rgba(0,0,0,.06);--shadow-lg:0 20px 60px rgba(0,0,0,.1);
+            --radius:18px;--radius-lg:24px;--tr:all .35s cubic-bezier(.4,0,.2,1);
         }
-        body.dark-mode {
-            --bg: #020617;
-            --bg-gradient: linear-gradient(135deg,#020617 0%,#0a0f1e 50%,#020617 100%);
-            --card: #0f172a;
-            --card-border: rgba(255,255,255,0.06);
-            --text: #f1f5f9;
-            --text-secondary: #cbd5e1;
-            --text-muted: #64748b;
-            --border: #1e293b;
-            --slate-soft: #1e293b;
+        body.dark-mode{
+            --bg:#020617;--bg-gradient:linear-gradient(135deg,#020617 0%,#0a0f1e 50%,#020617 100%);
+            --card:#0f172a;--card-border:rgba(255,255,255,.06);
+            --text:#f1f5f9;--text-sec:#cbd5e1;--text-muted:#64748b;
+            --border:#1e293b;--slate-soft:#1e293b;
+            --rose-soft:rgba(244,63,94,.12);--gold-soft:rgba(245,158,11,.12);
+            --sky-soft:rgba(14,165,233,.12);--indigo-soft:rgba(99,102,241,.12);
+            --accent-soft:rgba(16,185,129,.12);--teal-soft:rgba(20,184,166,.12);
+            --orange-soft:rgba(249,115,22,.12);
         }
         *{margin:0;padding:0;box-sizing:border-box;}
-        body{font-family:'DM Sans',sans-serif;background:var(--bg-gradient);color:var(--text);min-height:100vh;display:flex;overflow-x:hidden;transition:background .5s,color .4s;}
+        body{font-family:'DM Sans',sans-serif;background:var(--bg-gradient);color:var(--text);min-height:100vh;display:flex;overflow-x:hidden;transition:background .5s ease,color .4s ease;}
         h1,h2,h3,h4,h5,h6{font-family:'Sora',sans-serif;}
+        html{scroll-behavior:smooth;}
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
 
-        .bg-blobs{position:fixed;top:0;left:280px;right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;}
-        .bg-blobs .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.3;animation:blobFloat 20s ease-in-out infinite;transition:opacity .5s;}
-        body.dark-mode .bg-blobs .blob{opacity:.1;}
-        .blob-1{width:350px;height:350px;background:#10b981;top:-80px;right:5%;animation-delay:0s;}
+        /* ── Background Blobs ── */
+        .bg-blobs{position:fixed;top:0;left:var(--sidebar-width,280px);right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;}
+        .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.3;animation:blobFloat 20s ease-in-out infinite;transition:opacity .5s;}
+        body.dark-mode .blob{opacity:.08;}
+        .blob-1{width:350px;height:350px;background:#10b981;top:-80px;right:5%;}
         .blob-2{width:280px;height:280px;background:#0ea5e9;bottom:15%;left:8%;animation-delay:-7s;}
         .blob-3{width:220px;height:220px;background:#f59e0b;top:50%;right:25%;animation-delay:-14s;}
         @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1);}25%{transform:translate(30px,-40px) scale(1.1);}50%{transform:translate(-20px,20px) scale(.95);}75%{transform:translate(15px,35px) scale(1.05);}}
 
-        /* ===== SIDEBAR ===== */
-        .sidebar{width:280px;height:100vh;position:fixed;left:0;top:0;background:var(--sidebar-bg);z-index:1000;display:flex;flex-direction:column;overflow:hidden;transition:background .5s;}
-        .sidebar::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,185,129,.07) 0%,transparent 40%,transparent 60%,rgba(14,165,233,.05) 100%);pointer-events:none;}
-        .sidebar-brand{padding:32px 28px 28px;position:relative;}
-        .sidebar-brand .logo-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;color:white;margin-bottom:16px;box-shadow:0 8px 24px rgba(16,185,129,.3);}
-        .sidebar-brand h2{font-size:22px;font-weight:800;color:#f1f5f9;letter-spacing:-.5px;}
-        .sidebar-brand h2 span{color:var(--accent);}
-        .sidebar-brand p{font-size:11px;color:var(--text-muted);margin-top:4px;font-weight:500;letter-spacing:1px;text-transform:uppercase;}
-        .sidebar-nav{flex:1;padding:0 16px;display:flex;flex-direction:column;gap:4px;position:relative;}
-        .nav-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;padding:20px 16px 8px;}
-        .sidebar-nav a{display:flex;align-items:center;gap:14px;padding:13px 18px;border-radius:14px;text-decoration:none;color:#94a3b8;font-weight:500;font-size:14.5px;transition:var(--transition);position:relative;overflow:hidden;}
-        .sidebar-nav a i{width:20px;text-align:center;font-size:16px;transition:var(--transition);}
-        .sidebar-nav a:hover{color:#e2e8f0;background:var(--sidebar-hover);}
-        .sidebar-nav a:hover i{color:var(--accent);}
-        .sidebar-nav a.active{color:#f1f5f9;background:var(--sidebar-active-bg);font-weight:600;}
-        .sidebar-nav a.active i{color:var(--accent);}
-        .sidebar-nav a.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:24px;background:var(--accent);border-radius:0 4px 4px 0;}
-        .sidebar-footer{padding:20px 24px;border-top:1px solid rgba(255,255,255,.05);position:relative;}
-        .sidebar-footer .user-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.03);transition:var(--transition);}
-        .sidebar-footer .user-card:hover{background:rgba(255,255,255,.06);}
-        .user-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#0ea5e9);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;font-family:'Sora',sans-serif;overflow:hidden;}
-        .user-avatar img{width:100%;height:100%;object-fit:cover;}
-        .user-info .user-name{color:#e2e8f9;font-weight:600;font-size:14px;}
-        .user-info .user-role{color:var(--text-muted);font-size:11px;}
-
-        /* ===== MAIN ===== */
-        .main{margin-left:280px;flex:1;padding:32px 40px;position:relative;z-index:1;min-height:100vh;}
+        /* ── Main Content ── */
+        .sidebar-page-main{margin-left:var(--sidebar-width,280px);flex:1;padding:32px 40px;position:relative;z-index:1;min-height:100vh;transition:margin .4s ease;}
         .top-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:36px;gap:24px;flex-wrap:wrap;}
-        .greeting-section h1{font-size:28px;font-weight:800;letter-spacing:-.8px;color:var(--text);line-height:1.2;}
+        .greeting-section h1{font-size:28px;font-weight:800;letter-spacing:-.8px;color:var(--text);line-height:1.2;transition:color .4s ease;}
         .greeting-section h1 span{color:var(--accent-dark);}
-        .greeting-section .sub-line{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:13.5px;margin-top:6px;font-weight:500;}
-        .greeting-section .sub-line i{color:var(--accent);font-size:13px;}
-        .header-badge{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:12px 20px;box-shadow:var(--shadow-sm);transition:var(--transition);}
+        .sub-line{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:13.5px;margin-top:6px;font-weight:500;transition:color .4s ease;}
+        .sub-line i{color:var(--accent);font-size:13px;}
+        .header-badge{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:12px 20px;box-shadow:var(--shadow-sm);transition:var(--tr);}
         .header-badge i{color:var(--accent);font-size:18px;}
-        .header-badge span{font-size:13px;font-weight:600;color:var(--text-secondary);}
+        .header-badge span{font-size:13px;font-weight:600;color:var(--text-sec);transition:color .4s ease;}
 
-        /* ===== SETTINGS GRID ===== */
-        .settings-grid{display:grid;grid-template-columns:260px 1fr;gap:24px;max-width:960px;}
+        /* ── Settings Grid ── */
+        .settings-grid{display:grid;grid-template-columns:280px 1fr;gap:28px;max-width:1100px;}
 
         /* Profile Card */
-        .profile-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--card-border);box-shadow:var(--shadow-sm);padding:32px 24px;text-align:center;position:sticky;top:32px;height:fit-content;transition:var(--transition);}
+        .profile-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--card-border);box-shadow:var(--shadow-sm);padding:28px 22px;text-align:center;position:sticky;top:32px;height:fit-content;transition:all .5s ease;}
         .profile-card:hover{box-shadow:var(--shadow-md);}
-        .avatar-wrap{position:relative;width:100px;height:100px;margin:0 auto 20px;}
-        .avatar-wrap img{width:100%;height:100%;border-radius:28px;object-fit:cover;border:3px solid var(--accent);box-shadow:0 12px 28px rgba(16,185,129,.2);transition:var(--transition);}
+        .avatar-wrap{position:relative;width:100px;height:100px;margin:0 auto 16px;}
+        .avatar-wrap img{width:100%;height:100%;border-radius:28px;object-fit:cover;border:3px solid var(--accent);box-shadow:0 12px 28px rgba(16,185,129,.2);transition:var(--tr);}
         .avatar-wrap:hover img{box-shadow:0 16px 36px rgba(16,185,129,.3);transform:scale(1.03);}
-        .avatar-edit-btn{position:absolute;bottom:-6px;right:-6px;width:36px;height:36px;background:linear-gradient(135deg,var(--accent-dark),var(--accent));border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:3px solid var(--card);color:white;font-size:13px;transition:var(--transition);box-shadow:0 4px 12px rgba(16,185,129,.3);}
+        .avatar-edit-btn{position:absolute;bottom:-6px;right:-6px;width:36px;height:36px;background:linear-gradient(135deg,var(--accent-dark),var(--accent));border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:3px solid var(--card);color:#fff;font-size:13px;transition:var(--tr);box-shadow:0 4px 12px rgba(16,185,129,.3);}
         .avatar-edit-btn:hover{transform:scale(1.12);box-shadow:0 6px 16px rgba(16,185,129,.4);}
-        .profile-card .profile-name{font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;}
-        .profile-card .profile-role{font-size:13px;color:var(--text-muted);font-weight:500;margin-bottom:20px;}
-        .profile-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-        .profile-stat{background:var(--slate-soft);border-radius:14px;padding:14px 10px;transition:var(--transition);}
+        .profile-name{font-family:'Sora',sans-serif;font-size:17px;font-weight:700;color:var(--text);margin-bottom:2px;transition:color .4s ease;}
+        .profile-role{font-size:13px;color:var(--text-muted);font-weight:500;margin-bottom:4px;transition:color .4s ease;}
+        .profile-availability{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:4px 12px;border-radius:8px;margin-bottom:16px;text-transform:uppercase;letter-spacing:.5px;transition:all .4s ease;}
+        .profile-availability.available{background:var(--accent-soft);color:var(--accent-dark);}
+        .profile-availability.unavailable{background:var(--rose-soft);color:var(--rose);}
+        body.dark-mode .profile-availability.available{background:rgba(16,185,129,.15);}
+        body.dark-mode .profile-availability.unavailable{background:rgba(244,63,94,.15);}
+        .profile-availability i{font-size:6px;}
+        .profile-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+        .profile-stat{background:var(--slate-soft);border-radius:14px;padding:12px 8px;transition:all .5s ease;}
         body.dark-mode .profile-stat{background:rgba(255,255,255,.04);}
         .profile-stat:hover{transform:translateY(-2px);}
-        .profile-stat .ps-num{font-family:'Sora',sans-serif;font-size:22px;font-weight:800;color:var(--text);line-height:1;}
-        .profile-stat .ps-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px;}
+        .ps-num{font-family:'Sora',sans-serif;font-size:20px;font-weight:800;color:var(--text);line-height:1;transition:color .4s ease;}
+        .ps-label{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:3px;transition:color .4s ease;}
+
+        /* ── Preview Card (what patient sees) ── */
+        .preview-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--border);}
+        body.dark-mode .preview-section{border-color:rgba(255,255,255,.06);}
+        .preview-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+        .preview-card{background:var(--slate-soft);border-radius:14px;padding:16px;text-align:left;transition:all .4s ease;}
+        body.dark-mode .preview-card{background:rgba(255,255,255,.04);}
+        .pc-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+        .pc-av{width:42px;height:42px;border-radius:12px;overflow:hidden;flex-shrink:0;border:2px solid var(--accent);}
+        .pc-av img{width:100%;height:100%;object-fit:cover;}
+        .pc-name{font-family:'Sora',sans-serif;font-size:13px;font-weight:700;color:var(--text);transition:color .4s ease;}
+        .pc-spec{font-size:11px;color:var(--text-muted);transition:color .4s ease;}
+        .pc-tags{display:flex;flex-wrap:wrap;gap:6px;}
+        .pc-tag{font-size:10px;font-weight:700;padding:4px 10px;border-radius:8px;display:flex;align-items:center;gap:4px;transition:all .4s ease;}
+        .pc-tag.tag-fee{background:var(--accent-soft);color:var(--accent-dark);}
+        .pc-tag.tag-rating{background:var(--gold-soft);color:var(--gold-dark);}
+        .pc-tag.tag-patients{background:var(--sky-soft);color:var(--sky-dark);}
+        .pc-tag.tag-years{background:var(--indigo-soft);color:var(--indigo-dark);}
+        body.dark-mode .pc-tag.tag-fee{background:rgba(16,185,129,.15);color:var(--accent);}
+        body.dark-mode .pc-tag.tag-rating{background:rgba(245,158,11,.15);color:var(--gold);}
+        body.dark-mode .pc-tag.tag-patients{background:rgba(14,165,233,.15);color:var(--sky);}
+        body.dark-mode .pc-tag.tag-years{background:rgba(99,102,241,.15);color:var(--indigo);}
+        .pc-tag i{font-size:9px;}
 
         /* Settings Sections */
         .settings-sections{display:flex;flex-direction:column;gap:20px;}
-        .setting-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--card-border);box-shadow:var(--shadow-sm);overflow:hidden;transition:var(--transition);}
+        .setting-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--card-border);box-shadow:var(--shadow-sm);overflow:hidden;transition:all .5s ease;}
         .setting-card:hover{box-shadow:var(--shadow-md);}
-        .setting-card-header{display:flex;align-items:center;gap:12px;padding:22px 28px;border-bottom:1px solid var(--border);}
-        .sch-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+        .setting-card-header{display:flex;align-items:center;gap:12px;padding:22px 28px;border-bottom:1px solid var(--border);transition:border-color .5s ease;}
+        .sch-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:all .5s ease;}
         .sch-icon.icon-identity{background:var(--accent-soft);color:var(--accent-dark);}
+        .sch-icon.icon-clinic{background:var(--teal-soft);color:var(--teal-dark);}
         .sch-icon.icon-security{background:var(--rose-soft);color:var(--rose);}
         .sch-icon.icon-comm{background:var(--sky-soft);color:var(--sky);}
+        .sch-icon.icon-feedback{background:var(--gold-soft);color:var(--gold);}
         .sch-icon.icon-system{background:var(--indigo-soft);color:var(--indigo);}
         body.dark-mode .sch-icon.icon-identity{background:rgba(16,185,129,.15);}
+        body.dark-mode .sch-icon.icon-clinic{background:rgba(20,184,166,.15);}
         body.dark-mode .sch-icon.icon-security{background:rgba(244,63,94,.12);}
         body.dark-mode .sch-icon.icon-comm{background:rgba(14,165,233,.12);}
+        body.dark-mode .sch-icon.icon-feedback{background:rgba(245,158,11,.15);}
         body.dark-mode .sch-icon.icon-system{background:rgba(99,102,241,.12);}
-        .setting-card-header h3{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px;}
-        .setting-card-header p{font-size:12px;color:var(--text-muted);margin-top:2px;}
+        .setting-card-header h3{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.2px;transition:color .4s ease;}
+        .setting-card-header p{font-size:12px;color:var(--text-muted);margin-top:2px;transition:color .4s ease;}
         .setting-card-body{padding:6px 28px 10px;}
-        .setting-row{display:flex;align-items:center;justify-content:space-between;padding:18px 0;border-bottom:1px solid var(--border);gap:20px;}
+        .setting-row{display:flex;align-items:center;justify-content:space-between;padding:18px 0;border-bottom:1px solid var(--border);gap:20px;transition:border-color .5s ease;}
         .setting-row:last-child{border-bottom:none;}
         .setting-label{flex:1;min-width:0;}
-        .setting-label h4{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px;}
-        .setting-label p{font-size:12.5px;color:var(--text-muted);line-height:1.5;}
+        .setting-label h4{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px;transition:color .4s ease;}
+        .setting-label p{font-size:12.5px;color:var(--text-muted);line-height:1.5;transition:color .4s ease;}
+
+        /* ── Two-column row for compact fields ── */
+        .setting-row-dual{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:18px 0;border-bottom:1px solid var(--border);}
+        .setting-row-dual:last-child{border-bottom:none;}
+        .dual-item{display:flex;flex-direction:column;gap:6px;}
+        .dual-item label{font-size:12px;font-weight:700;color:var(--text-sec);transition:color .4s ease;}
+        .dual-item input,.dual-item select{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;background:var(--slate-soft);font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:500;color:var(--text);outline:none;transition:all .3s ease;}
+        body.dark-mode .dual-item input,body.dark-mode .dual-item select{background:#1e293b;color:var(--text);}
+        .dual-item input:focus,.dual-item select:focus{border-color:var(--accent);background:var(--card);box-shadow:0 0 0 3px var(--accent-glow);}
+        .dual-item select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+
         .setting-control{flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;}
 
         /* Inputs */
         .input-field{width:280px;position:relative;}
-        .input-field i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;transition:var(--transition);pointer-events:none;}
-        .input-field input{width:100%;padding:12px 16px 12px 42px;border:1.5px solid var(--border);border-radius:12px;background:var(--slate-soft);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:var(--text);outline:none;transition:var(--transition);}
-        body.dark-mode .input-field input{background:var(--dm-input-bg,#1e293b);}
-        .input-field input::placeholder{color:var(--text-muted);}
-        .input-field input:focus{border-color:var(--accent);background:var(--card);box-shadow:0 0 0 4px var(--accent-glow);}
-        .input-field input:focus+ i,.input-field input:focus ~ i{color:var(--accent);}
+        .input-field i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;transition:var(--tr);pointer-events:none;}
+        .input-field input,.input-field textarea,.input-field select{width:100%;padding:12px 16px 12px 42px;border:1.5px solid var(--border);border-radius:12px;background:var(--slate-soft);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:var(--text);outline:none;transition:all .5s ease;}
+        body.dark-mode .input-field input,body.dark-mode .input-field textarea,body.dark-mode .input-field select{background:#1e293b;color:var(--text);}
+        .input-field input::placeholder,.input-field textarea::placeholder{color:var(--text-muted);}
+        .input-field input:focus,.input-field textarea:focus,.input-field select:focus{border-color:var(--accent);background:var(--card);box-shadow:0 0 0 4px var(--accent-glow);}
+        .input-field input:focus~i,.input-field textarea:focus~i{color:var(--accent);}
         .input-field.error input{border-color:var(--rose);box-shadow:0 0 0 4px rgba(244,63,94,.15);}
         .input-field.error i{color:var(--rose);}
         .field-error{font-size:11px;color:var(--rose);margin-top:5px;font-weight:600;display:none;}
         .input-field.error .field-error{display:block;}
+        .input-field textarea{resize:vertical;min-height:80px;padding-left:16px;line-height:1.6;}
 
         /* Toggle */
         .toggle-switch{position:relative;width:50px;height:28px;cursor:pointer;display:inline-block;}
         .toggle-switch input{opacity:0;width:0;height:0;position:absolute;}
-        .toggle-track{position:absolute;inset:0;background:#cbd5e1;border-radius:34px;transition:var(--transition);}
-        .toggle-track::before{content:'';position:absolute;width:22px;height:22px;left:3px;bottom:3px;background:white;border-radius:50%;transition:var(--transition);box-shadow:0 2px 6px rgba(0,0,0,.15);}
+        .toggle-track{position:absolute;inset:0;background:#cbd5e1;border-radius:34px;transition:all .4s ease;}
+        .toggle-track::before{content:'';position:absolute;width:22px;height:22px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:all .4s ease;box-shadow:0 2px 6px rgba(0,0,0,.15);}
         .toggle-switch input:checked+.toggle-track{background:linear-gradient(135deg,var(--accent-dark),var(--accent));box-shadow:0 4px 14px rgba(16,185,129,.3);}
         .toggle-switch input:checked+.toggle-track::before{transform:translateX(22px);}
         .toggle-switch input:focus-visible+.toggle-track{outline:2px solid var(--accent);outline-offset:2px;}
-        .toggle-status{font-size:11px;font-weight:700;margin-top:4px;text-align:right;transition:color .3s;}
+        .toggle-status{font-size:11px;font-weight:700;margin-top:4px;text-align:right;transition:all .4s ease;}
         .toggle-status.on{color:var(--accent-dark);}
         .toggle-status.off{color:var(--text-muted);}
 
         /* Password */
         .pw-wrap{width:280px;position:relative;}
-        .pw-wrap .pw-field{position:relative;}
-        .pw-wrap .pw-field i.fa-lock{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;transition:var(--transition);pointer-events:none;z-index:2;}
-        .pw-wrap input{width:100%;padding:12px 42px 12px 42px;border:1.5px solid var(--border);border-radius:12px;background:var(--slate-soft);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:var(--text);outline:none;transition:var(--transition);}
+        .pw-field{position:relative;}
+        .pw-field i.fa-lock{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;transition:var(--tr);pointer-events:none;z-index:2;}
+        .pw-wrap input{width:100%;padding:12px 42px 12px 42px;border:1.5px solid var(--border);border-radius:12px;background:var(--slate-soft);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:var(--text);outline:none;transition:all .5s ease;}
         body.dark-mode .pw-wrap input{background:#1e293b;}
         .pw-wrap input::placeholder{color:var(--text-muted);}
         .pw-wrap input:focus{border-color:var(--accent);background:var(--card);box-shadow:0 0 0 4px var(--accent-glow);}
         .pw-wrap input:focus~i.fa-lock{color:var(--accent);}
-        .pw-toggle-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;transition:var(--transition);z-index:2;padding:4px;}
-        .pw-toggle-eye:hover{color:var(--text-secondary);}
+        .pw-toggle-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;transition:var(--tr);z-index:2;padding:4px;}
+        .pw-toggle-eye:hover{color:var(--text-sec);}
         .strength-wrap{margin-top:10px;}
-        .strength-bar-bg{height:5px;background:var(--border);border-radius:10px;overflow:hidden;}
+        .strength-bar-bg{height:5px;background:var(--border);border-radius:10px;overflow:hidden;transition:background .5s ease;}
+        body.dark-mode .strength-bar-bg{background:#1e293b;}
         .strength-bar-fill{height:100%;width:0;border-radius:10px;transition:width .4s ease,background .4s ease;}
         .strength-label{font-size:11px;font-weight:700;margin-top:6px;transition:color .3s;color:var(--text-muted);min-height:16px;}
 
-        /* ===== ACTION BUTTONS ===== */
-        .actions-bar{display:flex;justify-content:flex-end;gap:14px;margin-top:28px;max-width:960px;}
-        .btn{padding:13px 28px;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:var(--transition);border:none;display:inline-flex;align-items:center;gap:8px;position:relative;overflow:hidden;}
-        .btn-reset{background:var(--slate-soft);color:var(--slate);}
+        /* ── Feedback Section ── */
+        .feedback-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+        .fb-stat{background:var(--slate-soft);border-radius:14px;padding:16px;text-align:center;transition:all .4s ease;}
+        body.dark-mode .fb-stat{background:rgba(255,255,255,.04);}
+        .fb-stat-num{font-family:'Sora',sans-serif;font-size:26px;font-weight:800;line-height:1;transition:color .4s ease;}
+        .fb-stat-num.gold{color:var(--gold);}
+        .fb-stat-num.accent{color:var(--accent);}
+        .fb-stat-num.sky{color:var(--sky);}
+        .fb-stat-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:6px;transition:color .4s ease;}
+
+        .fb-list{display:flex;flex-direction:column;gap:10px;max-height:380px;overflow-y:auto;padding-right:4px;}
+        .fb-list::-webkit-scrollbar{width:3px;}
+        .fb-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+        .fb-item{background:var(--slate-soft);border-radius:14px;padding:16px;display:flex;gap:14px;transition:all .3s ease;}
+        body.dark-mode .fb-item{background:rgba(255,255,255,.04);}
+        .fb-item:hover{transform:translateX(4px);}
+        .fb-av{width:42px;height:42px;border-radius:12px;overflow:hidden;flex-shrink:0;}
+        .fb-av img{width:100%;height:100%;object-fit:cover;}
+        .fb-content{flex:1;min-width:0;}
+        .fb-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
+        .fb-patient{font-size:13.5px;font-weight:700;color:var(--text);transition:color .4s ease;}
+        .fb-date{font-size:10px;color:var(--text-muted);font-weight:500;white-space:nowrap;transition:color .4s ease;}
+        .fb-stars{display:flex;gap:2px;margin-bottom:6px;}
+        .fb-stars i{font-size:11px;color:var(--gold);}
+        .fb-stars i.empty{color:var(--border);}
+        .fb-text{font-size:12.5px;color:var(--text-sec);line-height:1.6;transition:color .4s ease;}
+        .fb-empty{text-align:center;padding:40px 20px;color:var(--text-muted);}
+        .fb-empty i{font-size:36px;opacity:.15;display:block;margin-bottom:10px;}
+        .fb-empty p{font-size:13px;font-weight:500;}
+
+        /* ── Action Buttons ── */
+        .actions-bar{display:flex;justify-content:flex-end;gap:14px;margin-top:28px;max-width:1020px;}
+        .btn{padding:13px 28px;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:var(--tr);border:none;display:inline-flex;align-items:center;gap:8px;position:relative;overflow:hidden;}
+        .btn-reset{background:var(--slate-soft);color:var(--slate);transition:all .5s ease;}
         body.dark-mode .btn-reset{background:rgba(255,255,255,.06);color:var(--text-muted);}
-        .btn-reset:hover{background:var(--border);color:var(--text-secondary);transform:translateY(-1px);}
-        .btn-save{background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:white;box-shadow:0 6px 20px rgba(16,185,129,.3);}
+        .btn-reset:hover{background:var(--border);color:var(--text-sec);transform:translateY(-1px);}
+        .btn-save{background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:#fff;box-shadow:0 6px 20px rgba(16,185,129,.3);}
         .btn-save:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(16,185,129,.4);}
         .btn-save:active{transform:translateY(0);}
         .btn-save.saving{pointer-events:none;opacity:.85;}
-        .btn-save .spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;}
+        .btn-save .spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
         .btn-save.saving .spinner{display:inline-block;}
         .btn-save.saving .btn-text{display:none;}
         .btn-save.saving .btn-saving-text{display:inline;}
         .btn-save .btn-saving-text{display:none;}
         @keyframes spin{to{transform:rotate(360deg);}}
-
-        /* Ripple */
         .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.35);transform:scale(0);animation:rippleAnim .6s ease-out;pointer-events:none;}
         @keyframes rippleAnim{to{transform:scale(4);opacity:0;}}
 
-        /* ===== CONFIRM DIALOG ===== */
+        /* ── Confirm Dialog ── */
         .confirm-overlay{position:fixed;inset:0;background:rgba(11,17,32,.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;justify-content:center;align-items:center;z-index:3000;padding:20px;}
         .confirm-overlay.show{display:flex;}
         .confirm-box{background:var(--card);border-radius:24px;padding:36px 32px 28px;max-width:420px;width:100%;box-shadow:0 40px 80px rgba(0,0,0,.2);transform:scale(.92) translateY(20px);opacity:0;transition:all .4s cubic-bezier(.34,1.56,.64,1);text-align:center;}
+        body.dark-mode .confirm-box{background:#0f172a;border:1px solid rgba(255,255,255,.08);}
         .confirm-overlay.show .confirm-box{transform:scale(1) translateY(0);opacity:1;}
-        .confirm-icon{width:64px;height:64px;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:28px;}
+        .confirm-icon{width:64px;height:64px;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:28px;transition:all .5s ease;}
         .confirm-icon.warn{background:var(--gold-soft);color:var(--gold);}
         .confirm-icon.danger{background:var(--rose-soft);color:var(--rose);}
-        .confirm-box h3{font-size:20px;font-weight:800;color:var(--text);margin-bottom:8px;}
-        .confirm-box p{font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:28px;}
+        .confirm-box h3{font-size:20px;font-weight:800;color:var(--text);margin-bottom:8px;transition:color .4s ease;}
+        .confirm-box p{font-size:14px;color:var(--text-sec);line-height:1.6;margin-bottom:28px;transition:color .4s ease;}
         .confirm-btns{display:flex;gap:12px;justify-content:center;}
         .confirm-btns .btn{flex:1;justify-content:center;padding:12px 20px;}
 
-        /* ===== TOAST ===== */
+        /* ── Toast ── */
         .toast-container{position:fixed;top:24px;right:24px;z-index:5000;display:flex;flex-direction:column;gap:10px;}
-        .toast{background:var(--card);border-radius:14px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.12);border-left:4px solid var(--accent);font-size:14px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);min-width:300px;}
-        body.dark-mode .toast{background:var(--card);color:var(--text);}
+        .toast{background:var(--card);border-radius:14px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.12);border-left:4px solid var(--accent);font-size:14px;font-weight:600;color:var(--text);transform:translateX(120%);transition:all .5s cubic-bezier(.34,1.56,.64,1);min-width:300px;max-width:420px;}
+        body.dark-mode .toast{background:#0f172a;border-color:rgba(255,255,255,.08);box-shadow:0 16px 40px rgba(0,0,0,.3);}
         .toast.show{transform:translateX(0);}
         .toast i{font-size:18px;}
-        .toast .t-success{color:var(--accent);}
-        .toast .t-warn{color:var(--gold);}
-        .toast .t-err{color:var(--rose);}
-        .toast .t-info{color:var(--sky);}
+        .t-success{color:var(--accent);}
+        .t-warn{color:var(--gold);}
+        .t-err{color:var(--rose);}
+        .t-info{color:var(--sky);}
 
-        /* ===== RESPONSIVE ===== */
-        @media(max-width:1100px){.settings-grid{grid-template-columns:1fr;}.profile-card{position:static;max-width:400px;margin:0 auto;}}
-        @media(max-width:768px){.sidebar{transform:translateX(-100%);}.main{margin-left:0;padding:20px;}.top-header{flex-direction:column;align-items:flex-start;}.setting-row{flex-direction:column;align-items:flex-start;gap:12px;}.input-field,.pw-wrap{width:100%;}.setting-control{width:100%;justify-content:flex-start;}.actions-bar{justify-content:stretch;}.actions-bar .btn{flex:1;justify-content:center;}}
-        html{scroll-behavior:smooth;}
-        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+        /* ════════════════════════════════════════
+           RESPONSIVE
+           ════════════════════════════════════════ */
+        @media(max-width:1100px){
+            .settings-grid{grid-template-columns:1fr;}
+            .profile-card{position:static;max-width:420px;margin:0 auto;}
+        }
+        @media(max-width:1024px){
+            .sidebar-page-main{padding:20px;}
+            .bg-blobs{left:0;}
+        }
+        @media(max-width:768px){
+            .sidebar-page-main{padding-top:76px;}
+            .top-header{flex-direction:column;align-items:flex-start;}
+            .greeting-section h1{font-size:22px;}
+            .header-badge span{display:none;}
+            .setting-row{flex-direction:column;align-items:flex-start;gap:12px;}
+            .setting-row-dual{grid-template-columns:1fr;}
+            .input-field,.pw-wrap{width:100%;}
+            .setting-control{width:100%;justify-content:flex-start;}
+            .feedback-summary{grid-template-columns:1fr;}
+            .actions-bar{justify-content:stretch;}
+            .actions-bar .btn{flex:1;justify-content:center;}
+        }
+        @media(max-width:600px){
+            .toast{min-width:unset;max-width:calc(100vw - 48px);font-size:13px;padding:12px 16px;}
+            .toast-container{top:76px;right:12px;left:12px;}
+            .profile-card{padding:24px 18px;}
+            .avatar-wrap{width:80px;height:80px;}
+            .setting-card-header{padding:18px 20px;}
+            .setting-card-body{padding:6px 20px 10px;}
+        }
+        @media(max-width:380px){
+            .actions-bar .btn{padding:11px 16px;font-size:13px;}
+        }
     </style>
+    <link rel="stylesheet" href="SIDEBAR.CSS">
+    <script src="hoc-sidebar.js" defer></script>
 </head>
 <body>
 
+<!-- Mobile Top Bar -->
+<div class="mob-topbar" id="mobTopbar">
+    <button class="mob-hamburger" id="mobHamburgerBtn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
+    <div class="mob-logo">
+        <div class="mob-logo-icon"><i class="fas fa-heartbeat"></i></div>
+        <span class="mob-logo-text">Health<span>OnCall</span></span>
+    </div>
+    <button class="mob-notif" aria-label="Notifications"><i class="fas fa-bell"></i></button>
+</div>
+
+<!-- Sidebar Overlay -->
+<div class="sb-overlay" id="hocSbOverlay"></div>
+
+<!-- Background Blobs -->
 <div class="bg-blobs">
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
@@ -247,40 +337,39 @@
 </div>
 
 <!-- Sidebar -->
-<aside class="sidebar">
-    <div class="sidebar-brand">
-        <div class="logo-icon"><i class="fas fa-heartbeat"></i></div>
-        <h2>Health<span>OnCall</span></h2>
-        <p>Doctor Portal</p>
+<aside class="sidebar" id="hocSidebar">
+    <div class="sb-brand">
+        <div class="sb-logo"><i class="fas fa-heartbeat"></i></div>
+        <div class="sb-brand-text"><h2>Health<span>OnCall</span></h2><p>Doctor Portal</p></div>
     </div>
-    <nav class="sidebar-nav">
-        <div class="nav-label">Main Menu</div>
+    <nav class="sb-nav">
+        <div class="sb-nav-label">Main Menu</div>
         <a href="doctor-dashboard 2.html"><i class="fas fa-th-large"></i> Dashboard</a>
-        <a href="Patients Page 2.html"><i class="fas fa-calendar-week"></i> Patient</a>
-       
-        <div class="nav-label">System</div>
+    
+        <a href="Patients Page 2.html"><i class="fas fa-calendar-week"></i> Weekly Patient Plan</a>
+        <div class="sb-nav-label">System</div>
         <a href="setting 2.html" class="active"><i class="fas fa-cog"></i> Settings</a>
-        <a href="logout 2.html" id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        <a href="logout 2.html" class="nav-danger" id="logoutLink"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </nav>
-    <div class="sidebar-footer">
-        <div class="user-card">
-            <div class="user-avatar" id="sidebarAvatar"><img src="https://ui-avatars.com/api/?name=Ali+Khan&background=10b981&color=fff&bold=true&size=80" alt="" id="sidebarAvatarImg"></div>
-            <div class="user-info">
-                <div class="user-name" id="sidebarName">Dr. Ali Khan</div>
-                <div class="user-role">General Physician</div>
+    <div class="sb-footer">
+        <div class="sb-user">
+            <div class="sb-avatar"><img src="https://ui-avatars.com/api/?name=Ali+Khan&background=10b981&color=fff&bold=true&size=80" alt="" id="sidebarAvatarImg"></div>
+            <div>
+                <div class="sb-uname" id="sidebarName">Dr. Ahmed</div>
+                <div class="sb-urole" id="sidebarRole">Physiotherapy</div>
             </div>
         </div>
     </div>
 </aside>
 
-<!-- Main -->
-<main class="main">
+<!-- Main Content -->
+<main class="sidebar-page-main">
     <header class="top-header">
         <div class="greeting-section">
             <h1>Account <span>Settings</span></h1>
             <div class="sub-line">
                 <i class="fas fa-shield-alt"></i>
-                <span>Manage your profile, security, and preferences</span>
+                <span>Manage your profile, clinic, and preferences</span>
             </div>
         </div>
         <div class="header-badge">
@@ -300,58 +389,139 @@
                 <input type="file" id="avatarInput" accept="image/*" style="display:none;">
             </div>
             <div class="profile-name" id="profileNameDisplay">Dr. Ali Khan</div>
-            <div class="profile-role">General Physician</div>
+            <div class="profile-role" id="profileRoleDisplay">General Physician</div>
+            <div class="profile-availability available" id="profileAvailability">
+                <i class="fas fa-circle"></i> Available
+            </div>
             <div class="profile-stats">
-                <div class="profile-stat"><div class="ps-num">142</div><div class="ps-label">Patients</div></div>
-                <div class="profile-stat"><div class="ps-num">3.8</div><div class="ps-label">Years</div></div>
-                <div class="profile-stat"><div class="ps-num">98%</div><div class="ps-label">Rating</div></div>
-                <div class="profile-stat"><div class="ps-num">6</div><div class="ps-label">This Week</div></div>
+                <div class="profile-stat"><div class="ps-num" id="psRating">4.7</div><div class="ps-label">Rating</div></div>
+                <div class="profile-stat"><div class="ps-num" id="psPatients">210+</div><div class="ps-label">Patients</div></div>
+                <div class="profile-stat"><div class="ps-num" id="psYears">6</div><div class="ps-label">Years</div></div>
+                <div class="profile-stat"><div class="ps-num" id="psFee">1800</div><div class="ps-label">Fee (Rs)</div></div>
+            </div>
+
+            <!-- Preview: What Patient Sees -->
+            <div class="preview-section">
+                <div class="preview-label"><i class="fas fa-eye" style="margin-right:4px;"></i> Patient Preview</div>
+                <div class="preview-card">
+                    <div class="pc-top">
+                        <div class="pc-av"><img id="pcAvatar" src="https://ui-avatars.com/api/?name=Ali+Khan&background=10b981&color=fff&bold=true&size=80" alt=""></div>
+                        <div>
+                            <div class="pc-name" id="pcName">Dr. Ali Khan</div>
+                            <div class="pc-spec" id="pcSpec">General Physician</div>
+                        </div>
+                    </div>
+                    <div class="pc-tags">
+                        <span class="pc-tag tag-fee"><i class="fas fa-rupee-sign"></i> <span id="pcFee">1800</span></span>
+                        <span class="pc-tag tag-rating"><i class="fas fa-star"></i> <span id="pcRating">4.7</span></span>
+                        <span class="pc-tag tag-patients"><i class="fas fa-users"></i> <span id="pcPatients">210+</span></span>
+                        <span class="pc-tag tag-years"><i class="fas fa-clock"></i> <span id="pcYears">6 yrs</span></span>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Settings Sections -->
         <div class="settings-sections">
 
-            <!-- Identity -->
+            <!-- ═══ Identity ═══ -->
             <div class="setting-card">
                 <div class="setting-card-header">
                     <div class="sch-icon icon-identity"><i class="fas fa-user-md"></i></div>
-                    <div><h3>Identity & Access</h3><p>Your professional information</p></div>
+                    <div><h3>Identity & Access</h3><p>Your professional information shown to patients</p></div>
                 </div>
                 <div class="setting-card-body">
                     <div class="setting-row">
-                        <div class="setting-label"><h4>Full Name</h4><p>Displayed on bookings and reports</p></div>
+                        <div class="setting-label"><h4>Full Name</h4><p>Displayed on bookings, reports, and patient cards</p></div>
                         <div class="setting-control">
                             <div class="input-field" id="nameField">
-                                <input type="text" id="nameInput" value="Dr. Ali Khan">
+                                <input type="text" id="nameInput" value="Dr. Ali Khan" placeholder="Dr. Full Name">
                                 <i class="fas fa-user"></i>
                                 <div class="field-error">Name is required</div>
                             </div>
                         </div>
                     </div>
                     <div class="setting-row">
-                        <div class="setting-label"><h4>Email Address</h4><p>Used for login and recovery</p></div>
+                        <div class="setting-label"><h4>Email Address</h4><p>Used for login and account recovery</p></div>
                         <div class="setting-control">
                             <div class="input-field" id="emailField">
-                                <input type="email" id="emailInput" value="dr.ali@healthoncall.com">
+                                <input type="email" id="emailInput" value="dr.ali@healthoncall.com" placeholder="doctor@email.com">
                                 <i class="fas fa-envelope"></i>
                                 <div class="field-error">Enter a valid email</div>
                             </div>
                         </div>
                     </div>
                     <div class="setting-row">
-                        <div class="setting-label"><h4>Specialization</h4><p>Your primary medical field</p></div>
+                        <div class="setting-label"><h4>Phone Number</h4><p>Visible to patients for contact</p></div>
+                        <div class="setting-control">
+                            <div class="input-field" id="phoneField">
+                                <input type="tel" id="phoneInput" value="+92 300 1234567" placeholder="+92 3XX XXXXXXX">
+                                <i class="fas fa-phone"></i>
+                                <div class="field-error">Enter a valid phone number</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-label"><h4>Specialization</h4><p>Your primary medical field shown on profile card</p></div>
                         <div class="setting-control">
                             <div class="input-field">
-                                <input type="text" value="General Physician" readonly style="opacity:.6;cursor:default;">
+                                <input type="text" id="specInput" value="General Physician" placeholder="e.g. Cardiologist">
                                 <i class="fas fa-stethoscope"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-label"><h4>About / Bio</h4><p>Short description patients see on your profile</p></div>
+                        <div class="setting-control" style="width:100%;max-width:400px;">
+                            <div class="input-field" style="width:100%;">
+                                <textarea id="bioInput" rows="3" placeholder="Tell patients about your experience and expertise...">Experienced physician specializing in general medicine with 6+ years of clinical practice.</textarea>
+                                <i class="fas fa-align-left" style="top:16px;transform:none;"></i>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Security -->
+            <!-- ═══ Clinic & Practice ═══ -->
+            <div class="setting-card">
+                <div class="setting-card-header">
+                    <div class="sch-icon icon-clinic"><i class="fas fa-hospital"></i></div>
+                    <div><h3>Clinic & Practice</h3><p>Details shown on your patient-facing card</p></div>
+                </div>
+                <div class="setting-card-body">
+                    <div class="setting-row-dual">
+                        <div class="dual-item">
+                            <label><i class="fas fa-rupee-sign" style="color:var(--accent);margin-right:4px;"></i> Consultation Fee (Rs)</label>
+                            <input type="number" id="feeInput" value="1800" min="0" placeholder="e.g. 1500">
+                        </div>
+                        <div class="dual-item">
+                            <label><i class="fas fa-clock" style="color:var(--indigo);margin-right:4px;"></i> Years of Experience</label>
+                            <input type="number" id="yearsInput" value="6" min="0" placeholder="e.g. 5">
+                        </div>
+                    </div>
+                    <div class="setting-row-dual">
+                        <div class="dual-item">
+                            <label><i class="fas fa-map-marker-alt" style="color:var(--rose);margin-right:4px;"></i> Clinic Location</label>
+                            <input type="text" id="locationInput" value="Madina Town" placeholder="e.g. Madina Town, Faisalabad">
+                        </div>
+                        <div class="dual-item">
+                            <label><i class="fas fa-route" style="color:var(--sky);margin-right:4px;"></i> Distance (km)</label>
+                            <input type="text" id="distanceInput" value="5.2" placeholder="e.g. 3.5">
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-label"><h4>Availability Status</h4><p>Toggle to show patients if you're currently available</p></div>
+                        <div class="setting-control">
+                            <div style="display:flex;flex-direction:column;align-items:flex-end;">
+                                <label class="toggle-switch"><input type="checkbox" id="toggleAvailability" checked data-label="Availability"><span class="toggle-track"></span></label>
+                                <div class="toggle-status on" id="statusAvailability">Available</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ Security ═══ -->
             <div class="setting-card">
                 <div class="setting-card-header">
                     <div class="sch-icon icon-security"><i class="fas fa-shield-alt"></i></div>
@@ -365,7 +535,7 @@
                                 <div class="pw-field">
                                     <i class="fas fa-lock"></i>
                                     <input type="password" id="passwordInput" placeholder="Enter new password">
-                                    <button class="pw-toggle-eye" onclick="togglePw()" aria-label="Toggle password visibility" type="button">
+                                    <button class="pw-toggle-eye" id="pwToggleBtn" aria-label="Toggle password visibility" type="button">
                                         <i class="fas fa-eye" id="pwEyeIcon"></i>
                                     </button>
                                 </div>
@@ -379,7 +549,7 @@
                 </div>
             </div>
 
-            <!-- Communication -->
+            <!-- ═══ Communication ═══ -->
             <div class="setting-card">
                 <div class="setting-card-header">
                     <div class="sch-icon icon-comm"><i class="fas fa-bell"></i></div>
@@ -387,10 +557,10 @@
                 </div>
                 <div class="setting-card-body">
                     <div class="setting-row">
-                        <div class="setting-label"><h4>WhatsApp Reminders</h4><p>Automated appointment reminders to patients</p></div>
+                        <div class="setting-label"><h4>In-app chat reminders</h4><p>Notify patients through HealthOnCall chat (not external messengers)</p></div>
                         <div class="setting-control">
                             <div style="display:flex;flex-direction:column;align-items:flex-end;">
-                                <label class="toggle-switch"><input type="checkbox" id="toggleWA" checked data-label="WA Reminders"><span class="toggle-track"></span></label>
+                                <label class="toggle-switch"><input type="checkbox" id="toggleWA" checked data-label="App chat reminders"><span class="toggle-track"></span></label>
                                 <div class="toggle-status on" id="statusWA">Enabled</div>
                             </div>
                         </div>
@@ -416,7 +586,39 @@
                 </div>
             </div>
 
-            <!-- System -->
+            <!-- ═══ Patient Feedback ═══ -->
+            <div class="setting-card">
+                <div class="setting-card-header">
+                    <div class="sch-icon icon-feedback"><i class="fas fa-star-half-alt"></i></div>
+                    <div><h3>Patient Feedback</h3><p>Reviews and ratings from your patients</p></div>
+                </div>
+                <div class="setting-card-body" style="padding-top:18px;">
+                    <!-- Summary Stats -->
+                    <div class="feedback-summary">
+                        <div class="fb-stat">
+                            <div class="fb-stat-num gold" id="fbAvgRating">4.7</div>
+                            <div class="fb-stat-label">Avg Rating</div>
+                        </div>
+                        <div class="fb-stat">
+                            <div class="fb-stat-num accent" id="fbTotalReviews">0</div>
+                            <div class="fb-stat-label">Total Reviews</div>
+                        </div>
+                        <div class="fb-stat">
+                            <div class="fb-stat-num sky" id="fbThisMonth">0</div>
+                            <div class="fb-stat-label">This Month</div>
+                        </div>
+                    </div>
+                    <!-- Feedback List -->
+                    <div class="fb-list" id="feedbackList">
+                        <div class="fb-empty">
+                            <i class="fas fa-comment-dots"></i>
+                            <p>Loading patient feedback...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ System ═══ -->
             <div class="setting-card">
                 <div class="setting-card-header">
                     <div class="sch-icon icon-system"><i class="fas fa-sliders-h"></i></div>
@@ -424,7 +626,7 @@
                 </div>
                 <div class="setting-card-body">
                     <div class="setting-row">
-                        <div class="setting-label"><h4>Dark Mode</h4><p>Reduce eye strain in low-light</p></div>
+                        <div class="setting-label"><h4>Dark Mode</h4><p>Reduce eye strain in low-light environments</p></div>
                         <div class="setting-control">
                             <div style="display:flex;flex-direction:column;align-items:flex-end;">
                                 <label class="toggle-switch"><input type="checkbox" id="darkModeToggle" data-label="Dark Mode"><span class="toggle-track"></span></label>
@@ -449,10 +651,10 @@
 
     <!-- Actions -->
     <div class="actions-bar">
-        <button class="btn btn-reset" onclick="resetSettings()">
+        <button class="btn btn-reset" id="resetBtn">
             <i class="fas fa-undo"></i> Reset to Default
         </button>
-        <button class="btn btn-save" id="saveBtn" onclick="saveSettings()">
+        <button class="btn btn-save" id="saveBtn">
             <span class="btn-text"><i class="fas fa-check"></i> Save Changes</span>
             <span class="btn-saving-text">Saving...</span>
             <span class="spinner"></span>
@@ -467,431 +669,571 @@
         <h3 id="confirmTitle">Are you sure?</h3>
         <p id="confirmMsg">This action cannot be undone.</p>
         <div class="confirm-btns">
-            <button class="btn btn-reset" onclick="closeConfirm()">Cancel</button>
+            <button class="btn btn-reset" id="confirmCancelBtn">Cancel</button>
             <button class="btn btn-save" id="confirmAction">Confirm</button>
         </div>
     </div>
 </div>
 
-<!-- Toast -->
+<!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-    /* ===== DEFAULTS ===== */
-    const DEFAULTS = {
-        name: 'Dr. Ali Khan',
-        email: 'dr.ali@healthoncall.com',
-        wa: true,
-        analytics: false,
-        alert: true,
-        dark: false,
-        compact: false
+/* ═══════════════════════════════════════
+   MOBILE SIDEBAR TOGGLE
+   ═══════════════════════════════════════ */
+(function(){
+    var sidebar = document.getElementById('hocSidebar');
+    var overlay = document.getElementById('hocSbOverlay');
+    var hamburger = document.getElementById('mobHamburgerBtn');
+    function openSb(){ sidebar.classList.add('open'); overlay.classList.add('active'); document.body.style.overflow='hidden'; }
+    function closeSb(){ sidebar.classList.remove('open'); overlay.classList.remove('active'); document.body.style.overflow=''; }
+    hamburger.addEventListener('click', openSb);
+    overlay.addEventListener('click', closeSb);
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeSb(); });
+    window.addEventListener('resize', function(){ if(window.innerWidth>1024) closeSb(); });
+})();
+
+/* ═══════════════════════════════════════
+   DOCTOR ID — Change this per doctor
+   ═══════════════════════════════════════ */
+var DOCTOR_ID = localStorage.getItem('hoc_doctor_id') || 'dr_ahmed';
+
+/* ═══════════════════════════════════════
+   DEFAULTS
+   ═══════════════════════════════════════ */
+var DEFAULTS = {
+    name:'Dr. Ali Khan', email:'dr.ali@healthoncall.com', phone:'+92 300 1234567',
+    spec:'General Physician', bio:'Experienced physician specializing in general medicine with 6+ years of clinical practice.',
+    fee:1800, years:6, location:'Madina Town', distance:'5.2', available:true,
+    wa:true, analytics:false, alert:true, dark:false, compact:false
+};
+
+/* ═══════════════════════════════════════
+   LIVE PREVIEW SYNC
+   ═══════════════════════════════════════ */
+function syncPreview(){
+    var name = document.getElementById('nameInput').value.trim() || 'Doctor';
+    var spec = document.getElementById('specInput').value.trim() || 'Specialist';
+    var fee = document.getElementById('feeInput').value || '0';
+    var years = document.getElementById('yearsInput').value || '0';
+    var avail = document.getElementById('toggleAvailability').checked;
+
+    /* Profile card */
+    document.getElementById('profileNameDisplay').textContent = name;
+    document.getElementById('profileRoleDisplay').textContent = spec;
+    document.getElementById('psFee').textContent = fee;
+    document.getElementById('psYears').textContent = years;
+    document.getElementById('sidebarName').textContent = name;
+    document.getElementById('sidebarRole').textContent = spec;
+
+    var avEl = document.getElementById('profileAvailability');
+    if(avail){
+        avEl.className = 'profile-availability available';
+        avEl.innerHTML = '<i class="fas fa-circle"></i> Available';
+    }else{
+        avEl.className = 'profile-availability unavailable';
+        avEl.innerHTML = '<i class="fas fa-circle"></i> Unavailable';
+    }
+
+    /* Patient preview card */
+    document.getElementById('pcName').textContent = name;
+    document.getElementById('pcSpec').textContent = spec;
+    document.getElementById('pcFee').textContent = fee;
+    document.getElementById('pcYears').textContent = years + ' yrs';
+
+    /* Avatar sync */
+    var avSrc = document.getElementById('avatarPreview').src;
+    document.getElementById('pcAvatar').src = avSrc;
+    document.getElementById('sidebarAvatarImg').src = avSrc;
+}
+
+/* ═══════════════════════════════════════
+   LOAD SETTINGS — Firestore + localStorage
+   ═══════════════════════════════════════ */
+function loadSettings(){
+    var saved = localStorage.getItem('hoc-settings');
+    if(saved){
+        try{
+            var s = JSON.parse(saved);
+            document.getElementById('nameInput').value = s.name || DEFAULTS.name;
+            document.getElementById('emailInput').value = s.email || DEFAULTS.email;
+            document.getElementById('phoneInput').value = s.phone || DEFAULTS.phone;
+            document.getElementById('specInput').value = s.spec || DEFAULTS.spec;
+            document.getElementById('bioInput').value = s.bio || DEFAULTS.bio;
+            document.getElementById('feeInput').value = s.fee || DEFAULTS.fee;
+            document.getElementById('yearsInput').value = s.years || DEFAULTS.years;
+            document.getElementById('locationInput').value = s.location || DEFAULTS.location;
+            document.getElementById('distanceInput').value = s.distance || DEFAULTS.distance;
+            document.getElementById('toggleAvailability').checked = s.available !== undefined ? s.available : DEFAULTS.available;
+            document.getElementById('toggleWA').checked = s.wa !== undefined ? s.wa : DEFAULTS.wa;
+            document.getElementById('toggleAnalytics').checked = s.analytics !== undefined ? s.analytics : DEFAULTS.analytics;
+            document.getElementById('toggleAlert').checked = s.alert !== undefined ? s.alert : DEFAULTS.alert;
+            document.getElementById('darkModeToggle').checked = s.dark !== undefined ? s.dark : DEFAULTS.dark;
+            document.getElementById('toggleCompact').checked = s.compact !== undefined ? s.compact : DEFAULTS.compact;
+            if(s.avatar){
+                document.getElementById('avatarPreview').src = s.avatar;
+                document.getElementById('sidebarAvatarImg').src = s.avatar;
+            }
+            if(s.lastUpdated) document.getElementById('lastUpdated').textContent = 'Last updated: ' + s.lastUpdated;
+            if(s.dark) document.body.classList.add('dark-mode');
+            if(s.rating) document.getElementById('psRating').textContent = s.rating;
+            if(s.patientCount) document.getElementById('psPatients').textContent = s.patientCount;
+        }catch(e){}
+    }
+    syncPreview();
+    updateAllToggleStatuses();
+    loadFromFirestore();
+    loadFeedback();
+}
+
+/* ═══════════════════════════════════════
+   LOAD FROM FIRESTORE — doctor profile
+   ═══════════════════════════════════════ */
+function loadFromFirestore(){
+    if(!window._hocDb) return;
+    window._hocDb.collection('Doctors').doc(DOCTOR_ID).get().then(function(doc){
+        if(!doc.exists) return;
+        var d = doc.data();
+        if(d.name) document.getElementById('nameInput').value = d.name;
+        if(d.email) document.getElementById('emailInput').value = d.email;
+        if(d.phone) document.getElementById('phoneInput').value = d.phone;
+        if(d.specialization) document.getElementById('specInput').value = d.specialization;
+        if(d.bio) document.getElementById('bioInput').value = d.bio;
+        if(d.fee) document.getElementById('feeInput').value = d.fee;
+        if(d.experience) document.getElementById('yearsInput').value = d.experience;
+        if(d.location) document.getElementById('locationInput').value = d.location;
+        if(d.distance) document.getElementById('distanceInput').value = d.distance;
+        if(d.photoURL){
+            document.getElementById('avatarPreview').src = d.photoURL;
+            document.getElementById('sidebarAvatarImg').src = d.photoURL;
+        }
+        if(d.rating){
+            document.getElementById('psRating').textContent = d.rating;
+            document.getElementById('fbAvgRating').textContent = d.rating;
+        }
+        if(d.patientCount){
+            document.getElementById('psPatients').textContent = d.patientCount + '+';
+            document.getElementById('pcPatients').textContent = d.patientCount + '+';
+        }
+        if(d.available !== undefined) document.getElementById('toggleAvailability').checked = d.available;
+        syncPreview();
+        updateAllToggleStatuses();
+    }).catch(function(e){ console.warn('Firestore load err:', e); });
+}
+
+/* ═══════════════════════════════════════
+   LOAD FEEDBACK — from Firestore
+   ═══════════════════════════════════════ */
+function loadFeedback(){
+    var listEl = document.getElementById('feedbackList');
+    if(!window._hocDb){
+        /* Demo feedback when no Firestore */
+        renderFeedback([
+            {patientName:'Esha Maham',rating:5,text:'Dr. Khan was very thorough and caring. Explained everything clearly. Highly recommend!',date:'2025-01-10'},
+            {patientName:'Ali Hassan',rating:4,text:'Good consultation, waited a bit but the doctor was professional and helpful.',date:'2025-01-08'},
+            {patientName:'Sara Bibi',rating:5,text:'Excellent doctor! Very patient and knowledgeable. My condition improved significantly.',date:'2025-01-05'},
+            {patientName:'Usman Tariq',rating:4,text:'Professional and friendly. Gave me proper time and attention.',date:'2024-12-28'},
+            {patientName:'Fatima Noor',rating:3,text:'Average experience. The doctor was knowledgeable but the wait time was too long.',date:'2024-12-20'}
+        ]);
+        return;
+    }
+
+    window._hocDb.collection('Feedback')
+        .where('doctorId','==',DOCTOR_ID)
+        .orderBy('timestamp','desc')
+        .limit(20)
+        .get().then(function(snap){
+            if(snap.empty){
+                listEl.innerHTML = '<div class="fb-empty"><i class="fas fa-comment-dots"></i><p>No patient feedback yet</p></div>';
+                return;
+            }
+            var feedbacks = [];
+            snap.forEach(function(doc){
+                var d = doc.data();
+                feedbacks.push({
+                    patientName: d.patientName || 'Anonymous',
+                    rating: d.rating || 0,
+                    text: d.text || d.comment || '',
+                    date: d.timestamp ? (d.timestamp.toDate ? d.timestamp.toDate().toISOString().split('T')[0] : d.timestamp) : ''
+                });
+            });
+            renderFeedback(feedbacks);
+        }).catch(function(e){
+            console.warn('Feedback load err:', e);
+            listEl.innerHTML = '<div class="fb-empty"><i class="fas fa-exclamation-triangle"></i><p>Could not load feedback</p></div>';
+        });
+}
+
+function renderFeedback(list){
+    var listEl = document.getElementById('feedbackList');
+    if(!list.length){
+        listEl.innerHTML = '<div class="fb-empty"><i class="fas fa-comment-dots"></i><p>No patient feedback yet</p></div>';
+        return;
+    }
+
+    /* Stats */
+    var totalRating = 0, thisMonth = 0, now = new Date();
+    list.forEach(function(f){ totalRating += f.rating; if(f.date && f.date.startsWith(now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'))) thisMonth++; });
+    var avg = (totalRating / list.length).toFixed(1);
+    document.getElementById('fbAvgRating').textContent = avg;
+    document.getElementById('fbTotalReviews').textContent = list.length;
+    document.getElementById('fbThisMonth').textContent = thisMonth;
+    document.getElementById('psRating').textContent = avg;
+
+    var h = '';
+    list.forEach(function(f){
+        var stars = '';
+        for(var i=1;i<=5;i++){
+            stars += '<i class="fas fa-star' + (i<=f.rating?'':' empty') + '"></i>';
+        }
+        var initials = f.patientName.split(' ').filter(function(w){return w.length>1;}).map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+        var colors = ['#10b981','#f59e0b','#8b5cf6','#f43f5e','#0ea5e9','#6366f1'];
+        var color = colors[f.patientName.length % colors.length];
+        var dateStr = f.date ? new Date(f.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+
+        h += '<div class="fb-item">';
+        h += '<div class="fb-av" style="width:42px;height:42px;border-radius:12px;background:'+color+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;font-family:Sora,sans-serif;flex-shrink:0;">'+initials+'</div>';
+        h += '<div class="fb-content">';
+        h += '<div class="fb-top"><span class="fb-patient">'+f.patientName+'</span><span class="fb-date">'+dateStr+'</span></div>';
+        h += '<div class="fb-stars">'+stars+'</div>';
+        if(f.text) h += '<div class="fb-text">'+f.text+'</div>';
+        h += '</div></div>';
+    });
+    listEl.innerHTML = h;
+}
+
+/* ═══════════════════════════════════════
+   TOGGLE STATUS LABELS
+   ═══════════════════════════════════════ */
+function updateAllToggleStatuses(){
+    var toggles = [
+        {id:'toggleWA',statusId:'statusWA',onLabel:'Enabled',offLabel:'Disabled'},
+        {id:'toggleAnalytics',statusId:'statusAnalytics',onLabel:'Enabled',offLabel:'Disabled'},
+        {id:'toggleAlert',statusId:'statusAlert',onLabel:'Enabled',offLabel:'Disabled'},
+        {id:'toggleAvailability',statusId:'statusAvailability',onLabel:'Available',offLabel:'Unavailable'},
+        {id:'darkModeToggle',statusId:'statusDark',onLabel:'Enabled',offLabel:'Disabled'},
+        {id:'toggleCompact',statusId:'statusCompact',onLabel:'Enabled',offLabel:'Disabled'}
+    ];
+    toggles.forEach(function(t){
+        var input = document.getElementById(t.id);
+        var status = document.getElementById(t.statusId);
+        if(!input||!status) return;
+        if(input.checked){
+            status.textContent = t.onLabel;
+            status.className = 'toggle-status on';
+        }else{
+            status.textContent = t.offLabel;
+            status.className = 'toggle-status off';
+        }
+    });
+}
+
+/* ═══════════════════════════════════════
+   AUTO-SAVE DARK MODE
+   ═══════════════════════════════════════ */
+function autoSaveDarkMode(isDark){
+    var saved = localStorage.getItem('hoc-settings');
+    var settings = saved ? JSON.parse(saved) : {};
+    settings.dark = isDark;
+    localStorage.setItem('hoc-settings', JSON.stringify(settings));
+}
+
+/* ═══════════════════════════════════════
+   TOGGLE LISTENERS
+   ═══════════════════════════════════════ */
+document.querySelectorAll('.toggle-switch input').forEach(function(toggle){
+    toggle.addEventListener('change', function(){
+        updateAllToggleStatuses();
+        if(this.id === 'darkModeToggle'){
+            document.body.classList.toggle('dark-mode', this.checked);
+            autoSaveDarkMode(this.checked);
+            showToast('Dark mode ' + (this.checked?'enabled':'disabled') + ' — applies to all pages', this.checked?'success':'info');
+            return;
+        }
+        if(this.id === 'toggleAvailability'){
+            syncPreview();
+            showToast(this.checked ? 'You are now visible as Available to patients' : 'You are now marked as Unavailable', this.checked?'success':'info');
+            return;
+        }
+        var label = this.dataset.label || 'Setting';
+        showToast(label + ' ' + (this.checked?'enabled':'disabled'), this.checked?'success':'info');
+    });
+});
+
+/* ═══════════════════════════════════════
+   AVATAR UPLOAD
+   ═══════════════════════════════════════ */
+document.getElementById('avatarInput').addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    if(!file.type.startsWith('image/')){ showToast('Please select a valid image file','error'); this.value=''; return; }
+    if(file.size > 5*1024*1024){ showToast('Image must be under 5MB','error'); this.value=''; return; }
+    var reader = new FileReader();
+    reader.onload = function(ev){
+        document.getElementById('avatarPreview').src = ev.target.result;
+        syncPreview();
+        showToast('Profile photo updated','success');
+    };
+    reader.readAsDataURL(file);
+});
+
+/* ═══════════════════════════════════════
+   LIVE SYNC ON INPUT
+   ═══════════════════════════════════════ */
+['nameInput','specInput','feeInput','yearsInput'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', syncPreview);
+});
+
+document.getElementById('nameInput').addEventListener('input', function(){
+    document.getElementById('nameField').classList.remove('error');
+});
+document.getElementById('emailInput').addEventListener('input', function(){
+    document.getElementById('emailField').classList.remove('error');
+});
+
+/* ═══════════════════════════════════════
+   PASSWORD TOGGLE
+   ═══════════════════════════════════════ */
+document.getElementById('pwToggleBtn').addEventListener('click', function(){
+    var input = document.getElementById('passwordInput');
+    var icon = document.getElementById('pwEyeIcon');
+    if(input.type==='password'){ input.type='text'; icon.className='fas fa-eye-slash'; }
+    else{ input.type='password'; icon.className='fas fa-eye'; }
+});
+
+/* ═══════════════════════════════════════
+   PASSWORD STRENGTH
+   ═══════════════════════════════════════ */
+document.getElementById('passwordInput').addEventListener('input', function(){
+    var val=this.value, fill=document.getElementById('strengthFill'), label=document.getElementById('strengthLabel');
+    if(!val){ fill.style.width='0%'; fill.style.background='transparent'; label.innerHTML='&nbsp;'; label.style.color='var(--text-muted)'; return; }
+    var score=0;
+    if(val.length>=6)score++; if(val.length>=10)score++; if(/[A-Z]/.test(val))score++; if(/[0-9]/.test(val))score++; if(/[^A-Za-z0-9]/.test(val))score++;
+    var levels=[{w:'10%',c:'#f43f5e',t:'Very Weak'},{w:'25%',c:'#f43f5e',t:'Weak'},{w:'50%',c:'#f59e0b',t:'Fair'},{w:'75%',c:'#0ea5e9',t:'Good'},{w:'90%',c:'#10b981',t:'Strong'},{w:'100%',c:'#059669',t:'Very Strong'}];
+    var lvl=levels[Math.min(score,levels.length-1)];
+    fill.style.width=lvl.w; fill.style.background=lvl.c; label.textContent=lvl.t; label.style.color=lvl.c;
+});
+
+/* ═══════════════════════════════════════
+   VALIDATION
+   ═══════════════════════════════════════ */
+function validate(){
+    var valid=true;
+    var name=document.getElementById('nameInput').value.trim();
+    var email=document.getElementById('emailInput').value.trim();
+    var pw=document.getElementById('passwordInput').value;
+    if(!name){ document.getElementById('nameField').classList.add('error'); valid=false; }
+    else document.getElementById('nameField').classList.remove('error');
+    var emailRegex=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if(email&&!emailRegex.test(email)){ document.getElementById('emailField').classList.add('error'); valid=false; }
+    else document.getElementById('emailField').classList.remove('error');
+    if(pw&&pw.length<6){ showToast('Password must be at least 6 characters','error'); valid=false; }
+    return valid;
+}
+
+/* ═══════════════════════════════════════
+   SAVE — localStorage + Firestore
+   ═══════════════════════════════════════ */
+document.getElementById('saveBtn').addEventListener('click', function(){
+    if(!validate()) return;
+    var btn = this;
+    btn.classList.add('saving');
+
+    var now = new Date();
+    var timeStr = now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+
+    var settings = {
+        name: document.getElementById('nameInput').value.trim(),
+        email: document.getElementById('emailInput').value.trim(),
+        phone: document.getElementById('phoneInput').value.trim(),
+        spec: document.getElementById('specInput').value.trim(),
+        bio: document.getElementById('bioInput').value.trim(),
+        fee: parseInt(document.getElementById('feeInput').value) || 0,
+        years: parseInt(document.getElementById('yearsInput').value) || 0,
+        location: document.getElementById('locationInput').value.trim(),
+        distance: document.getElementById('distanceInput').value.trim(),
+        available: document.getElementById('toggleAvailability').checked,
+        wa: document.getElementById('toggleWA').checked,
+        analytics: document.getElementById('toggleAnalytics').checked,
+        alert: document.getElementById('toggleAlert').checked,
+        dark: document.getElementById('darkModeToggle').checked,
+        compact: document.getElementById('toggleCompact').checked,
+        avatar: document.getElementById('avatarPreview').src,
+        rating: document.getElementById('fbAvgRating').textContent,
+        lastUpdated: timeStr
     };
 
-    /* ===== LOAD SAVED SETTINGS ===== */
-    function loadSettings() {
-        const saved = localStorage.getItem('hoc-settings');
-        if (saved) {
-            try {
-                const s = JSON.parse(saved);
-                document.getElementById('nameInput').value = s.name || DEFAULTS.name;
-                document.getElementById('emailInput').value = s.email || DEFAULTS.email;
-                document.getElementById('toggleWA').checked = s.wa !== undefined ? s.wa : DEFAULTS.wa;
-                document.getElementById('toggleAnalytics').checked = s.analytics !== undefined ? s.analytics : DEFAULTS.analytics;
-                document.getElementById('toggleAlert').checked = s.alert !== undefined ? s.alert : DEFAULTS.alert;
-                document.getElementById('darkModeToggle').checked = s.dark !== undefined ? s.dark : DEFAULTS.dark;
-                document.getElementById('toggleCompact').checked = s.compact !== undefined ? s.compact : DEFAULTS.compact;
+    /* Save to localStorage */
+    localStorage.setItem('hoc-settings', JSON.stringify(settings));
+    document.getElementById('lastUpdated').textContent = 'Last updated: ' + timeStr;
 
-                // Avatar
-                if (s.avatar) {
-                    document.getElementById('avatarPreview').src = s.avatar;
-                    document.getElementById('sidebarAvatarImg').src = s.avatar;
-                }
-
-                // Last updated
-                if (s.lastUpdated) {
-                    document.getElementById('lastUpdated').textContent = 'Last updated: ' + s.lastUpdated;
-                }
-            } catch(e) {}
-        }
-
-        // Apply dark mode
-        if (document.getElementById('darkModeToggle').checked) {
-            document.body.classList.add('dark-mode');
-        }
-
-        // Sync name
-        document.getElementById('profileNameDisplay').textContent = document.getElementById('nameInput').value;
-        document.getElementById('sidebarName').textContent = document.getElementById('nameInput').value;
-
-        // Update all toggle statuses
-        updateAllToggleStatuses();
-    }
-
-    /* ===== TOGGLE STATUS LABELS ===== */
-    function updateToggleStatuses() {
-        const toggles = [
-            { id: 'toggleWA', statusId: 'statusWA' },
-            { id: 'toggleAnalytics', statusId: 'statusAnalytics' },
-            { id: 'toggleAlert', statusId: 'statusAlert' },
-            { id: 'darkModeToggle', statusId: 'statusDark' },
-            { id: 'toggleCompact', statusId: 'statusCompact' }
-        ];
-        toggles.forEach(t => {
-            const input = document.getElementById(t.id);
-            const status = document.getElementById(t.statusId);
-            if (input.checked) {
-                status.textContent = 'Enabled';
-                status.className = 'toggle-status on';
-            } else {
-                status.textContent = 'Disabled';
-                status.className = 'toggle-status off';
-            }
-        });
-    }
-
-    /* ===== ALL TOGGLE LISTENERS ===== */
-    document.querySelectorAll('.toggle-switch input').forEach(toggle => {
-        toggle.addEventListener('change', function() {
-            updateAllToggleStatuses();
-
-            // Dark mode special handling
-            if (this.id === 'darkModeToggle') {
-                document.body.classList.toggle('dark-mode', this.checked);
-            }
-
-            const label = this.dataset.label || 'Setting';
-            const state = this.checked ? 'enabled' : 'disabled';
-            showToast(`${label} ${state}`, this.checked ? 'success' : 'info');
-        });
-    });
-
-    /* ===== AVATAR UPLOAD ===== */
-    document.getElementById('avatarInput').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            showToast('Please select a valid image file', 'error');
-            this.value = '';
-            return;
-        }
-
-        if (file.size > 5 * 1024 * 1024) {
-            showToast('Image must be under 5MB', 'error');
-            this.value = '';
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            const src = ev.target.result;
-            document.getElementById('avatarPreview').src = src;
-            document.getElementById('sidebarAvatarImg').src = src;
-            showToast('Profile photo updated', 'success');
+    /* Save to Firestore */
+    if(window._hocDb){
+        var pw = document.getElementById('passwordInput').value;
+        var firestoreData = {
+            name: settings.name,
+            email: settings.email,
+            phone: settings.phone,
+            specialization: settings.spec,
+            bio: settings.bio,
+            fee: settings.fee,
+            experience: settings.years,
+            location: settings.location,
+            distance: settings.distance,
+            available: settings.available,
+            photoURL: settings.avatar.indexOf('data:')===0 ? '' : settings.avatar,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
-        reader.readAsDataURL(file);
-    });
+        if(pw) firestoreData.passwordHint = pw.length; // Don't store actual password
 
-    /* ===== NAME SYNC ===== */
-    document.getElementById('nameInput').addEventListener('input', function() {
-        const val = this.value.trim() || 'Your Name';
-        document.getElementById('profileNameDisplay').textContent = val;
-        document.getElementById('sidebarName').textContent = val;
-
-        // Clear error
-        document.getElementById('nameField').classList.remove('error');
-    });
-
-    /* ===== EMAIL CLEAR ERROR ===== */
-    document.getElementById('emailInput').addEventListener('input', function() {
-        document.getElementById('emailField').classList.remove('error');
-    });
-
-    /* ===== PASSWORD TOGGLE ===== */
-    function togglePw() {
-        const input = document.getElementById('passwordInput');
-        const icon = document.getElementById('pwEyeIcon');
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.className = 'fas fa-eye-slash';
-        } else {
-            input.type = 'password';
-            icon.className = 'fas fa-eye';
-        }
-    }
-
-    /* ===== PASSWORD STRENGTH ===== */
-    document.getElementById('passwordInput').addEventListener('input', function() {
-        const val = this.value;
-        const fill = document.getElementById('strengthFill');
-        const label = document.getElementById('strengthLabel');
-
-        if (!val) {
-            fill.style.width = '0%';
-            fill.style.background = 'transparent';
-            label.innerHTML = '&nbsp;';
-            label.style.color = 'var(--text-muted)';
-            return;
-        }
-
-        let score = 0;
-        if (val.length >= 6) score++;
-        if (val.length >= 10) score++;
-        if (/[A-Z]/.test(val)) score++;
-        if (/[0-9]/.test(val)) score++;
-        if (/[^A-Za-z0-9]/.test(val)) score++;
-
-        const levels = [
-            { w: '10%', c: '#f43f5e', t: 'Very Weak' },
-            { w: '25%', c: '#f43f5e', t: 'Weak' },
-            { w: '50%', c: '#f59e0b', t: 'Fair' },
-            { w: '75%', c: '#0ea5e9', t: 'Good' },
-            { w: '90%', c: '#10b981', t: 'Strong' },
-            { w: '100%', c: '#059669', t: 'Very Strong' }
-        ];
-
-        const lvl = levels[Math.min(score, levels.length - 1)];
-        fill.style.width = lvl.w;
-        fill.style.background = lvl.c;
-        label.textContent = lvl.t;
-        label.style.color = lvl.c;
-    });
-
-    /* ===== VALIDATION ===== */
-    function validate() {
-        let valid = true;
-        const name = document.getElementById('nameInput').value.trim();
-        const email = document.getElementById('emailInput').value.trim();
-        const pw = document.getElementById('passwordInput').value;
-
-        // Name
-        if (!name) {
-            document.getElementById('nameField').classList.add('error');
-            valid = false;
-        } else {
-            document.getElementById('nameField').classList.remove('error');
-        }
-
-        // Email
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (email && !emailRegex.test(email)) {
-            document.getElementById('emailField').classList.add('error');
-            valid = false;
-        } else {
-            document.getElementById('emailField').classList.remove('error');
-        }
-
-        // Password (only if entered)
-        if (pw && pw.length < 6) {
-            showToast('Password must be at least 6 characters', 'error');
-            valid = false;
-        }
-
-        return valid;
-    }
-
-    /* ===== SAVE ===== */
-    function saveSettings() {
-        if (!validate()) return;
-
-        const btn = document.getElementById('saveBtn');
-        btn.classList.add('saving');
-
-        setTimeout(() => {
+        window._hocDb.collection('Doctors').doc(DOCTOR_ID).set(firestoreData, {merge:true})
+            .then(function(){
+                btn.classList.remove('saving');
+                showToast('Settings saved to cloud successfully','success');
+            })
+            .catch(function(e){
+                btn.classList.remove('saving');
+                showToast('Saved locally. Cloud sync failed: '+e.message,'warning');
+            });
+    }else{
+        setTimeout(function(){
             btn.classList.remove('saving');
-
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-
-            const settings = {
-                name: document.getElementById('nameInput').value.trim(),
-                email: document.getElementById('emailInput').value.trim(),
-                wa: document.getElementById('toggleWA').checked,
-                analytics: document.getElementById('toggleAnalytics').checked,
-                alert: document.getElementById('toggleAlert').checked,
-                dark: document.getElementById('darkModeToggle').checked,
-                compact: document.getElementById('toggleCompact').checked,
-                avatar: document.getElementById('avatarPreview').src,
-                lastUpdated: timeStr
-            };
-
-            localStorage.setItem('hoc-settings', JSON.stringify(settings));
-            document.getElementById('lastUpdated').textContent = 'Last updated: ' + timeStr;
-
-            showToast('Settings saved successfully', 'success');
-        }, 1200);
+            showToast('Settings saved successfully','success');
+        }, 1000);
     }
 
-    /* ===== RESET (with confirm) ===== */
-    function resetSettings() {
-        showConfirm(
-            'warn',
-            'Reset All Settings?',
-            'This will restore all settings to their default values. Your profile photo will also be removed.',
-            'Reset to Default',
-            function() {
-                localStorage.removeItem('hoc-settings');
+    syncPreview();
+});
 
-                document.getElementById('nameInput').value = DEFAULTS.name;
-                document.getElementById('emailInput').value = DEFAULTS.email;
-                document.getElementById('passwordInput').value = '';
-                document.getElementById('strengthFill').style.width = '0%';
-                document.getElementById('strengthLabel').innerHTML = '&nbsp;';
-                document.getElementById('toggleWA').checked = DEFAULTS.wa;
-                document.getElementById('toggleAnalytics').checked = DEFAULTS.analytics;
-                document.getElementById('toggleAlert').checked = DEFAULTS.alert;
-                document.getElementById('darkModeToggle').checked = DEFAULTS.dark;
-                document.getElementById('toggleCompact').checked = DEFAULTS.compact;
-
-                // Reset avatar
-                const defaultAvatar = 'https://ui-avatars.com/api/?name=Ali+Khan&background=10b981&color=fff&bold=true&size=200';
-                document.getElementById('avatarPreview').src = defaultAvatar;
-                document.getElementById('sidebarAvatarImg').src = defaultAvatar;
-
-                // Reset name displays
-                document.getElementById('profileNameDisplay').textContent = DEFAULTS.name;
-                document.getElementById('sidebarName').textContent = DEFAULTS.name;
-
-                // Reset dark mode
-                document.body.classList.remove('dark-mode');
-
-                // Clear errors
-                document.getElementById('nameField').classList.remove('error');
-                document.getElementById('emailField').classList.remove('error');
-
-                // Reset last updated
-                document.getElementById('lastUpdated').textContent = 'Last updated: Just now';
-
-                updateAllToggleStatuses();
-                showToast('All settings reset to defaults', 'warning');
-            }
-        );
-    }
-
-    /* ===== LOGOUT (with confirm) ===== */
-    document.getElementById('logoutLink').addEventListener('click', function(e) {
-        e.preventDefault();
-        showConfirm(
-            'danger',
-            'Logout from HealthOnCall?',
-            'You will be signed out and redirected to the login page.',
-            'Logout Now',
-            function() {
-                showToast('Logging out...', 'info');
-                setTimeout(() => {
-                    // Simulate redirect — in real app: window.location.href = 'login.html';
-                    showToast('You have been logged out', 'success');
-                }, 1500);
-            }
-        );
+/* ═══════════════════════════════════════
+   RESET
+   ═══════════════════════════════════════ */
+document.getElementById('resetBtn').addEventListener('click', function(){
+    showConfirm('warn','Reset All Settings?','This will restore all settings to their default values. Your profile photo will also be removed.','Reset to Default', function(){
+        localStorage.removeItem('hoc-settings');
+        document.getElementById('nameInput').value = DEFAULTS.name;
+        document.getElementById('emailInput').value = DEFAULTS.email;
+        document.getElementById('phoneInput').value = DEFAULTS.phone;
+        document.getElementById('specInput').value = DEFAULTS.spec;
+        document.getElementById('bioInput').value = DEFAULTS.bio;
+        document.getElementById('feeInput').value = DEFAULTS.fee;
+        document.getElementById('yearsInput').value = DEFAULTS.years;
+        document.getElementById('locationInput').value = DEFAULTS.location;
+        document.getElementById('distanceInput').value = DEFAULTS.distance;
+        document.getElementById('passwordInput').value = '';
+        document.getElementById('strengthFill').style.width = '0%';
+        document.getElementById('strengthLabel').innerHTML = '&nbsp;';
+        document.getElementById('toggleAvailability').checked = DEFAULTS.available;
+        document.getElementById('toggleWA').checked = DEFAULTS.wa;
+        document.getElementById('toggleAnalytics').checked = DEFAULTS.analytics;
+        document.getElementById('toggleAlert').checked = DEFAULTS.alert;
+        document.getElementById('darkModeToggle').checked = DEFAULTS.dark;
+        document.getElementById('toggleCompact').checked = DEFAULTS.compact;
+        var defAv = 'https://ui-avatars.com/api/?name=Ali+Khan&background=10b981&color=fff&bold=true&size=200';
+        document.getElementById('avatarPreview').src = defAv;
+        document.getElementById('sidebarAvatarImg').src = defAv;
+        document.body.classList.remove('dark-mode');
+        document.getElementById('nameField').classList.remove('error');
+        document.getElementById('emailField').classList.remove('error');
+        document.getElementById('lastUpdated').textContent = 'Last updated: Just now';
+        syncPreview();
+        updateAllToggleStatuses();
+        showToast('All settings reset to defaults','warning');
     });
+});
 
-    /* ===== CONFIRM DIALOG ===== */
-    let confirmCallback = null;
-
-    function showConfirm(type, title, msg, btnText, callback) {
-        const overlay = document.getElementById('confirmOverlay');
-        const icon = document.getElementById('confirmIcon');
-        const titleEl = document.getElementById('confirmTitle');
-        const msgEl = document.getElementById('confirmMsg');
-        const actionBtn = document.getElementById('confirmAction');
-
-        icon.className = 'confirm-icon ' + type;
-        if (type === 'warn') {
-            icon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
-            actionBtn.style.background = 'linear-gradient(135deg,#92400e,#f59e0b)';
-            actionBtn.style.boxShadow = '0 6px 20px rgba(245,158,11,.3)';
-        } else if (type === 'danger') {
-            icon.innerHTML = '<i class="fas fa-sign-out-alt"></i>';
-            actionBtn.style.background = 'linear-gradient(135deg,#9f1239,#f43f5e)';
-            actionBtn.style.boxShadow = '0 6px 20px rgba(244,63,94,.3)';
-        }
-
-        titleEl.textContent = title;
-        msgEl.textContent = msg;
-        actionBtn.textContent = btnText;
-        confirmCallback = callback;
-
-        overlay.classList.add('show');
-        document.body.style.overflow = 'hidden';
-
-        // Remove old listeners by cloning
-        const newBtn = actionBtn.cloneNode(true);
-        actionBtn.parentNode.replaceChild(newBtn, actionBtn);
-        newBtn.id = 'confirmAction';
-        newBtn.addEventListener('click', function() {
-            closeConfirm();
-            if (confirmCallback) confirmCallback();
-        });
-    }
-
-    function closeConfirm() {
-        document.getElementById('confirmOverlay').classList.remove('show');
-        document.body.style.overflow = '';
-        confirmCallback = null;
-    }
-
-    document.getElementById('confirmOverlay').addEventListener('click', function(e) {
-        if (e.target === this) closeConfirm();
+/* ═══════════════════════════════════════
+   LOGOUT
+   ═══════════════════════════════════════ */
+document.getElementById('logoutLink').addEventListener('click', function(e){
+    e.preventDefault();
+    showConfirm('danger','Logout from HealthOnCall?','You will be signed out from Firebase and redirected to the login page.','Logout Now', function(){
+        showToast('Signing out...','info');
+        if(typeof firebase!=='undefined' && firebase.auth){
+            firebase.auth().signOut().then(function(){
+                cleanupAndRedirect();
+            }).catch(function(){ cleanupAndRedirect(); });
+        }else{ cleanupAndRedirect(); }
     });
+});
+function cleanupAndRedirect(){
+    localStorage.removeItem('hoc_current_role');
+    localStorage.removeItem('hoc_user');
+    localStorage.removeItem('hoc-session-start');
+    localStorage.setItem('hoc_manual_logout','1');
+    window.location.href = '../index.html?signedout=1';
+}
 
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeConfirm();
+/* ═══════════════════════════════════════
+   CONFIRM DIALOG
+   ═══════════════════════════════════════ */
+var confirmCallback = null;
+function showConfirm(type, title, msg, btnText, callback){
+    var overlay = document.getElementById('confirmOverlay');
+    var icon = document.getElementById('confirmIcon');
+    var titleEl = document.getElementById('confirmTitle');
+    var msgEl = document.getElementById('confirmMsg');
+    var actionBtn = document.getElementById('confirmAction');
+    icon.className = 'confirm-icon ' + type;
+    if(type==='warn'){ icon.innerHTML='<i class="fas fa-exclamation-triangle"></i>'; actionBtn.style.background='linear-gradient(135deg,#92400e,#f59e0b)'; actionBtn.style.boxShadow='0 6px 20px rgba(245,158,11,.3)'; }
+    else if(type==='danger'){ icon.innerHTML='<i class="fas fa-sign-out-alt"></i>'; actionBtn.style.background='linear-gradient(135deg,#9f1239,#f43f5e)'; actionBtn.style.boxShadow='0 6px 20px rgba(244,63,94,.3)'; }
+    titleEl.textContent = title;
+    msgEl.textContent = msg;
+    actionBtn.textContent = btnText;
+    confirmCallback = callback;
+    overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+    var newBtn = actionBtn.cloneNode(true);
+    actionBtn.parentNode.replaceChild(newBtn, actionBtn);
+    newBtn.id = 'confirmAction';
+    newBtn.addEventListener('click', function(){ closeConfirm(); if(confirmCallback) confirmCallback(); });
+}
+function closeConfirm(){
+    document.getElementById('confirmOverlay').classList.remove('show');
+    document.body.style.overflow = '';
+    confirmCallback = null;
+}
+document.getElementById('confirmOverlay').addEventListener('click', function(e){ if(e.target===this) closeConfirm(); });
+document.getElementById('confirmCancelBtn').addEventListener('click', closeConfirm);
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeConfirm(); });
+
+/* ═══════════════════════════════════════
+   BUTTON RIPPLE
+   ═══════════════════════════════════════ */
+document.querySelectorAll('.btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+        var rect=this.getBoundingClientRect(), ripple=document.createElement('span');
+        ripple.className='ripple';
+        var size=Math.max(rect.width,rect.height);
+        ripple.style.width=ripple.style.height=size+'px';
+        ripple.style.left=(e.clientX-rect.left-size/2)+'px';
+        ripple.style.top=(e.clientY-rect.top-size/2)+'px';
+        this.appendChild(ripple);
+        setTimeout(function(){ripple.remove();},600);
     });
+});
 
-    /* ===== BUTTON RIPPLE EFFECT ===== */
-    document.querySelectorAll('.btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            const rect = this.getBoundingClientRect();
-            const ripple = document.createElement('span');
-            ripple.className = 'ripple';
-            const size = Math.max(rect.width, rect.height);
-            ripple.style.width = ripple.style.height = size + 'px';
-            ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
-            ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
-            this.appendChild(ripple);
-            setTimeout(() => ripple.remove(), 600);
-        });
-    });
+/* ═══════════════════════════════════════
+   TOAST
+   ═══════════════════════════════════════ */
+function showToast(message, type){
+    type=type||'success';
+    var container=document.getElementById('toastContainer'), toast=document.createElement('div');
+    toast.className='toast';
+    var icons={success:'<i class="fas fa-check-circle t-success"></i>',warning:'<i class="fas fa-exclamation-circle t-warn"></i>',error:'<i class="fas fa-times-circle t-err"></i>',info:'<i class="fas fa-info-circle t-info"></i>'};
+    var colors={success:'var(--accent)',warning:'var(--gold)',error:'var(--rose)',info:'var(--sky)'};
+    toast.style.borderLeftColor=colors[type]||colors.success;
+    toast.innerHTML=(icons[type]||icons.success)+' '+message;
+    container.appendChild(toast);
+    requestAnimationFrame(function(){requestAnimationFrame(function(){toast.classList.add('show');});});
+    setTimeout(function(){toast.classList.remove('show');setTimeout(function(){toast.remove();},500);},3500);
+}
 
-    /* ===== TOAST ===== */
-    function showToast(message, type = 'success') {
-        const container = document.getElementById('toastContainer');
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-
-        const icons = {
-            success: '<i class="fas fa-check-circle t-success"></i>',
-            warning: '<i class="fas fa-exclamation-circle t-warn"></i>',
-            error: '<i class="fas fa-times-circle t-err"></i>',
-            info: '<i class="fas fa-info-circle t-info"></i>'
-        };
-
-        const colors = {
-            success: 'var(--accent)',
-            warning: 'var(--gold)',
-            error: 'var(--rose)',
-            info: 'var(--sky)'
-        };
-
-        toast.style.borderLeftColor = colors[type] || colors.success;
-        toast.innerHTML = (icons[type] || icons.success) + ' ' + message;
-        container.appendChild(toast);
-
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => toast.classList.add('show'));
-        });
-
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 500);
-        }, 3500);
-    }
-
-    /* ===== INIT ===== */
-    loadSettings();
+/* ═══════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════ */
+loadSettings();
 </script>
-
 </body>
 </html>

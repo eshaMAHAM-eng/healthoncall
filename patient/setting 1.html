@@ -6,14 +6,27 @@
     <title>Settings | HealthOnCall</title>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="../doc/hoc-theme-init.js"></script>
+    <link rel="stylesheet" href="../doc/hoc-global-theme.css">
+    <script src="../doc/hoc-firebase-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="../doc/hoc-medical-reports.js"></script>
+    <script src="../doc/hoc-clinical-shared.js"></script>
+    <script src="../doc/hoc-notifications.js"></script>
+    <script src="hoc-patient-common.js"></script>
+   
     <style>
         :root {
             --sidebar-bg:#0b1120;
             --sidebar-hover:rgba(16,185,129,.08);
             --sidebar-active-bg:rgba(16,185,129,.15);
+            --sidebar-width:280px;
             --accent:#10b981;
             --accent-soft:#d1fae5;
             --accent-dark:#059669;
+            --accent-glow:rgba(16,185,129,.25);
             --rose:#f43f5e;
             --rose-soft:#ffe4e6;
             --rose-dark:#9f1239;
@@ -21,6 +34,7 @@
             --amber-soft:#fef3c7;
             --sky:#0ea5e9;
             --sky-soft:#e0f2fe;
+            --sky-dark:#0284c7;
             --slate-soft:#f1f5f9;
             --bg:#f0f4f8;
             --bg-gradient:linear-gradient(135deg,#f0f4f8 0%,#e8eef5 50%,#f0f4f8 100%);
@@ -35,6 +49,7 @@
             --shadow-md:0 8px 30px rgba(0,0,0,.06);
             --shadow-lg:0 20px 60px rgba(0,0,0,.1);
             --transition:all .35s cubic-bezier(.4,0,.2,1);
+            --radius:18px;
         }
         body.dark-mode{
             --bg:#020617;
@@ -53,11 +68,12 @@
             --sky-soft:rgba(14,165,233,.12);
         }
         *{margin:0;padding:0;box-sizing:border-box;}
+        html{scroll-behavior:smooth;}
         body{font-family:'DM Sans',sans-serif;background:var(--bg-gradient);color:var(--text);min-height:100vh;display:flex;overflow-x:hidden;transition:background .5s,color .4s;}
         h1,h2,h3,h4,h5,h6{font-family:'Sora',sans-serif;}
 
-        /* Blobs */
-        .bg-blobs{position:fixed;top:0;left:280px;right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;}
+        /* ===== BG BLOBS ===== */
+        .bg-blobs{position:fixed;top:0;left:var(--sidebar-width);right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;transition:left .35s cubic-bezier(.4,0,.2,1);}
         .bg-blobs .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.25;animation:blobFloat 20s ease-in-out infinite;transition:opacity .5s;}
         body.dark-mode .bg-blobs .blob{opacity:.08;}
         .blob-1{width:350px;height:350px;background:#10b981;top:-80px;right:5%;}
@@ -65,16 +81,17 @@
         .blob-3{width:220px;height:220px;background:#f59e0b;top:50%;right:25%;animation-delay:-14s;}
         @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1);}25%{transform:translate(30px,-40px) scale(1.1);}50%{transform:translate(-20px,20px) scale(.95);}75%{transform:translate(15px,35px) scale(1.05);}}
 
-        /* Sidebar */
-        .sidebar{width:280px;height:100vh;position:fixed;left:0;top:0;background:var(--sidebar-bg);z-index:1000;display:flex;flex-direction:column;overflow:hidden;transition:background .5s;}
+        /* ===== SIDEBAR ===== */
+        .sidebar{width:var(--sidebar-width);height:100vh;position:fixed;left:0;top:0;background:var(--sidebar-bg);z-index:1000;display:flex;flex-direction:column;overflow:hidden;transition:transform .35s cubic-bezier(.4,0,.2,1);}
         .sidebar::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,185,129,.07) 0%,transparent 40%,transparent 60%,rgba(14,165,233,.05) 100%);pointer-events:none;}
-        .sidebar-brand{padding:32px 28px 28px;position:relative;}
+        .sidebar-brand{padding:32px 28px 28px;position:relative;z-index:1;}
         .sidebar-brand .logo-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;margin-bottom:16px;box-shadow:0 8px 24px rgba(16,185,129,.3);}
         .sidebar-brand h2{font-size:22px;font-weight:800;color:#f1f5f9;letter-spacing:-.5px;}
         .sidebar-brand h2 span{color:var(--accent);}
         .sidebar-brand p{font-size:11px;color:#64748b;margin-top:4px;font-weight:500;letter-spacing:1px;text-transform:uppercase;}
-        .sidebar-nav{flex:1;padding:0 16px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;}
-        .sidebar-nav::-webkit-scrollbar{width:0;}
+        .sidebar-nav{flex:1;padding:0 16px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;-webkit-overflow-scrolling:touch;position:relative;z-index:1;}
+        .sidebar-nav::-webkit-scrollbar{width:3px;}
+        .sidebar-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px;}
         .nav-label{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1.5px;padding:20px 16px 8px;}
         .sidebar-nav a{display:flex;align-items:center;gap:14px;padding:13px 18px;border-radius:14px;text-decoration:none;color:#94a3b8;font-weight:500;font-size:14.5px;transition:var(--transition);position:relative;overflow:hidden;}
         .sidebar-nav a i{width:20px;text-align:center;font-size:16px;transition:var(--transition);}
@@ -85,7 +102,7 @@
         .sidebar-nav a.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:24px;background:var(--accent);border-radius:0 4px 4px 0;}
         .sidebar-nav a.nav-danger:hover{background:rgba(244,63,94,.1);}
         .sidebar-nav a.nav-danger:hover i{color:var(--rose);}
-        .sidebar-footer{padding:20px 24px;border-top:1px solid rgba(255,255,255,.05);}
+        .sidebar-footer{padding:20px 24px;border-top:1px solid rgba(255,255,255,.05);position:relative;z-index:1;}
         .sidebar-footer .user-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.03);transition:var(--transition);}
         .sidebar-footer .user-card:hover{background:rgba(255,255,255,.06);}
         .user-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#0ea5e9);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;font-family:'Sora',sans-serif;overflow:hidden;flex-shrink:0;}
@@ -93,35 +110,66 @@
         .user-info .user-name{color:#e2e8f0;font-weight:600;font-size:14px;}
         .user-info .user-role{color:#64748b;font-size:11px;}
 
-        /* Main */
-        .main{margin-left:280px;flex:1;padding:32px 40px;position:relative;z-index:1;min-height:100vh;}
+        /* ===== SIDEBAR OVERLAY ===== */
+        .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);z-index:999;opacity:0;transition:opacity .3s ease;}
+        .sidebar-overlay.active{display:block;opacity:1;}
 
-        .page-header{margin-bottom:32px;}
-        .page-header h1{font-size:28px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px;}
-        .page-header p{color:var(--text-muted);font-size:14.5px;}
+        /* ===== MOBILE TOP BAR ===== */
+        .mobile-topbar{display:none;position:fixed;top:0;left:0;right:0;z-index:900;background:var(--card);border-bottom:1px solid var(--border);padding:12px 16px;align-items:center;gap:12px;backdrop-filter:blur(12px);}
+        .hamburger{width:42px;height:42px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);font-size:18px;transition:var(--transition);flex-shrink:0;}
+        .hamburger:hover{border-color:var(--accent);color:var(--accent);}
+        .m-logo{display:flex;align-items:center;gap:10px;}
+        .m-logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:white;flex-shrink:0;}
+        .m-logo-text{font-family:'Sora',sans-serif;font-weight:800;font-size:17px;color:var(--text);}
+        .m-logo-text span{color:var(--accent);}
+        .m-notif{margin-left:auto;width:42px;height:42px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);font-size:16px;transition:var(--transition);flex-shrink:0;}
+        .m-notif:hover{border-color:var(--accent);color:var(--accent);}
 
-        .settings-layout{display:grid;grid-template-columns:240px 1fr;gap:28px;max-width:1100px;}
+        /* ===== MAIN ===== */
+        .main{
+            margin-left:var(--sidebar-width);
+            flex:1 1 auto;
+            min-width:0;
+            width:100%;
+            max-width:100%;
+            padding:32px 40px;
+            position:relative;
+            z-index:1;
+            min-height:100vh;
+            overflow-x:hidden;
+            transition:margin-left .35s cubic-bezier(.4,0,.2,1);
+        }
+        .page-header{margin-bottom:32px;max-width:100%;}
+        .page-header h1{font-size:28px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px;word-wrap:break-word;}
+        .page-header p{color:var(--text-muted);font-size:14.5px;word-wrap:break-word;}
+        .settings-layout{
+            display:grid;
+            grid-template-columns:240px 1fr;
+            gap:28px;
+            max-width:1100px;
+            width:100%;
+            margin:0 auto;
+            min-width:0;
+            align-items:start;
+        }
 
-        /* Settings Nav */
+        /* ===== SETTINGS NAV ===== */
         .settings-nav{
             background:var(--card);
             border-radius:20px;
             border:1px solid var(--card-border);
             padding:12px;
             position:sticky;
-            top:32px;
+            top:24px;
             height:fit-content;
+            max-height:calc(100vh - 48px);
+            overflow-y:auto;
+            -webkit-overflow-scrolling:touch;
             box-shadow:var(--shadow-sm);
             transition:var(--transition);
+            min-width:0;
         }
-        .settings-nav a{
-            display:flex;align-items:center;gap:12px;
-            padding:11px 16px;border-radius:12px;
-            text-decoration:none;color:var(--text-secondary);
-            font-weight:500;font-size:13.5px;
-            transition:var(--transition);
-            margin-bottom:2px;
-        }
+        .settings-nav a{display:flex;align-items:center;gap:12px;padding:11px 16px;border-radius:12px;text-decoration:none;color:var(--text-secondary);font-weight:500;font-size:13.5px;transition:var(--transition);margin-bottom:2px;}
         .settings-nav a i{width:18px;text-align:center;font-size:14px;transition:var(--transition);}
         .settings-nav a:hover{background:var(--slate-soft);color:var(--text);}
         .settings-nav a:hover i{color:var(--accent);}
@@ -130,12 +178,11 @@
         .settings-nav a.active i{color:var(--accent);}
         .settings-nav .nav-divider{height:1px;background:var(--border);margin:8px 12px;}
 
-        /* Settings Content */
-        .settings-content{min-width:0;}
+        /* ===== SETTINGS CONTENT ===== */
+        .settings-content{min-width:0;width:100%;max-width:100%;}
         .settings-section{display:none;animation:sectionIn .4s ease;}
         .settings-section.active{display:block;}
         @keyframes sectionIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
-
         .section-card{
             background:var(--card);
             border-radius:20px;
@@ -144,96 +191,71 @@
             margin-bottom:20px;
             box-shadow:var(--shadow-sm);
             transition:var(--transition);
+            max-width:100%;
+            min-width:0;
+            overflow-x:hidden;
         }
         .section-card:hover{box-shadow:var(--shadow-md);}
-        .section-card h3{font-size:16px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:10px;}
+        .section-card h3{font-size:16px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;word-break:break-word;}
         .section-card h3 i{font-size:15px;color:var(--accent);}
         .section-card .section-desc{color:var(--text-muted);font-size:13px;margin-bottom:24px;line-height:1.5;}
         .section-card .section-desc.danger-desc{color:var(--rose);opacity:.8;}
 
-        /* Form Elements */
-        .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
-        .form-group{display:flex;flex-direction:column;gap:6px;}
+        /* ===== FORM ELEMENTS ===== */
+        .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;min-width:0;}
+        .form-group{display:flex;flex-direction:column;gap:6px;min-width:0;}
         .form-group.full-width{grid-column:1/-1;}
         .form-group label{font-size:12.5px;font-weight:600;color:var(--text-secondary);letter-spacing:.3px;}
         .form-group input,.form-group select,.form-group textarea{
-            padding:12px 16px;border-radius:12px;border:1.5px solid var(--border);
-            background:var(--input-bg);color:var(--text);
-            font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;
-            transition:var(--transition);outline:none;width:100%;
+            padding:12px 16px;
+            border-radius:12px;
+            border:1.5px solid var(--border);
+            background:var(--input-bg);
+            color:var(--text);
+            font-family:'DM Sans',sans-serif;
+            font-size:14px;
+            font-weight:500;
+            transition:var(--transition);
+            outline:none;
+            width:100%;
+            max-width:100%;
+            min-width:0;
+            box-sizing:border-box;
         }
-        .form-group input:focus,.form-group select:focus,.form-group textarea:focus{
-            border-color:var(--accent);
-            box-shadow:0 0 0 3px rgba(16,185,129,.12);
-        }
+        .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,.12);}
         .form-group textarea{resize:vertical;min-height:80px;}
         .form-group input::placeholder,.form-group textarea::placeholder{color:var(--text-muted);font-weight:400;}
         .form-group .input-hint{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
         .form-group .input-hint i{margin-right:4px;font-size:10px;}
 
-        /* Avatar Upload */
+        /* ===== AVATAR UPLOAD ===== */
         .avatar-upload{display:flex;align-items:center;gap:20px;margin-bottom:24px;}
-        .avatar-preview{
-            width:80px;height:80px;border-radius:20px;
-            background:linear-gradient(135deg,var(--accent),#0ea5e9);
-            display:flex;align-items:center;justify-content:center;
-            font-size:28px;color:#fff;font-weight:800;font-family:'Sora',sans-serif;
-            overflow:hidden;position:relative;flex-shrink:0;
-            box-shadow:0 8px 24px rgba(16,185,129,.25);
-        }
+        .avatar-preview{width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,var(--accent),#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;font-weight:800;font-family:'Sora',sans-serif;overflow:hidden;position:relative;flex-shrink:0;box-shadow:0 8px 24px rgba(16,185,129,.25);}
         .avatar-preview img{width:100%;height:100%;object-fit:cover;}
-        .avatar-preview .avatar-overlay{
-            position:absolute;inset:0;background:rgba(0,0,0,.45);
-            display:flex;align-items:center;justify-content:center;
-            opacity:0;transition:var(--transition);cursor:pointer;
-        }
+        .avatar-preview .avatar-overlay{position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;opacity:0;transition:var(--transition);cursor:pointer;}
         .avatar-preview:hover .avatar-overlay{opacity:1;}
         .avatar-preview .avatar-overlay i{color:#fff;font-size:18px;}
         .avatar-actions h4{font-size:14px;font-weight:700;margin-bottom:4px;}
         .avatar-actions p{font-size:12px;color:var(--text-muted);margin-bottom:10px;}
-        .avatar-actions .btn-sm{
-            padding:8px 16px;border-radius:10px;border:1.5px solid var(--border);
-            background:var(--slate-soft);color:var(--text-secondary);
-            font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;
-            cursor:pointer;transition:var(--transition);
-        }
+        .avatar-actions .btn-sm{padding:8px 16px;border-radius:10px;border:1.5px solid var(--border);background:var(--slate-soft);color:var(--text-secondary);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:var(--transition);}
         .avatar-actions .btn-sm:hover{border-color:var(--accent);color:var(--accent);}
 
-        /* Toggle Switch */
-        .setting-row{
-            display:flex;align-items:center;justify-content:space-between;
-            padding:16px 0;border-bottom:1px solid var(--border);
-        }
+        /* ===== TOGGLE SWITCH ===== */
+        .setting-row{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;}
         .setting-row:last-child{border-bottom:none;}
-        .setting-row .setting-info{flex:1;margin-right:16px;}
+        .setting-row .setting-info{flex:1;margin-right:16px;min-width:0;}
         .setting-row .setting-info h4{font-size:14px;font-weight:600;margin-bottom:3px;}
         .setting-row .setting-info p{font-size:12.5px;color:var(--text-muted);line-height:1.4;}
-
-        .toggle{
-            position:relative;width:48px;height:26px;flex-shrink:0;cursor:pointer;
-        }
+        .toggle{position:relative;width:48px;height:26px;flex-shrink:0;cursor:pointer;}
         .toggle input{opacity:0;width:0;height:0;}
-        .toggle .slider{
-            position:absolute;inset:0;background:var(--border);
-            border-radius:26px;transition:var(--transition);
-        }
-        .toggle .slider::before{
-            content:'';position:absolute;width:20px;height:20px;
-            left:3px;bottom:3px;background:#fff;
-            border-radius:50%;transition:var(--transition);
-            box-shadow:0 2px 6px rgba(0,0,0,.15);
-        }
+        .toggle .slider{position:absolute;inset:0;background:var(--border);border-radius:26px;transition:var(--transition);}
+        .toggle .slider::before{content:'';position:absolute;width:20px;height:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:var(--transition);box-shadow:0 2px 6px rgba(0,0,0,.15);}
         .toggle input:checked + .slider{background:var(--accent);}
         .toggle input:checked + .slider::before{transform:translateX(22px);}
         .toggle input:focus-visible + .slider{box-shadow:0 0 0 3px rgba(16,185,129,.2);}
 
-        /* Buttons */
-        .btn{
-            padding:12px 24px;border-radius:12px;
-            font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;
-            cursor:pointer;transition:var(--transition);border:none;
-            display:inline-flex;align-items:center;gap:8px;position:relative;overflow:hidden;
-        }
+        /* ===== BUTTONS ===== */
+        .btn{padding:12px 24px;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:var(--transition);border:none;display:inline-flex;align-items:center;gap:8px;position:relative;overflow:hidden;}
         .btn-primary{background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:#fff;box-shadow:0 4px 16px rgba(16,185,129,.25);}
         .btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(16,185,129,.35);}
         .btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text-secondary);}
@@ -242,11 +264,10 @@
         .btn-danger:hover{background:var(--rose);color:#fff;transform:translateY(-1px);}
         .btn-sm{padding:9px 18px;font-size:13px;border-radius:10px;}
         .btn-group{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap;}
-
         .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.3);transform:scale(0);animation:rippleAnim .6s ease-out;pointer-events:none;}
         @keyframes rippleAnim{to{transform:scale(4);opacity:0;}}
 
-        /* Badge */
+        /* ===== BADGE ===== */
         .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:.3px;}
         .badge-accent{background:var(--accent-soft);color:var(--accent-dark);}
         body.dark-mode .badge-accent{color:var(--accent);}
@@ -256,52 +277,40 @@
         body.dark-mode .badge-amber{color:var(--amber);}
         body.dark-mode .badge-sky{color:var(--sky);}
 
-        /* Session Cards */
-        .session-card{
-            display:flex;align-items:center;gap:16px;
-            padding:16px;border-radius:14px;
-            background:var(--input-bg);margin-bottom:10px;
-            border:1px solid var(--card-border);
-            transition:var(--transition);
-        }
+        /* ===== SESSION CARDS ===== */
+        .session-card{display:flex;align-items:flex-start;gap:16px;padding:16px;border-radius:14px;background:var(--input-bg);margin-bottom:10px;border:1px solid var(--card-border);transition:var(--transition);flex-wrap:wrap;min-width:0;}
         .session-card:hover{border-color:var(--accent);}
-        .session-card .session-icon{
-            width:42px;height:42px;border-radius:12px;
-            display:flex;align-items:center;justify-content:center;
-            font-size:16px;flex-shrink:0;
-        }
+        .session-card .session-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
         .session-card .session-icon.desktop{background:var(--sky-soft);color:var(--sky);}
         .session-card .session-icon.mobile{background:var(--accent-soft);color:var(--accent);}
-        .session-card .session-detail{flex:1;}
-        .session-card .session-detail h4{font-size:13.5px;font-weight:600;margin-bottom:2px;}
-        .session-card .session-detail p{font-size:12px;color:var(--text-muted);}
-        .session-card .session-meta{text-align:right;flex-shrink:0;}
-        .session-card .session-meta .badge{margin-bottom:4px;}
+        .session-card .session-detail{flex:1;min-width:0;}
+        .session-card .session-detail h4{font-size:13.5px;font-weight:600;margin-bottom:2px;word-wrap:break-word;}
+        .session-card .session-detail p{font-size:12px;color:var(--text-muted);word-wrap:break-word;}
+        .session-card .session-meta{text-align:left;flex-shrink:0;width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:4px;}
+        .session-card .session-meta .badge{margin-bottom:0;}
+        @media(min-width:520px){
+            .session-card{align-items:center;flex-wrap:nowrap;}
+            .session-card .session-meta{width:auto;text-align:right;align-items:flex-end;margin-left:auto;}
+        }
 
-        /* Connected Device Card */
-        .device-card{
-            display:flex;align-items:center;gap:16px;
-            padding:18px;border-radius:14px;
-            background:var(--input-bg);
-            border:1px solid var(--card-border);
-            margin-bottom:10px;transition:var(--transition);
-        }
+        /* ===== DEVICE CARDS ===== */
+        .device-card{display:flex;align-items:flex-start;gap:16px;padding:18px;border-radius:14px;background:var(--input-bg);border:1px solid var(--card-border);margin-bottom:10px;transition:var(--transition);flex-wrap:wrap;min-width:0;}
         .device-card:hover{border-color:var(--accent);}
-        .device-card .device-icon{
-            width:46px;height:46px;border-radius:14px;
-            display:flex;align-items:center;justify-content:center;
-            font-size:20px;flex-shrink:0;
+        .device-card .device-icon{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+        .device-card .device-detail{flex:1;min-width:0;}
+        .device-card .device-detail h4{font-size:13.5px;font-weight:600;margin-bottom:2px;word-wrap:break-word;}
+        .device-card .device-detail p{font-size:12px;color:var(--text-muted);word-wrap:break-word;}
+        .device-card .device-status{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--accent);width:100%;flex-shrink:0;}
+        @media(min-width:520px){
+            .device-card{align-items:center;flex-wrap:nowrap;}
+            .device-card .device-status{width:auto;margin-left:auto;}
         }
-        .device-card .device-detail{flex:1;}
-        .device-card .device-detail h4{font-size:13.5px;font-weight:600;margin-bottom:2px;}
-        .device-card .device-detail p{font-size:12px;color:var(--text-muted);}
-        .device-card .device-status{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--accent);}
         .device-card .device-status .status-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:statusPulse 2s infinite;}
         .device-card .device-status.disconnected{color:var(--text-muted);}
         .device-card .device-status.disconnected .status-dot{background:var(--text-muted);animation:none;}
         @keyframes statusPulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 
-        /* Data Storage Bar */
+        /* ===== STORAGE BAR ===== */
         .storage-bar{height:10px;background:var(--slate-soft);border-radius:10px;overflow:hidden;margin:12px 0 8px;}
         .storage-bar .fill{height:100%;border-radius:10px;transition:width 1s ease;background:linear-gradient(90deg,var(--accent),#0ea5e9);}
         .storage-info{display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);font-weight:500;}
@@ -309,7 +318,7 @@
         .storage-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);}
         .storage-item .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 
-        /* Password Strength */
+        /* ===== PASSWORD STRENGTH ===== */
         .password-strength{display:flex;gap:4px;margin-top:8px;}
         .password-strength .bar{height:4px;flex:1;border-radius:4px;background:var(--border);transition:var(--transition);}
         .password-strength.weak .bar:nth-child(1){background:var(--rose);}
@@ -321,104 +330,165 @@
         .strength-text.medium{color:var(--amber);}
         .strength-text.strong,.strength-text.very-strong{color:var(--accent);}
 
-        /* Danger Zone */
-        .danger-zone{
-            border:1.5px dashed var(--rose);
-            background:var(--rose-soft);
-            border-radius:20px;
-            padding:28px;
-            margin-bottom:20px;
-            transition:var(--transition);
-        }
+        /* ===== DANGER ZONE ===== */
+        .danger-zone{border:1.5px dashed var(--rose);background:var(--rose-soft);border-radius:20px;padding:28px;margin-bottom:20px;transition:var(--transition);}
         body.dark-mode .danger-zone{background:rgba(244,63,94,.06);}
         .danger-zone h3{color:var(--rose)!important;}
         .danger-zone h3 i{color:var(--rose)!important;}
 
-        /* About Links */
-        .about-link{
-            display:flex;align-items:center;justify-content:space-between;
-            padding:14px 0;border-bottom:1px solid var(--border);
-            text-decoration:none;color:var(--text-secondary);transition:var(--transition);
-        }
+        /* ===== ABOUT LINKS ===== */
+        .about-link{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text-secondary);transition:var(--transition);}
         .about-link:last-child{border-bottom:none;}
         .about-link:hover{color:var(--accent);}
         .about-link .al-left{display:flex;align-items:center;gap:12px;}
         .about-link .al-left i{width:18px;text-align:center;font-size:14px;}
         .about-link .al-right{font-size:13px;opacity:.5;}
         .about-link:hover .al-right{opacity:1;}
+        .about-brand-banner{display:flex;align-items:center;gap:16px;margin-bottom:24px;padding:20px;background:var(--input-bg);border-radius:16px;min-width:0;flex-wrap:wrap;}
+        .about-brand-banner > div:last-of-type{min-width:0;}
 
-        /* Toast */
-        .toast-container{position:fixed;top:24px;right:24px;z-index:5000;display:flex;flex-direction:column;gap:10px;}
-        .toast{background:var(--card);border-radius:14px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.12);border-left:4px solid var(--accent);font-size:14px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);min-width:300px;}
+        /* ===== TOAST ===== */
+        .toast-container{position:fixed;top:24px;right:24px;z-index:5000;display:flex;flex-direction:column;gap:10px;pointer-events:none;}
+        .toast{background:var(--card);border-radius:14px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.12);border-left:4px solid var(--accent);font-size:14px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);min-width:0;max-width:min(420px,calc(100vw - 32px));pointer-events:auto;box-sizing:border-box;}
         .toast.show{transform:translateX(0);}
         .toast i{font-size:18px;}
         .toast .t-success{color:var(--accent);}
         .toast .t-err{color:var(--rose);}
         .toast .t-info{color:#0ea5e9;}
 
-        /* Modal */
-        .modal-overlay{
-            position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);
-            z-index:4000;display:none;align-items:center;justify-content:center;
-            animation:fadeIn .2s ease;
-        }
+        /* ===== MODAL ===== */
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);z-index:4000;display:none;align-items:flex-start;justify-content:center;animation:fadeIn .2s ease;padding:max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));overflow-y:auto;-webkit-overflow-scrolling:touch;box-sizing:border-box;}
         .modal-overlay.show{display:flex;}
         @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
-        .modal{
-            background:var(--card);border-radius:22px;padding:32px;
-            max-width:420px;width:90%;box-shadow:var(--shadow-lg);
-            border:1px solid var(--card-border);
-            animation:modalPop .3s cubic-bezier(.34,1.56,.64,1);
-        }
+        .modal{background:var(--card);border-radius:22px;padding:32px;max-width:420px;width:min(100%,420px);max-height:min(90vh,800px);overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:var(--shadow-lg);border:1px solid var(--card-border);animation:modalPop .3s cubic-bezier(.34,1.56,.64,1);margin:12px;box-sizing:border-box;}
         @keyframes modalPop{from{transform:scale(.9);opacity:0;}to{transform:scale(1);opacity:1;}}
         .modal h3{font-size:18px;font-weight:800;margin-bottom:8px;}
         .modal p{font-size:13.5px;color:var(--text-muted);margin-bottom:24px;line-height:1.6;}
         .modal .btn-group{margin-top:0;}
 
-        /* Responsive */
+        /* ===== RESPONSIVE ===== */
+        @media(max-width:1200px){
+            .settings-layout{grid-template-columns:minmax(0,200px) minmax(0,1fr);gap:20px;}
+            .main{padding:28px 22px;}
+        }
         @media(max-width:1024px){
-            .settings-layout{grid-template-columns:200px 1fr;gap:20px;}
+            .settings-layout{grid-template-columns:1fr;gap:14px;}
+            .settings-nav{
+                position:relative;
+                top:auto;
+                max-height:none;
+                display:flex;
+                flex-direction:row;
+                flex-wrap:nowrap;
+                overflow-x:auto;
+                overflow-y:hidden;
+                gap:4px;
+                padding:10px;
+                -webkit-overflow-scrolling:touch;
+                scroll-snap-type:x proximity;
+            }
+            .settings-nav::-webkit-scrollbar{height:4px;}
+            .settings-nav::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+            .settings-nav a{
+                white-space:nowrap;
+                flex-shrink:0;
+                margin-bottom:0;
+                scroll-snap-align:start;
+                padding:10px 14px;
+                font-size:13px;
+            }
+            .settings-nav .nav-divider{display:none;}
+            .main{padding:24px 18px;}
+            .page-header h1{font-size:24px;}
         }
         @media(max-width:768px){
             .sidebar{transform:translateX(-100%);}
-            .main{margin-left:0;padding:20px;}
-            .settings-layout{grid-template-columns:1fr;gap:16px;}
-            .settings-nav{position:static;display:flex;overflow-x:auto;padding:8px;gap:2px;}
-            .settings-nav::-webkit-scrollbar{display:none;}
-            .settings-nav a{white-space:nowrap;padding:10px 14px;font-size:12.5px;}
-            .settings-nav .nav-divider{display:none;}
+            .sidebar.open{transform:translateX(0);}
+            .sidebar-overlay.active{display:block;opacity:1;}
+            .mobile-topbar{
+                display:flex!important;
+                left:0;
+                right:0;
+                width:100%;
+                padding-top:max(12px, env(safe-area-inset-top, 0px));
+                padding-left:max(16px, env(safe-area-inset-left, 0px));
+                padding-right:max(16px, env(safe-area-inset-right, 0px));
+            }
+            .main{
+                margin-left:0;
+                padding:max(72px, calc(56px + env(safe-area-inset-top, 0px))) max(14px, env(safe-area-inset-left, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-right, 0px));
+            }
+            .bg-blobs{left:0;}
             .form-grid{grid-template-columns:1fr;}
             .page-header h1{font-size:22px;}
-            .section-card{padding:20px;border-radius:16px;}
-            .avatar-upload{flex-direction:column;text-align:center;}
+            .section-card{padding:18px;border-radius:16px;}
+            .section-card h3{font-size:15px;}
+            .avatar-upload{flex-direction:column;text-align:center;align-items:center;}
+            .toast-container{right:max(8px, env(safe-area-inset-right));left:max(8px, env(safe-area-inset-left));top:max(8px, env(safe-area-inset-top));}
+            .toast{min-width:0;max-width:100%;font-size:12px;padding:10px 14px;}
+            .setting-row{flex-direction:column;align-items:stretch;}
+            .setting-row .setting-info{margin-right:0;}
+            .setting-row .toggle{align-self:flex-end;}
+            .settings-content{overflow-x:hidden;}
+            .btn-group .btn{flex:1 1 auto;justify-content:center;min-width:0;}
+            .section-card div[style*="grid-template-columns:1fr 1fr 1fr"]{display:grid!important;grid-template-columns:1fr!important;}
+            .about-brand-banner{flex-direction:column;align-items:flex-start;}
+            .about-brand-banner .badge{margin-left:0!important;margin-top:8px;}
+            .about-link{flex-wrap:wrap;gap:8px 0;}
+        }
+        @media(max-width:480px){
+            .section-card{padding:14px 12px;}
+            .page-header h1{font-size:19px;}
+            .settings-nav a{padding:9px 12px;font-size:12px;}
+            .modal{padding:22px 18px;border-radius:18px;}
         }
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
-        html{scroll-behavior:smooth;}
     </style>
+    <link rel="stylesheet" href="../doc/SIDEBAR.CSS">
+    <link rel="stylesheet" href="../doc/shared sidebar footer.css">
+    <script src="../doc/hoc-sidebar.js" defer></script>
 </head>
 <body>
+    <script src="hoc-patient-common.js"></script>
+    <script>try{HOC_applyThemeFromStorage();}catch(e){}</script>
 
-    <!-- Blobs -->
+    <!-- BG Blobs -->
     <div class="bg-blobs">
         <div class="blob blob-1"></div>
         <div class="blob blob-2"></div>
         <div class="blob blob-3"></div>
     </div>
 
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="hocSbOverlay"></div>
+
+    <!-- Mobile Top Bar -->
+    <div class="mobile-topbar" id="mobTopbar">
+        <button class="hamburger" id="hocHamburger" aria-label="Open menu"><i class="fas fa-bars"></i></button>
+        <div class="m-logo">
+            <div class="m-logo-icon"><i class="fas fa-heartbeat"></i></div>
+            <span class="m-logo-text">Health<span>OnCall</span></span>
+        </div>
+        <button class="m-notif" aria-label="Notifications"><i class="fas fa-bell"></i></button>
+    </div>
+
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="hocSidebar">
         <div class="sidebar-brand">
             <div class="logo-icon"><i class="fas fa-heartbeat"></i></div>
-            <h2>Health<span>OnCall</span></h2>
-            <p>Patient Portal</p>
+            <div>
+                <h2>Health<span>OnCall</span></h2>
+                <p>Patient Portal</p>
+            </div>
         </div>
         <nav class="sidebar-nav">
             <div class="nav-label">Menu</div>
             <a href="Patient Dashboard Home Page p1.html"><i class="fas fa-th-large"></i> Home</a>
-            <a href="find doc 1.html"><i class="fas fa-search"></i> Find Specialist</a>
-            <a href="services 1.html"><i class="fas fa-concierge-bell"></i> Services</a>
+            
+            <a href="book-appointment.html"><i class="fas fa-calendar-plus"></i> Book Appointment</a>
+            <a href="Patient Dashboard Home Page p1.html#messages"><i class="fas fa-comments"></i> Messages</a>
             <a href="assistant 1.html"><i class="fas fa-robot"></i> AI Assistant</a>
-            <a href="feedaback.html"><i class="fas fa-star"></i> Feedback</a>
+            <a href="feedback 1.html"><i class="fas fa-star"></i> Feedback</a>
             <div class="nav-label">Account</div>
             <a href="setting 1.html" class="active"><i class="fas fa-cog"></i> Settings</a>
             <a href="logout 1.html" class="nav-danger"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -427,7 +497,7 @@
             <div class="user-card">
                 <div class="user-avatar"><img src="https://ui-avatars.com/api/?name=Sarah+Johnson&background=10b981&color=fff&bold=true&size=80" alt="" id="sidebarAvatarImg"></div>
                 <div class="user-info">
-                    <div class="user-name" id="sidebarName">Sarah Johnson</div>
+                    <div class="user-name" id="sidebarName">Esha Maham</div>
                     <div class="user-role">Patient</div>
                 </div>
             </div>
@@ -445,10 +515,12 @@
             <!-- Settings Nav -->
             <div class="settings-nav">
                 <a href="#" class="active" data-section="profile"><i class="fas fa-user"></i> Profile</a>
+                <a href="#" data-section="chat"><i class="fas fa-comments"></i> Chat</a>
                 <a href="#" data-section="security"><i class="fas fa-shield-alt"></i> Security</a>
                 <a href="#" data-section="notifications"><i class="fas fa-bell"></i> Notifications</a>
                 <a href="#" data-section="privacy"><i class="fas fa-lock"></i> Privacy</a>
                 <a href="#" data-section="appearance"><i class="fas fa-palette"></i> Appearance</a>
+                <a href="#" data-section="integrations"><i class="fas fa-plug"></i> Integrations</a>
                 <a href="#" data-section="devices"><i class="fas fa-watch"></i> Devices</a>
                 <div class="nav-divider"></div>
                 <a href="#" data-section="data"><i class="fas fa-database"></i> Data & Storage</a>
@@ -458,7 +530,7 @@
             <!-- Settings Content -->
             <div class="settings-content">
 
-                <!-- ==================== PROFILE ==================== -->
+                <!-- PROFILE -->
                 <div class="settings-section active" id="sec-profile">
                     <div class="section-card">
                         <h3><i class="fas fa-camera"></i> Profile Photo</h3>
@@ -477,900 +549,487 @@
                                 <button class="btn-sm" onclick="document.getElementById('avatarInput').click()">Upload Photo</button>
                             </div>
                         </div>
-
                         <h3><i class="fas fa-id-card"></i> Personal Information</h3>
                         <p class="section-desc">This information is used across your HealthOnCall account.</p>
                         <div class="form-grid">
-                            <div class="form-group">
-                                <label>First Name</label>
-                                <input type="text" id="firstName" value="Sarah" placeholder="Enter first name">
-                            </div>
-                            <div class="form-group">
-                                <label>Last Name</label>
-                                <input type="text" id="lastName" value="Johnson" placeholder="Enter last name">
-                            </div>
-                            <div class="form-group">
-                                <label>Email Address</label>
-                                <input type="email" id="emailInput" value="sarah.johnson@email.com" placeholder="Enter email">
-                                <span class="input-hint"><i class="fas fa-check-circle" style="color:var(--accent)"></i> Verified</span>
-                            </div>
-                            <div class="form-group">
-                                <label>Phone Number</label>
-                                <input type="tel" id="phoneInput" value="+1 (555) 234-5678" placeholder="Enter phone number">
-                                <span class="input-hint"><i class="fas fa-check-circle" style="color:var(--accent)"></i> Verified</span>
-                            </div>
-                            <div class="form-group">
-                                <label>Date of Birth</label>
-                                <input type="date" id="dobInput" value="1992-03-15">
-                            </div>
-                            <div class="form-group">
-                                <label>Gender</label>
-                                <select id="genderInput">
-                                    <option value="female" selected>Female</option>
-                                    <option value="male">Male</option>
-                                    <option value="other">Other</option>
-                                    <option value="prefer-not">Prefer not to say</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Blood Group</label>
-                                <select id="bloodInput">
-                                    <option value="">Select blood group</option>
-                                    <option value="A+" selected>A+</option>
-                                    <option value="A-">A-</option>
-                                    <option value="B+">B+</option>
-                                    <option value="B-">B-</option>
-                                    <option value="AB+">AB+</option>
-                                    <option value="AB-">AB-</option>
-                                    <option value="O+">O+</option>
-                                    <option value="O-">O-</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Language</label>
-                                <select id="langInput">
-                                    <option value="en" selected>English</option>
-                                    <option value="ur">Urdu</option>
-                                    <option value="es">Spanish</option>
-                                    <option value="ar">Arabic</option>
-                                    <option value="hi">Hindi</option>
-                                </select>
-                            </div>
-                            <div class="form-group full-width">
-                                <label>Address</label>
-                                <textarea id="addressInput" placeholder="Enter your home address">456 Oak Avenue, Apt 12B, Brooklyn, NY 11201</textarea>
-                            </div>
+                            <div class="form-group"><label>First Name</label><input type="text" id="firstName" value="Sarah" placeholder="Enter first name"></div>
+                            <div class="form-group"><label>Last Name</label><input type="text" id="lastName" value="Johnson" placeholder="Enter last name"></div>
+                            <div class="form-group"><label>Email Address</label><input type="email" id="emailInput" value="sarah.johnson@email.com" placeholder="Enter email"><span class="input-hint"><i class="fas fa-check-circle" style="color:var(--accent)"></i> Verified</span></div>
+                            <div class="form-group"><label>Phone Number</label><input type="tel" id="phoneInput" value="+1 (555) 234-5678" placeholder="Enter phone number"><span class="input-hint"><i class="fas fa-check-circle" style="color:var(--accent)"></i> Verified</span></div>
+                            <div class="form-group"><label>Date of Birth</label><input type="date" id="dobInput" value="1992-03-15"></div>
+                            <div class="form-group"><label>Gender</label><select id="genderInput"><option value="female" selected>Female</option><option value="male">Male</option><option value="other">Other</option><option value="prefer-not">Prefer not to say</option></select></div>
+                            <div class="form-group"><label>Blood Group</label><select id="bloodInput"><option value="">Select blood group</option><option value="A+" selected>A+</option><option value="A-">A-</option><option value="B+">B+</option><option value="B-">B-</option><option value="AB+">AB+</option><option value="AB-">AB-</option><option value="O+">O+</option><option value="O-">O-</option></select></div>
+                            <div class="form-group"><label>Language</label><select id="langInput"><option value="en" selected>English</option><option value="ur">Urdu</option><option value="es">Spanish</option><option value="ar">Arabic</option><option value="hi">Hindi</option></select></div>
+                            <div class="form-group full-width"><label>Address</label><textarea id="addressInput" placeholder="Enter your home address">456 Oak Avenue, Apt 12B, Brooklyn, NY 11201</textarea></div>
                         </div>
                         <div class="btn-group">
                             <button class="btn btn-primary" onclick="saveProfile()"><i class="fas fa-save"></i> Save Changes</button>
                             <button class="btn btn-outline" onclick="resetProfile()"><i class="fas fa-undo"></i> Reset</button>
                         </div>
                     </div>
-
                     <div class="section-card">
                         <h3><i class="fas fa-user-shield"></i> Emergency Contact</h3>
                         <p class="section-desc">This person will be contacted in case of a medical emergency.</p>
                         <div class="form-grid">
-                            <div class="form-group">
-                                <label>Contact Name</label>
-                                <input type="text" id="emName" value="Michael Johnson" placeholder="Full name">
-                            </div>
-                            <div class="form-group">
-                                <label>Relationship</label>
-                                <select id="emRelation">
-                                    <option value="spouse" selected>Spouse</option>
-                                    <option value="parent">Parent</option>
-                                    <option value="sibling">Sibling</option>
-                                    <option value="child">Child</option>
-                                    <option value="friend">Friend</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Phone Number</label>
-                                <input type="tel" id="emPhone" value="+1 (555) 987-6543" placeholder="Phone number">
-                            </div>
-                            <div class="form-group">
-                                <label>Alternate Phone</label>
-                                <input type="tel" id="emPhone2" value="" placeholder="Optional">
-                            </div>
+                            <div class="form-group"><label>Contact Name</label><input type="text" id="emName" value="Michael Johnson" placeholder="Full name"></div>
+                            <div class="form-group"><label>Relationship</label><select id="emRelation"><option value="spouse" selected>Spouse</option><option value="parent">Parent</option><option value="sibling">Sibling</option><option value="child">Child</option><option value="friend">Friend</option><option value="other">Other</option></select></div>
+                            <div class="form-group"><label>Phone Number</label><input type="tel" id="emPhone" value="+1 (555) 987-6543" placeholder="Phone number"></div>
+                            <div class="form-group"><label>Alternate Phone</label><input type="tel" id="emPhone2" value="" placeholder="Optional"></div>
                         </div>
-                        <div class="btn-group">
-                            <button class="btn btn-primary btn-sm" onclick="saveEmergency()"><i class="fas fa-save"></i> Save Emergency Contact</button>
+                        <div class="btn-group"><button class="btn btn-primary btn-sm" onclick="saveEmergency()"><i class="fas fa-save"></i> Save Emergency Contact</button></div>
+                    </div>
+                </div>
+
+                <!-- CHAT (in-app messaging + assistant link — no LLM keys here) -->
+                <div class="settings-section" id="sec-chat">
+                    <div class="section-card">
+                        <h3><i class="fas fa-comments"></i> In-app chat (patient)</h3>
+                        <p class="section-desc">After staff approves an appointment, open <b>Home</b> and use <b>Messages &amp; care team</b> to chat with your doctor or lab technician in the portal — no WhatsApp required.</p>
+                        <div class="btn-group" style="margin-top:0;">
+                            <a class="btn btn-primary" href="Patient Dashboard Home Page p1.html#messages" style="text-decoration:none;display:inline-flex;"><i class="fas fa-home"></i> Go to Messages</a>
+                        </div>
+                    </div>
+                    <div class="section-card">
+                        <h3><i class="fas fa-robot"></i> AI assistant</h3>
+                        <p class="section-desc">Open the assistant for booking help and general guidance. It does not replace medical advice from your clinician.</p>
+                        <div class="btn-group" style="margin-top:0;">
+                            <a class="btn btn-outline" href="assistant 1.html" style="text-decoration:none;display:inline-flex;"><i class="fas fa-robot"></i> Open AI Assistant</a>
                         </div>
                     </div>
                 </div>
 
-                <!-- ==================== SECURITY ==================== -->
+                <!-- SECURITY -->
                 <div class="settings-section" id="sec-security">
                     <div class="section-card">
                         <h3><i class="fas fa-key"></i> Change Password</h3>
                         <p class="section-desc">Your password must be at least 8 characters long and include a mix of letters, numbers, and symbols.</p>
                         <div class="form-grid" style="max-width:480px;">
-                            <div class="form-group full-width">
-                                <label>Current Password</label>
-                                <div style="position:relative">
-                                    <input type="password" id="currentPass" placeholder="Enter current password" style="padding-right:44px">
-                                    <button onclick="togglePass('currentPass',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;"><i class="fas fa-eye"></i></button>
-                                </div>
-                            </div>
-                            <div class="form-group full-width">
-                                <label>New Password</label>
-                                <div style="position:relative">
-                                    <input type="password" id="newPass" placeholder="Enter new password" style="padding-right:44px" oninput="checkStrength(this.value)">
-                                    <button onclick="togglePass('newPass',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;"><i class="fas fa-eye"></i></button>
-                                </div>
-                                <div class="password-strength" id="strengthBar">
-                                    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                                </div>
-                                <span class="strength-text" id="strengthText"></span>
-                            </div>
-                            <div class="form-group full-width">
-                                <label>Confirm New Password</label>
-                                <input type="password" id="confirmPass" placeholder="Re-enter new password">
-                                <span class="input-hint" id="matchHint" style="display:none"></span>
-                            </div>
+                            <div class="form-group full-width"><label>Current Password</label><div style="position:relative"><input type="password" id="currentPass" placeholder="Enter current password" style="padding-right:44px"><button onclick="togglePass('currentPass',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;"><i class="fas fa-eye"></i></button></div></div>
+                            <div class="form-group full-width"><label>New Password</label><div style="position:relative"><input type="password" id="newPass" placeholder="Enter new password" style="padding-right:44px" oninput="checkStrength(this.value)"><button onclick="togglePass('newPass',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;"><i class="fas fa-eye"></i></button></div><div class="password-strength" id="strengthBar"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div><span class="strength-text" id="strengthText"></span></div>
+                            <div class="form-group full-width"><label>Confirm New Password</label><input type="password" id="confirmPass" placeholder="Re-enter new password"><span class="input-hint" id="matchHint" style="display:none"></span></div>
                         </div>
-                        <div class="btn-group">
-                            <button class="btn btn-primary btn-sm" onclick="changePassword()"><i class="fas fa-lock"></i> Update Password</button>
-                        </div>
+                        <div class="btn-group"><button class="btn btn-primary btn-sm" onclick="changePassword()"><i class="fas fa-lock"></i> Update Password</button></div>
                     </div>
-
                     <div class="section-card">
                         <h3><i class="fas fa-fingerprint"></i> Two-Factor Authentication</h3>
                         <p class="section-desc">Add an extra layer of security to your account by requiring a code when signing in.</p>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Authenticator App</h4>
-                                <p>Use Google Authenticator or Authy to generate verification codes</p>
-                            </div>
-                            <span class="badge badge-amber"><i class="fas fa-exclamation-circle"></i> Not Set Up</span>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>SMS Verification</h4>
-                                <p>Receive a code via SMS to your registered phone number</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" onchange="toggle2FA(this,'SMS')"><span class="slider"></span></label>
-                        </div>
-                        <div class="btn-group">
-                            <button class="btn btn-outline btn-sm" onclick="showToast('Authenticator setup instructions sent to your email','info')"><i class="fas fa-qrcode"></i> Set Up Authenticator</button>
-                        </div>
+                        <div class="setting-row"><div class="setting-info"><h4>Authenticator App</h4><p>Use Google Authenticator or Authy to generate verification codes</p></div><span class="badge badge-amber"><i class="fas fa-exclamation-circle"></i> Not Set Up</span></div>
+                        <div class="setting-row"><div class="setting-info"><h4>SMS Verification</h4><p>Receive a code via SMS to your registered phone number</p></div><label class="toggle"><input type="checkbox" onchange="toggle2FA(this,'SMS')"><span class="slider"></span></label></div>
+                        <div class="btn-group"><button class="btn btn-outline btn-sm" onclick="showToast('Authenticator setup instructions sent to your email','info')"><i class="fas fa-qrcode"></i> Set Up Authenticator</button></div>
                     </div>
-
                     <div class="section-card">
                         <h3><i class="fas fa-desktop"></i> Active Sessions</h3>
                         <p class="section-desc">Devices where you are currently signed in. Revoke any session you don't recognize.</p>
-                        <div class="session-card">
-                            <div class="session-icon desktop"><i class="fas fa-laptop"></i></div>
-                            <div class="session-detail">
-                                <h4>Windows PC — Chrome</h4>
-                                <p>New York, US · 192.168.1.***</p>
-                            </div>
-                            <div class="session-meta">
-                                <span class="badge badge-accent"><i class="fas fa-circle" style="font-size:6px"></i> Current</span>
-                                <p style="font-size:11px;color:var(--text-muted);margin-top:4px">Active now</p>
-                            </div>
-                        </div>
-                        <div class="session-card">
-                            <div class="session-icon mobile"><i class="fas fa-mobile-alt"></i></div>
-                            <div class="session-detail">
-                                <h4>iPhone 14 — Safari</h4>
-                                <p>New York, US · 10.0.0.***</p>
-                            </div>
-                            <div class="session-meta">
-                                <p style="font-size:11px;color:var(--text-muted)">2 hours ago</p>
-                                <button class="btn btn-outline btn-sm" style="margin-top:6px;padding:6px 12px;font-size:11px;" onclick="revokeSession(this)"><i class="fas fa-times"></i> Revoke</button>
-                            </div>
-                        </div>
-                        <div class="session-card">
-                            <div class="session-icon desktop"><i class="fas fa-tablet-alt"></i></div>
-                            <div class="session-detail">
-                                <h4>iPad Air — Safari</h4>
-                                <p>Newark, US · 172.16.***.***</p>
-                            </div>
-                            <div class="session-meta">
-                                <p style="font-size:11px;color:var(--text-muted)">3 days ago</p>
-                                <button class="btn btn-outline btn-sm" style="margin-top:6px;padding:6px 12px;font-size:11px;" onclick="revokeSession(this)"><i class="fas fa-times"></i> Revoke</button>
-                            </div>
-                        </div>
+                        <div class="session-card"><div class="session-icon desktop"><i class="fas fa-laptop"></i></div><div class="session-detail"><h4>Windows PC — Chrome</h4><p>New York, US · 192.168.1.***</p></div><div class="session-meta"><span class="badge badge-accent"><i class="fas fa-circle" style="font-size:6px"></i> Current</span><p style="font-size:11px;color:var(--text-muted);margin-top:4px">Active now</p></div></div>
+                        <div class="session-card"><div class="session-icon mobile"><i class="fas fa-mobile-alt"></i></div><div class="session-detail"><h4>iPhone 14 — Safari</h4><p>New York, US · 10.0.0.***</p></div><div class="session-meta"><p style="font-size:11px;color:var(--text-muted)">2 hours ago</p><button class="btn btn-outline btn-sm" style="margin-top:6px;padding:6px 12px;font-size:11px;" onclick="revokeSession(this)"><i class="fas fa-times"></i> Revoke</button></div></div>
+                        <div class="session-card"><div class="session-icon desktop"><i class="fas fa-tablet-alt"></i></div><div class="session-detail"><h4>iPad Air — Safari</h4><p>Newark, US · 172.16.***.***</p></div><div class="session-meta"><p style="font-size:11px;color:var(--text-muted)">3 days ago</p><button class="btn btn-outline btn-sm" style="margin-top:6px;padding:6px 12px;font-size:11px;" onclick="revokeSession(this)"><i class="fas fa-times"></i> Revoke</button></div></div>
                     </div>
                 </div>
 
-                <!-- ==================== NOTIFICATIONS ==================== -->
+                <!-- NOTIFICATIONS -->
                 <div class="settings-section" id="sec-notifications">
-                    <div class="section-card">
-                        <h3><i class="fas fa-bell"></i> Notification Preferences</h3>
-                        <p class="section-desc">Choose how and when you want to be notified.</p>
-
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Push Notifications</h4>
-                                <p>Receive notifications directly in your browser</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" checked onchange="saveNotifPref('push',this.checked)"><span class="slider"></span></label>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Email Notifications</h4>
-                                <p>Get important updates via email</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" checked onchange="saveNotifPref('email',this.checked)"><span class="slider"></span></label>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>SMS Notifications</h4>
-                                <p>Receive text messages for critical alerts</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" onchange="saveNotifPref('sms',this.checked)"><span class="slider"></span></label>
-                        </div>
-                    </div>
-
-                    <div class="section-card">
-                        <h3><i class="fas fa-calendar-check"></i> Appointment Alerts</h3>
-                        <p class="section-desc">Manage reminders related to your appointments.</p>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Appointment Reminders</h4>
-                                <p>Get reminded 1 hour and 24 hours before your appointment</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" checked onchange="saveNotifPref('appt-reminder',this.checked)"><span class="slider"></span></label>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Doctor Availability Alerts</h4>
-                                <p>Know when your preferred doctors become available</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" checked onchange="saveNotifPref('doc-avail',this.checked)"><span class="slider"></span></label>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Cancellation Updates</h4>
-                                <p>Get notified if a doctor cancels or reschedules</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" checked onchange="saveNotifPref('cancel',this.checked)"><span class="slider"></span></label>
-                        </div>
-                    </div>
-
-                    <div class="section-card">
-                        <h3><i class="fas fa-file-medical"></i> Health Updates</h3>
-                        <p class="section-desc">Notifications about your medical data.</p>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>New Prescription Alerts</h4>
-                                <p>Get notified when a doctor prescribes new medication</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" checked onchange="saveNotifPref('prescription',this.checked)"><span class="slider"></span></label>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Lab Results Ready</h4>
-                                <p>Know when your lab results are available for review</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" checked onchange="saveNotifPref('lab-results',this.checked)"><span class="slider"></span></label>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Health Tips & Articles</h4>
-                                <p>Weekly health tips based on your medical profile</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" onchange="saveNotifPref('health-tips',this.checked)"><span class="slider"></span></label>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Promotional Offers</h4>
-                                <p>Discounts on health packages and services</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" onchange="saveNotifPref('promo',this.checked)"><span class="slider"></span></label>
-                        </div>
-                    </div>
+                    <div class="section-card"><h3><i class="fas fa-bell"></i> Notification Preferences</h3><p class="section-desc">Choose how and when you want to be notified.</p><div class="setting-row"><div class="setting-info"><h4>Push Notifications</h4><p>Receive notifications directly in your browser</p></div><label class="toggle"><input type="checkbox" checked onchange="saveNotifPref('push',this.checked)"><span class="slider"></span></label></div><div class="setting-row"><div class="setting-info"><h4>Email Notifications</h4><p>Get important updates via email</p></div><label class="toggle"><input type="checkbox" checked onchange="saveNotifPref('email',this.checked)"><span class="slider"></span></label></div><div class="setting-row"><div class="setting-info"><h4>SMS Notifications</h4><p>Receive text messages for critical alerts</p></div><label class="toggle"><input type="checkbox" onchange="saveNotifPref('sms',this.checked)"><span class="slider"></span></label></div></div>
+                    <div class="section-card"><h3><i class="fas fa-calendar-check"></i> Appointment Alerts</h3><p class="section-desc">Manage reminders related to your appointments.</p><div class="setting-row"><div class="setting-info"><h4>Appointment Reminders</h4><p>Get reminded 1 hour and 24 hours before your appointment</p></div><label class="toggle"><input type="checkbox" checked onchange="saveNotifPref('appt-reminder',this.checked)"><span class="slider"></span></label></div><div class="setting-row"><div class="setting-info"><h4>Doctor Availability Alerts</h4><p>Know when your preferred doctors become available</p></div><label class="toggle"><input type="checkbox" checked onchange="saveNotifPref('doc-avail',this.checked)"><span class="slider"></span></label></div><div class="setting-row"><div class="setting-info"><h4>Cancellation Updates</h4><p>Get notified if a doctor cancels or reschedules</p></div><label class="toggle"><input type="checkbox" checked onchange="saveNotifPref('cancel',this.checked)"><span class="slider"></span></label></div></div>
+                    <div class="section-card"><h3><i class="fas fa-file-medical"></i> Health Updates</h3><p class="section-desc">Notifications about your medical data.</p><div class="setting-row"><div class="setting-info"><h4>New Prescription Alerts</h4><p>Get notified when a doctor prescribes new medication</p></div><label class="toggle"><input type="checkbox" checked onchange="saveNotifPref('prescription',this.checked)"><span class="slider"></span></label></div><div class="setting-row"><div class="setting-info"><h4>Lab Results Ready</h4><p>Know when your lab results are available for review</p></div><label class="toggle"><input type="checkbox" checked onchange="saveNotifPref('lab-results',this.checked)"><span class="slider"></span></label></div><div class="setting-row"><div class="setting-info"><h4>Health Tips & Articles</h4><p>Weekly health tips based on your medical profile</p></div><label class="toggle"><input type="checkbox" onchange="saveNotifPref('health-tips',this.checked)"><span class="slider"></span></label></div><div class="setting-row"><div class="setting-info"><h4>Promotional Offers</h4><p>Discounts on health packages and services</p></div><label class="toggle"><input type="checkbox" onchange="saveNotifPref('promo',this.checked)"><span class="slider"></span></label></div></div>
                 </div>
 
-                <!-- ==================== PRIVACY ==================== -->
+                <!-- PRIVACY -->
                 <div class="settings-section" id="sec-privacy">
-                    <div class="section-card">
-                        <h3><i class="fas fa-eye-slash"></i> Profile Visibility</h3>
-                        <p class="section-desc">Control who can see your profile information.</p>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Show Profile to Doctors</h4>
-                                <p>Allow doctors to see your basic profile during appointments</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" checked onchange="savePrivacyPref('show-to-doc',this.checked)"><span class="slider"></span></label>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Show Online Status</h4>
-                                <p>Let others see when you are active on HealthOnCall</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" onchange="savePrivacyPref('online-status',this.checked)"><span class="slider"></span></label>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Profile Searchable</h4>
-                                <p>Allow other patients to find you by name or email</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" onchange="savePrivacyPref('searchable',this.checked)"><span class="slider"></span></label>
-                        </div>
-                    </div>
-
-                    <div class="section-card">
-                        <h3><i class="fas fa-share-alt"></i> Data Sharing</h3>
-                        <p class="section-desc">Manage how your medical data is shared.</p>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Share Medical Records with Doctors</h4>
-                                <p>Automatically share relevant records with your assigned doctors</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" checked onchange="savePrivacyPref('share-records',this.checked)"><span class="slider"></span></label>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Anonymous Usage Analytics</h4>
-                                <p>Help improve HealthOnCall by sharing anonymous usage data</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" checked onchange="savePrivacyPref('analytics',this.checked)"><span class="slider"></span></label>
-                        </div>
-                        <div class="setting-row">
-                            <div class="setting-info">
-                                <h4>Third-Party Lab Integration</h4>
-                                <p>Allow lab results to be fetched directly from partner labs</p>
-                            </div>
-                            <label class="toggle"><input type="checkbox" checked onchange="savePrivacyPref('lab-integration',this.checked)"><span class="slider"></span></label>
-                        </div>
-                    </div>
+                    <div class="section-card"><h3><i class="fas fa-eye-slash"></i> Profile Visibility</h3><p class="section-desc">Control who can see your profile information.</p><div class="setting-row"><div class="setting-info"><h4>Show Profile to Doctors</h4><p>Allow doctors to see your basic profile during appointments</p></div><label class="toggle"><input type="checkbox" checked onchange="savePrivacyPref('show-to-doc',this.checked)"><span class="slider"></span></label></div><div class="setting-row"><div class="setting-info"><h4>Show Online Status</h4><p>Let others see when you are active on HealthOnCall</p></div><label class="toggle"><input type="checkbox" onchange="savePrivacyPref('online-status',this.checked)"><span class="slider"></span></label></div><div class="setting-row"><div class="setting-info"><h4>Profile Searchable</h4><p>Allow other patients to find you by name or email</p></div><label class="toggle"><input type="checkbox" onchange="savePrivacyPref('searchable',this.checked)"><span class="slider"></span></label></div></div>
+                    <div class="section-card"><h3><i class="fas fa-share-alt"></i> Data Sharing</h3><p class="section-desc">Manage how your medical data is shared.</p><div class="setting-row"><div class="setting-info"><h4>Share Medical Records with Doctors</h4><p>Automatically share relevant records with your assigned doctors</p></div><label class="toggle"><input type="checkbox" checked onchange="savePrivacyPref('share-records',this.checked)"><span class="slider"></span></label></div><div class="setting-row"><div class="setting-info"><h4>Anonymous Usage Analytics</h4><p>Help improve HealthOnCall by sharing anonymous usage data</p></div><label class="toggle"><input type="checkbox" checked onchange="savePrivacyPref('analytics',this.checked)"><span class="slider"></span></label></div><div class="setting-row"><div class="setting-info"><h4>Third-Party Lab Integration</h4><p>Allow lab results to be fetched directly from partner labs</p></div><label class="toggle"><input type="checkbox" checked onchange="savePrivacyPref('lab-integration',this.checked)"><span class="slider"></span></label></div></div>
                 </div>
 
-                <!-- ==================== APPEARANCE ==================== -->
+                <!-- APPEARANCE -->
                 <div class="settings-section" id="sec-appearance">
-                    <div class="section-card">
-                        <h3><i class="fas fa-moon"></i> Theme</h3>
-                        <p class="section-desc">Choose your preferred appearance mode.</p>
-                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:8px;">
-                            <div class="theme-option" id="themeLight" onclick="setTheme('light')" style="padding:20px 16px;border-radius:16px;border:2px solid var(--border);background:var(--input-bg);text-align:center;cursor:pointer;transition:var(--transition);">
-                                <i class="fas fa-sun" style="font-size:24px;color:var(--amber);margin-bottom:8px;display:block;"></i>
-                                <span style="font-size:13px;font-weight:600;">Light</span>
-                            </div>
-                            <div class="theme-option" id="themeDark" onclick="setTheme('dark')" style="padding:20px 16px;border-radius:16px;border:2px solid var(--border);background:var(--input-bg);text-align:center;cursor:pointer;transition:var(--transition);">
-                                <i class="fas fa-moon" style="font-size:24px;color:#818cf8;margin-bottom:8px;display:block;"></i>
-                                <span style="font-size:13px;font-weight:600;">Dark</span>
-                            </div>
-                            <div class="theme-option" id="themeSystem" onclick="setTheme('system')" style="padding:20px 16px;border-radius:16px;border:2px solid var(--border);background:var(--input-bg);text-align:center;cursor:pointer;transition:var(--transition);">
-                                <i class="fas fa-desktop" style="font-size:24px;color:var(--sky);margin-bottom:8px;display:block;"></i>
-                                <span style="font-size:13px;font-weight:600;">System</span>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="section-card"><h3><i class="fas fa-moon"></i> Theme</h3><p class="section-desc">Choose your preferred appearance mode.</p><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:8px;"><div class="theme-option" id="themeLight" onclick="setTheme('light')" style="padding:20px 16px;border-radius:16px;border:2px solid var(--border);background:var(--input-bg);text-align:center;cursor:pointer;transition:var(--transition);"><i class="fas fa-sun" style="font-size:24px;color:var(--amber);margin-bottom:8px;display:block;"></i><span style="font-size:13px;font-weight:600;">Light</span></div><div class="theme-option" id="themeDark" onclick="setTheme('dark')" style="padding:20px 16px;border-radius:16px;border:2px solid var(--border);background:var(--input-bg);text-align:center;cursor:pointer;transition:var(--transition);"><i class="fas fa-moon" style="font-size:24px;color:#818cf8;margin-bottom:8px;display:block;"></i><span style="font-size:13px;font-weight:600;">Dark</span></div><div class="theme-option" id="themeSystem" onclick="setTheme('system')" style="padding:20px 16px;border-radius:16px;border:2px solid var(--border);background:var(--input-bg);text-align:center;cursor:pointer;transition:var(--transition);"><i class="fas fa-desktop" style="font-size:24px;color:var(--sky);margin-bottom:8px;display:block;"></i><span style="font-size:13px;font-weight:600;">System</span></div></div></div>
+                    <div class="section-card"><h3><i class="fas fa-text-height"></i> Font Size</h3><p class="section-desc">Adjust the text size across the patient portal.</p><div style="display:flex;align-items:center;gap:16px;margin-bottom:8px;"><span style="font-size:12px;color:var(--text-muted);font-weight:600;">A</span><input type="range" min="12" max="20" value="14" id="fontSlider" oninput="updateFontSize(this.value)" style="flex:1;accent-color:var(--accent);cursor:pointer;height:6px;"><span style="font-size:20px;color:var(--text-muted);font-weight:600;">A</span><span id="fontValue" style="font-size:13px;font-weight:700;color:var(--accent);min-width:36px;text-align:right;">14px</span></div></div>
+                    <div class="section-card"><h3><i class="fas fa-palette"></i> Accent Color</h3><p class="section-desc">Personalize the interface with your favorite color.</p><div style="display:flex;gap:12px;flex-wrap:wrap;"><div onclick="setAccent('#10b981')" class="accent-dot active-accent" style="width:36px;height:36px;border-radius:50%;background:#10b981;cursor:pointer;border:3px solid transparent;transition:var(--transition);box-shadow:0 2px 8px rgba(16,185,129,.3);"></div><div onclick="setAccent('#0ea5e9')" class="accent-dot" style="width:36px;height:36px;border-radius:50%;background:#0ea5e9;cursor:pointer;border:3px solid transparent;transition:var(--transition);"></div><div onclick="setAccent('#8b5cf6')" class="accent-dot" style="width:36px;height:36px;border-radius:50%;background:#8b5cf6;cursor:pointer;border:3px solid transparent;transition:var(--transition);"></div><div onclick="setAccent('#f43f5e')" class="accent-dot" style="width:36px;height:36px;border-radius:50%;background:#f43f5e;cursor:pointer;border:3px solid transparent;transition:var(--transition);"></div><div onclick="setAccent('#f59e0b')" class="accent-dot" style="width:36px;height:36px;border-radius:50%;background:#f59e0b;cursor:pointer;border:3px solid transparent;transition:var(--transition);"></div><div onclick="setAccent('#ec4899')" class="accent-dot" style="width:36px;height:36px;border-radius:50%;background:#ec4899;cursor:pointer;border:3px solid transparent;transition:var(--transition);"></div></div></div>
+                </div>
 
+                <!-- INTEGRATIONS -->
+                <div class="settings-section" id="sec-integrations">
                     <div class="section-card">
-                        <h3><i class="fas fa-text-height"></i> Font Size</h3>
-                        <p class="section-desc">Adjust the text size across the patient portal.</p>
-                        <div style="display:flex;align-items:center;gap:16px;margin-bottom:8px;">
-                            <span style="font-size:12px;color:var(--text-muted);font-weight:600;">A</span>
-                            <input type="range" min="12" max="20" value="14" id="fontSlider" oninput="updateFontSize(this.value)" style="flex:1;accent-color:var(--accent);cursor:pointer;height:6px;">
-                            <span style="font-size:20px;color:var(--text-muted);font-weight:600;">A</span>
-                            <span id="fontValue" style="font-size:13px;font-weight:700;color:var(--accent);min-width:36px;text-align:right;">14px</span>
+                        <h3><i class="fas fa-plug"></i> Maps &amp; patient ID</h3>
+                        <p class="section-desc">Values are saved only in this browser. Add a Google Maps JavaScript API key for the interactive doctor map on Book Appointment. Set your patient ID so appointments in Firestore match your account.</p>
+                        <div class="form-group" style="margin-bottom:16px;">
+                            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Google Maps JavaScript API key</label>
+                            <input type="password" id="hocGmapKey" autocomplete="off" placeholder="AIza…" style="width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);background:var(--input-bg);color:var(--text);font-family:'DM Sans',sans-serif;">
                         </div>
-                    </div>
-
-                    <div class="section-card">
-                        <h3><i class="fas fa-palette"></i> Accent Color</h3>
-                        <p class="section-desc">Personalize the interface with your favorite color.</p>
-                        <div style="display:flex;gap:12px;flex-wrap:wrap;">
-                            <div onclick="setAccent('#10b981')" class="accent-dot active-accent" style="width:36px;height:36px;border-radius:50%;background:#10b981;cursor:pointer;border:3px solid transparent;transition:var(--transition);box-shadow:0 2px 8px rgba(16,185,129,.3);"></div>
-                            <div onclick="setAccent('#0ea5e9')" class="accent-dot" style="width:36px;height:36px;border-radius:50%;background:#0ea5e9;cursor:pointer;border:3px solid transparent;transition:var(--transition);"></div>
-                            <div onclick="setAccent('#8b5cf6')" class="accent-dot" style="width:36px;height:36px;border-radius:50%;background:#8b5cf6;cursor:pointer;border:3px solid transparent;transition:var(--transition);"></div>
-                            <div onclick="setAccent('#f43f5e')" class="accent-dot" style="width:36px;height:36px;border-radius:50%;background:#f43f5e;cursor:pointer;border:3px solid transparent;transition:var(--transition);"></div>
-                            <div onclick="setAccent('#f59e0b')" class="accent-dot" style="width:36px;height:36px;border-radius:50%;background:#f59e0b;cursor:pointer;border:3px solid transparent;transition:var(--transition);"></div>
-                            <div onclick="setAccent('#ec4899')" class="accent-dot" style="width:36px;height:36px;border-radius:50%;background:#ec4899;cursor:pointer;border:3px solid transparent;transition:var(--transition);"></div>
+                        <div class="form-group" style="margin-bottom:16px;">
+                            <label style="display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Patient ID (Firestore appointments filter)</label>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                                <input type="text" id="hocPidDisplay" readonly style="flex:1;min-width:200px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);background:var(--slate-soft);color:var(--text);font-family:monospace;font-size:12px;">
+                                <button type="button" class="btn btn-outline btn-sm" onclick="hocCopyPatientId()"><i class="fas fa-copy"></i> Copy</button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="hocNewPatientId()"><i class="fas fa-user-plus"></i> New ID</button>
+                            </div>
+                            <p style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.45;">Use a unique ID per patient account so you only see your own appointments. Default is <code>p1</code> for demo data.</p>
                         </div>
+                        <button type="button" class="btn btn-primary" onclick="saveIntegrationKeys()"><i class="fas fa-save"></i> Save</button>
                     </div>
                 </div>
 
-                <!-- ==================== DEVICES ==================== -->
+                <!-- DEVICES -->
                 <div class="settings-section" id="sec-devices">
-                    <div class="section-card">
-                        <h3><i class="fas fa-heartbeat"></i> Connected Health Devices</h3>
-                        <p class="section-desc">Manage your wearable devices and health trackers synced with HealthOnCall.</p>
-
-                        <div class="device-card">
-                            <div class="device-icon" style="background:var(--accent-soft);color:var(--accent);"><i class="fas fa-watch"></i></div>
-                            <div class="device-detail">
-                                <h4>Apple Watch Series 9</h4>
-                                <p>Last synced: 5 minutes ago · Heart rate, Steps, SpO2</p>
-                            </div>
-                            <div class="device-status"><span class="status-dot"></span> Connected</div>
-                        </div>
-                        <div class="device-card">
-                            <div class="device-icon" style="background:var(--sky-soft);color:var(--sky);"><i class="fas fa-weight"></i></div>
-                            <div class="device-detail">
-                                <h4>Withings Body+ Scale</h4>
-                                <p>Last synced: 2 hours ago · Weight, BMI, Body fat</p>
-                            </div>
-                            <div class="device-status"><span class="status-dot"></span> Connected</div>
-                        </div>
-                        <div class="device-card">
-                            <div class="device-icon" style="background:var(--amber-soft);color:var(--amber);"><i class="fas fa-lungs"></i></div>
-                            <div class="device-detail">
-                                <h4>Omron Blood Pressure Monitor</h4>
-                                <p>Last synced: 3 days ago · Systolic, Diastolic, Pulse</p>
-                            </div>
-                            <div class="device-status disconnected"><span class="status-dot"></span> Disconnected</div>
-                        </div>
-                        <div class="btn-group">
-                            <button class="btn btn-outline btn-sm" onclick="showToast('Scanning for nearby devices...','info')"><i class="fas fa-plus"></i> Add New Device</button>
-                            <button class="btn btn-outline btn-sm" onclick="showToast('Syncing all devices...','info')"><i class="fas fa-sync-alt"></i> Sync All</button>
-                        </div>
-                    </div>
+                    <div class="section-card"><h3><i class="fas fa-heartbeat"></i> Connected Health Devices</h3><p class="section-desc">Manage your wearable devices and health trackers synced with HealthOnCall.</p><div class="device-card"><div class="device-icon" style="background:var(--accent-soft);color:var(--accent);"><i class="fas fa-watch"></i></div><div class="device-detail"><h4>Apple Watch Series 9</h4><p>Last synced: 5 minutes ago · Heart rate, Steps, SpO2</p></div><div class="device-status"><span class="status-dot"></span> Connected</div></div><div class="device-card"><div class="device-icon" style="background:var(--sky-soft);color:var(--sky);"><i class="fas fa-weight"></i></div><div class="device-detail"><h4>Withings Body+ Scale</h4><p>Last synced: 2 hours ago · Weight, BMI, Body fat</p></div><div class="device-status"><span class="status-dot"></span> Connected</div></div><div class="device-card"><div class="device-icon" style="background:var(--amber-soft);color:var(--amber);"><i class="fas fa-lungs"></i></div><div class="device-detail"><h4>Omron Blood Pressure Monitor</h4><p>Last synced: 3 days ago · Systolic, Diastolic, Pulse</p></div><div class="device-status disconnected"><span class="status-dot"></span> Disconnected</div></div><div class="btn-group"><button class="btn btn-outline btn-sm" onclick="showToast('Scanning for nearby devices...','info')"><i class="fas fa-plus"></i> Add New Device</button><button class="btn btn-outline btn-sm" onclick="showToast('Syncing all devices...','info')"><i class="fas fa-sync-alt"></i> Sync All</button></div></div>
                 </div>
 
-                <!-- ==================== DATA & STORAGE ==================== -->
+                <!-- DATA & STORAGE -->
                 <div class="settings-section" id="sec-data">
-                    <div class="section-card">
-                        <h3><i class="fas fa-hdd"></i> Storage Usage</h3>
-                        <p class="section-desc">Your medical records, prescriptions, and uploaded files.</p>
-                        <div class="storage-bar"><div class="fill" style="width:34%;"></div></div>
-                        <div class="storage-info">
-                            <span>1.7 GB of 5 GB used</span>
-                            <span>34%</span>
-                        </div>
-                        <div class="storage-breakdown">
-                            <div class="storage-item"><span class="dot" style="background:var(--accent);"></span> Medical Records — 820 MB</div>
-                            <div class="storage-item"><span class="dot" style="background:var(--sky);"></span> Prescriptions — 340 MB</div>
-                            <div class="storage-item"><span class="dot" style="background:var(--amber);"></span> Lab Reports — 410 MB</div>
-                            <div class="storage-item"><span class="dot" style="background:#8b5cf6;"></span> Other — 130 MB</div>
-                        </div>
-                    </div>
-
-                    <div class="section-card">
-                        <h3><i class="fas fa-download"></i> Export Your Data</h3>
-                        <p class="section-desc">Download a copy of all your health data in a standard format.</p>
-                        <div class="btn-group">
-                            <button class="btn btn-primary btn-sm" onclick="showToast('Preparing your data export... You will receive an email shortly.','success')"><i class="fas fa-file-archive"></i> Export All Data (ZIP)</button>
-                            <button class="btn btn-outline btn-sm" onclick="showToast('Generating PDF report...','info')"><i class="fas fa-file-pdf"></i> Export as PDF</button>
-                        </div>
-                    </div>
-
-                    <div class="danger-zone">
-                        <h3><i class="fas fa-exclamation-triangle"></i> Danger Zone</h3>
-                        <p class="section-desc danger-desc">Irreversible actions. Please proceed with caution.</p>
-                        <div class="setting-row" style="border:none;">
-                            <div class="setting-info">
-                                <h4>Delete All Medical Records</h4>
-                                <p>Permanently remove all uploaded records, lab results, and prescriptions</p>
-                            </div>
-                            <button class="btn btn-danger btn-sm" onclick="openModal('deleteData')"><i class="fas fa-trash-alt"></i> Delete</button>
-                        </div>
-                    </div>
+                    <div class="section-card"><h3><i class="fas fa-hdd"></i> Storage Usage</h3><p class="section-desc">Your medical records, prescriptions, and uploaded files.</p><div class="storage-bar"><div class="fill" style="width:34%;"></div></div><div class="storage-info"><span>1.7 GB of 5 GB used</span><span>34%</span></div><div class="storage-breakdown"><div class="storage-item"><span class="dot" style="background:var(--accent);"></span> Medical Records — 820 MB</div><div class="storage-item"><span class="dot" style="background:var(--sky);"></span> Prescriptions — 340 MB</div><div class="storage-item"><span class="dot" style="background:var(--amber);"></span> Lab Reports — 410 MB</div><div class="storage-item"><span class="dot" style="background:#8b5cf6;"></span> Other — 130 MB</div></div></div>
+                    <div class="section-card"><h3><i class="fas fa-download"></i> Export Your Data</h3><p class="section-desc">Download a copy of all your health data in a standard format.</p><div class="btn-group"><button class="btn btn-primary btn-sm" onclick="showToast('Preparing your data export... You will receive an email shortly.','success')"><i class="fas fa-file-archive"></i> Export All Data (ZIP)</button><button class="btn btn-outline btn-sm" onclick="showToast('Generating PDF report...','info')"><i class="fas fa-file-pdf"></i> Export as PDF</button></div></div>
+                    <div class="danger-zone"><h3><i class="fas fa-exclamation-triangle"></i> Danger Zone</h3><p class="section-desc danger-desc">Irreversible actions. Please proceed with caution.</p><div class="setting-row" style="border:none;"><div class="setting-info"><h4>Delete All Medical Records</h4><p>Permanently remove all uploaded records, lab results, and prescriptions</p></div><button class="btn btn-danger btn-sm" onclick="openModal('deleteData')"><i class="fas fa-trash-alt"></i> Delete</button></div></div>
                 </div>
 
-                <!-- ==================== ABOUT ==================== -->
+                <!-- ABOUT -->
                 <div class="settings-section" id="sec-about">
-                    <div class="section-card">
-                        <h3><i class="fas fa-info-circle"></i> About HealthOnCall</h3>
-                        <p class="section-desc">Application information and legal documents.</p>
-                        <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;padding:20px;background:var(--input-bg);border-radius:16px;">
-                            <div style="width:56px;height:56px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;box-shadow:0 8px 24px rgba(16,185,129,.25);"><i class="fas fa-heartbeat"></i></div>
-                            <div>
-                                <h4 style="font-size:16px;font-weight:800;font-family:'Sora',sans-serif;">HealthOnCall <span style="color:var(--accent);">Patient</span></h4>
-                                <p style="font-size:12px;color:var(--text-muted);margin-top:2px;">Version 2.4.1 · Build 20250115</p>
-                            </div>
-                            <span class="badge badge-accent" style="margin-left:auto;">Up to date</span>
-                        </div>
-                        <a href="#" class="about-link"><span class="al-left"><i class="fas fa-file-contract"></i> Terms of Service</span><span class="al-right"><i class="fas fa-external-link-alt"></i></span></a>
-                        <a href="#" class="about-link"><span class="al-left"><i class="fas fa-shield-alt"></i> Privacy Policy</span><span class="al-right"><i class="fas fa-external-link-alt"></i></span></a>
-                        <a href="#" class="about-link"><span class="al-left"><i class="fas fa-cookie-bite"></i> Cookie Policy</span><span class="al-right"><i class="fas fa-external-link-alt"></i></span></a>
-                        <a href="#" class="about-link"><span class="al-left"><i class="fas fa-hospital"></i> HIPAA Compliance</span><span class="al-right"><i class="fas fa-external-link-alt"></i></span></a>
-                        <a href="#" class="about-link"><span class="al-left"><i class="fas fa-headset"></i> Contact Support</span><span class="al-right"><i class="fas fa-external-link-alt"></i></span></a>
-                        <a href="#" class="about-link"><span class="al-left"><i class="fas fa-star"></i> Rate HealthOnCall</span><span class="al-right"><i class="fas fa-external-link-alt"></i></span></a>
-                    </div>
-
-                    <div class="danger-zone">
-                        <h3><i class="fas fa-user-times"></i> Delete Account</h3>
-                        <p class="section-desc danger-desc">Permanently delete your HealthOnCall account and all associated data. This action cannot be undone.</p>
-                        <div class="btn-group">
-                            <button class="btn btn-danger" onclick="openModal('deleteAccount')"><i class="fas fa-trash"></i> Delete My Account</button>
-                        </div>
-                    </div>
+                    <div class="section-card"><h3><i class="fas fa-info-circle"></i> About HealthOnCall</h3><p class="section-desc">Application information and legal documents.</p><div class="about-brand-banner"><div style="width:56px;height:56px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;box-shadow:0 8px 24px rgba(16,185,129,.25);"><i class="fas fa-heartbeat"></i></div><div><h4 style="font-size:16px;font-weight:800;font-family:'Sora',sans-serif;">HealthOnCall <span style="color:var(--accent);">Patient</span></h4><p style="font-size:12px;color:var(--text-muted);margin-top:2px;">Version 2.4.1 · Build 20250115</p></div><span class="badge badge-accent" style="margin-left:auto;">Up to date</span></div><a href="#" class="about-link"><span class="al-left"><i class="fas fa-file-contract"></i> Terms of Service</span><span class="al-right"><i class="fas fa-external-link-alt"></i></span></a><a href="#" class="about-link"><span class="al-left"><i class="fas fa-shield-alt"></i> Privacy Policy</span><span class="al-right"><i class="fas fa-external-link-alt"></i></span></a><a href="#" class="about-link"><span class="al-left"><i class="fas fa-cookie-bite"></i> Cookie Policy</span><span class="al-right"><i class="fas fa-external-link-alt"></i></span></a><a href="#" class="about-link"><span class="al-left"><i class="fas fa-hospital"></i> HIPAA Compliance</span><span class="al-right"><i class="fas fa-external-link-alt"></i></span></a><a href="#" class="about-link"><span class="al-left"><i class="fas fa-headset"></i> Contact Support</span><span class="al-right"><i class="fas fa-external-link-alt"></i></span></a><a href="#" class="about-link"><span class="al-left"><i class="fas fa-star"></i> Rate HealthOnCall</span><span class="al-right"><i class="fas fa-external-link-alt"></i></span></a></div>
+                    <div class="danger-zone"><h3><i class="fas fa-user-times"></i> Delete Account</h3><p class="section-desc danger-desc">Permanently delete your HealthOnCall account and all associated data. This action cannot be undone.</p><div class="btn-group"><button class="btn btn-danger" onclick="openModal('deleteAccount')"><i class="fas fa-trash"></i> Delete My Account</button></div></div>
                 </div>
-
             </div>
         </div>
     </main>
 
     <!-- Modal -->
     <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
-        <div class="modal" id="modalContent" onclick="event.stopPropagation()">
-            <!-- Filled by JS -->
-        </div>
+        <div class="modal" id="modalContent" onclick="event.stopPropagation()"></div>
     </div>
 
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
-        /* ===== SETTINGS NAV ===== */
-        document.querySelectorAll('.settings-nav a').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const section = this.dataset.section;
-                if (!section) return;
+    /* ===== SIDEBAR TOGGLE ===== */
+    var sidebar = document.getElementById('hocSidebar');
+    var overlay = document.getElementById('hocSbOverlay');
+    var hamburger = document.getElementById('hocHamburger');
 
-                document.querySelectorAll('.settings-nav a').forEach(l => l.classList.remove('active'));
-                this.classList.add('active');
+    function hocToggleSidebar(){
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+        document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    }
+    function hocCloseSidebar(){
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
 
-                document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
-                const target = document.getElementById('sec-' + section);
-                if (target) target.classList.add('active');
-            });
+    hamburger.addEventListener('click', hocToggleSidebar);
+    overlay.addEventListener('click', hocCloseSidebar);
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeModal(); });
+    window.addEventListener('resize', function(){ if(window.innerWidth > 768) hocCloseSidebar(); });
+
+    /* ===== SETTINGS NAV ===== */
+    document.querySelectorAll('.settings-nav a').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const section = this.dataset.section;
+            if (!section) return;
+            document.querySelectorAll('.settings-nav a').forEach(l => l.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById('sec-' + section);
+            if (target) target.classList.add('active');
+            // Close sidebar on mobile after click
+            if(window.innerWidth <= 768) hocCloseSidebar();
         });
+    });
 
-        /* ===== LOAD USER INFO ===== */
-        function loadUserInfo() {
-            const saved = localStorage.getItem('hoc-patient-settings');
-            if (saved) {
-                try {
-                    const s = JSON.parse(saved);
-                    if (s.name) {
-                        document.getElementById('sidebarName').textContent = s.name;
-                        const parts = s.name.split(' ');
-                        if (document.getElementById('firstName') && parts[0]) document.getElementById('firstName').value = parts[0];
-                        if (document.getElementById('lastName') && parts[1]) document.getElementById('lastName').value = parts.slice(1).join(' ');
-                    }
-                    if (s.avatar) {
-                        document.getElementById('sidebarAvatarImg').src = s.avatar;
-                        document.getElementById('avatarImg').src = s.avatar;
-                    }
-                    if (s.dark) {
-                        document.body.classList.add('dark-mode');
-                        updateThemeUI('dark');
-                    }
-                    if (s.theme) updateThemeUI(s.theme);
-                    if (s.fontSize) {
-                        document.getElementById('fontSlider').value = s.fontSize;
-                        document.getElementById('fontValue').textContent = s.fontSize + 'px';
-                        document.body.style.fontSize = s.fontSize + 'px';
-                    }
-                } catch(e) {}
-            }
-        }
-        loadUserInfo();
-
-        /* ===== AVATAR UPLOAD ===== */
-        function previewAvatar(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('avatarImg').src = e.target.result;
-                    document.getElementById('sidebarAvatarImg').src = e.target.result;
-                    showToast('Profile photo updated', 'success');
-                    saveSettings();
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        /* ===== SAVE PROFILE ===== */
-        function saveProfile() {
-            const fn = document.getElementById('firstName').value.trim();
-            const ln = document.getElementById('lastName').value.trim();
-            if (!fn || !ln) {
-                showToast('Please fill in first and last name', 'error');
-                return;
-            }
-            const name = fn + ' ' + ln;
-            document.getElementById('sidebarName').textContent = name;
-            saveSettings();
-            showToast('Profile saved successfully', 'success');
-        }
-
-        function resetProfile() {
-            document.getElementById('firstName').value = 'Sarah';
-            document.getElementById('lastName').value = 'Johnson';
-            document.getElementById('emailInput').value = 'sarah.johnson@email.com';
-            document.getElementById('phoneInput').value = '+1 (555) 234-5678';
-            document.getElementById('dobInput').value = '1992-03-15';
-            document.getElementById('genderInput').value = 'female';
-            document.getElementById('bloodInput').value = 'A+';
-            document.getElementById('langInput').value = 'en';
-            document.getElementById('addressInput').value = '456 Oak Avenue, Apt 12B, Brooklyn, NY 11201';
-            showToast('Form reset to defaults', 'info');
-        }
-
-        function saveEmergency() {
-            saveSettings();
-            showToast('Emergency contact saved', 'success');
-        }
-
-        /* ===== PASSWORD ===== */
-        function togglePass(id, btn) {
-            const inp = document.getElementById(id);
-            const icon = btn.querySelector('i');
-            if (inp.type === 'password') {
-                inp.type = 'text';
-                icon.className = 'fas fa-eye-slash';
-            } else {
-                inp.type = 'password';
-                icon.className = 'fas fa-eye';
-            }
-        }
-
-        function checkStrength(val) {
-            const bar = document.getElementById('strengthBar');
-            const text = document.getElementById('strengthText');
-            bar.className = 'password-strength';
-            text.className = 'strength-text';
-
-            if (!val) { text.textContent = ''; return; }
-
-            let score = 0;
-            if (val.length >= 8) score++;
-            if (/[A-Z]/.test(val)) score++;
-            if (/[0-9]/.test(val)) score++;
-            if (/[^A-Za-z0-9]/.test(val)) score++;
-
-            const labels = ['', 'Weak', 'Medium', 'Strong', 'Very Strong'];
-            const classes = ['', 'weak', 'medium', 'strong', 'very-strong'];
-
-            bar.classList.add(classes[score]);
-            text.classList.add(classes[score]);
-            text.textContent = labels[score];
-        }
-
-        // Confirm password match
-        document.getElementById('confirmPass').addEventListener('input', function() {
-            const hint = document.getElementById('matchHint');
-            const newP = document.getElementById('newPass').value;
-            if (!this.value) { hint.style.display = 'none'; return; }
-            hint.style.display = 'block';
-            if (this.value === newP) {
-                hint.innerHTML = '<i class="fas fa-check-circle" style="color:var(--accent)"></i> Passwords match';
-                hint.style.color = 'var(--accent)';
-            } else {
-                hint.innerHTML = '<i class="fas fa-times-circle" style="color:var(--rose)"></i> Passwords do not match';
-                hint.style.color = 'var(--rose)';
-            }
-        });
-
-        function changePassword() {
-            const curr = document.getElementById('currentPass').value;
-            const newP = document.getElementById('newPass').value;
-            const conf = document.getElementById('confirmPass').value;
-            if (!curr) { showToast('Please enter your current password', 'error'); return; }
-            if (newP.length < 8) { showToast('New password must be at least 8 characters', 'error'); return; }
-            if (newP !== conf) { showToast('Passwords do not match', 'error'); return; }
-            if (curr === newP) { showToast('New password must be different from current', 'error'); return; }
-
-            document.getElementById('currentPass').value = '';
-            document.getElementById('newPass').value = '';
-            document.getElementById('confirmPass').value = '';
-            document.getElementById('matchHint').style.display = 'none';
-            document.getElementById('strengthBar').className = 'password-strength';
-            document.getElementById('strengthText').textContent = '';
-            showToast('Password changed successfully', 'success');
-        }
-
-        /* ===== 2FA ===== */
-        function toggle2FA(cb, method) {
-            if (cb.checked) {
-                showToast(method + ' verification enabled', 'success');
-            } else {
-                showToast(method + ' verification disabled', 'info');
-            }
-        }
-
-        /* ===== REVOKE SESSION ===== */
-        function revokeSession(btn) {
-            const card = btn.closest('.session-card');
-            card.style.transition = 'all .4s ease';
-            card.style.opacity = '0';
-            card.style.transform = 'translateX(40px)';
-            setTimeout(() => {
-                card.style.height = card.offsetHeight + 'px';
-                card.style.overflow = 'hidden';
-                requestAnimationFrame(() => {
-                    card.style.height = '0';
-                    card.style.marginBottom = '0';
-                    card.style.padding = '0';
-                    card.style.border = 'none';
-                });
-                setTimeout(() => card.remove(), 400);
-            }, 400);
-            showToast('Session revoked successfully', 'success');
-        }
-
-        /* ===== NOTIFICATIONS ===== */
-        function saveNotifPref(key, val) {
-            let prefs = JSON.parse(localStorage.getItem('hoc-patient-notif') || '{}');
-            prefs[key] = val;
-            localStorage.setItem('hoc-patient-notif', JSON.stringify(prefs));
-            showToast('Notification preference updated', 'success');
-        }
-
-        /* ===== PRIVACY ===== */
-        function savePrivacyPref(key, val) {
-            let prefs = JSON.parse(localStorage.getItem('hoc-patient-privacy') || '{}');
-            prefs[key] = val;
-            localStorage.setItem('hoc-patient-privacy', JSON.stringify(prefs));
-            showToast('Privacy setting updated', 'success');
-        }
-
-        /* ===== APPEARANCE ===== */
-        function setTheme(mode) {
-            if (mode === 'dark') {
-                document.body.classList.add('dark-mode');
-            } else if (mode === 'light') {
-                document.body.classList.remove('dark-mode');
-            } else {
-                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    document.body.classList.add('dark-mode');
-                } else {
-                    document.body.classList.remove('dark-mode');
+    /* ===== LOAD USER INFO ===== */
+    function loadUserInfo() {
+        const saved = localStorage.getItem('hoc-patient-settings');
+        if (saved) {
+            try {
+                const s = JSON.parse(saved);
+                if (s.name) {
+                    document.getElementById('sidebarName').textContent = s.name;
+                    const parts = s.name.split(' ');
+                    if (document.getElementById('firstName') && parts[0]) document.getElementById('firstName').value = parts[0];
+                    if (document.getElementById('lastName') && parts[1]) document.getElementById('lastName').value = parts.slice(1).join(' ');
                 }
-            }
-            updateThemeUI(mode);
-            saveSettings();
-            showToast('Theme set to ' + mode, 'success');
+                if (s.avatar) {
+                    document.getElementById('sidebarAvatarImg').src = s.avatar;
+                    document.getElementById('avatarImg').src = s.avatar;
+                }
+                if (s.dark) {
+                    document.body.classList.add('dark-mode');
+                    updateThemeUI('dark');
+                }
+                if (s.theme) updateThemeUI(s.theme);
+                if (s.fontSize) {
+                    document.getElementById('fontSlider').value = s.fontSize;
+                    document.getElementById('fontValue').textContent = s.fontSize + 'px';
+                    document.body.style.fontSize = s.fontSize + 'px';
+                }
+                var gk = document.getElementById('hocGmapKey');
+                if (gk) gk.value = localStorage.getItem('hoc_google_maps_key') || '';
+                var pid = document.getElementById('hocPidDisplay');
+                if (pid && typeof HOC_getPatientId === 'function') pid.value = HOC_getPatientId();
+            } catch(e) {}
         }
+    }
+    loadUserInfo();
+    (function(){ var p=document.getElementById('hocPidDisplay'); if(p&&typeof HOC_getPatientId==='function'&&!p.value)p.value=HOC_getPatientId(); })();
+    (function hocSyncIntegrationInputs(){
+        var gk=document.getElementById('hocGmapKey'); if(gk&&!gk.value.trim())gk.value=localStorage.getItem('hoc_google_maps_key')||'';
+    })();
 
-        function updateThemeUI(mode) {
-            document.querySelectorAll('.theme-option').forEach(el => {
-                el.style.borderColor = 'var(--border)';
-                el.style.background = 'var(--input-bg)';
-            });
-            let target;
-            if (mode === 'dark') target = document.getElementById('themeDark');
-            else if (mode === 'system') target = document.getElementById('themeSystem');
-            else target = document.getElementById('themeLight');
-            if (target) {
-                target.style.borderColor = 'var(--accent)';
-                target.style.background = 'var(--accent-soft)';
-            }
-        }
+    function saveIntegrationKeys() {
+        var g = document.getElementById('hocGmapKey');
+        if (g) localStorage.setItem('hoc_google_maps_key', (g.value || '').trim());
+        showToast('Maps key saved on this device', 'success');
+    }
+    function hocCopyPatientId() {
+        var el = document.getElementById('hocPidDisplay');
+        if (!el) return;
+        if (navigator.clipboard) navigator.clipboard.writeText(el.value).then(function() { showToast('Patient ID copied', 'success'); });
+    }
+    function hocNewPatientId() {
+        if (!confirm('Create a new patient ID? You will only see appointments that use this ID.')) return;
+        var id = 'p_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+        localStorage.setItem('hoc_patient_id', id);
+        var pid = document.getElementById('hocPidDisplay');
+        if (pid) pid.value = id;
+        showToast('New patient ID created', 'success');
+    }
 
-        function updateFontSize(val) {
-            document.getElementById('fontValue').textContent = val + 'px';
-            document.body.style.fontSize = val + 'px';
-            saveSettings();
-        }
-
-        function setAccent(color) {
-            document.documentElement.style.setProperty('--accent', color);
-            // Calculate darker version
-            document.querySelectorAll('.accent-dot').forEach(d => {
-                d.style.borderColor = 'transparent';
-                d.style.boxShadow = 'none';
-                d.classList.remove('active-accent');
-            });
-            event.target.style.borderColor = color;
-            event.target.style.boxShadow = '0 2px 12px ' + color + '55';
-            event.target.classList.add('active-accent');
-            showToast('Accent color updated', 'success');
-        }
-
-        /* ===== PERSIST SETTINGS ===== */
-        function saveSettings() {
-            const s = {
-                name: (document.getElementById('firstName').value + ' ' + document.getElementById('lastName').value).trim(),
-                avatar: document.getElementById('avatarImg').src,
-                dark: document.body.classList.contains('dark-mode'),
-                fontSize: document.getElementById('fontSlider').value,
-                theme: document.body.classList.contains('dark-mode') ? 'dark' : 'light'
+    /* ===== AVATAR ===== */
+    function previewAvatar(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('avatarImg').src = e.target.result;
+                document.getElementById('sidebarAvatarImg').src = e.target.result;
+                showToast('Profile photo updated', 'success');
+                saveSettings();
             };
-            localStorage.setItem('hoc-patient-settings', JSON.stringify(s));
+            reader.readAsDataURL(input.files[0]);
         }
+    }
 
-        /* ===== MODAL ===== */
-        function openModal(type) {
-            const overlay = document.getElementById('modalOverlay');
-            const content = document.getElementById('modalContent');
+    /* ===== SAVE PROFILE ===== */
+    function saveProfile() {
+        const fn = document.getElementById('firstName').value.trim();
+        const ln = document.getElementById('lastName').value.trim();
+        if (!fn || !ln) { showToast('Please fill in first and last name', 'error'); return; }
+        document.getElementById('sidebarName').textContent = fn + ' ' + ln;
+        localStorage.setItem('hoc_patient_name', fn + ' ' + ln);
+        saveSettings();
+        showToast('Profile saved successfully', 'success');
+    }
 
-            if (type === 'deleteData') {
-                content.innerHTML = `
-                    <div style="text-align:center;margin-bottom:20px;">
-                        <div style="width:60px;height:60px;border-radius:50%;background:var(--rose-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-                            <i class="fas fa-trash-alt" style="font-size:24px;color:var(--rose);"></i>
-                        </div>
-                        <h3>Delete All Medical Records?</h3>
-                        <p>This will permanently remove all your medical records, lab results, and prescriptions. This action <strong>cannot be undone</strong>.</p>
-                    </div>
-                    <div style="margin-bottom:20px;">
-                        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">Type <strong>"DELETE"</strong> to confirm</label>
-                        <input type="text" id="confirmDeleteData" placeholder="Type DELETE here" style="width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid var(--border);background:var(--input-bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
-                    </div>
-                    <div class="btn-group" style="justify-content:stretch;">
-                        <button class="btn btn-danger" style="flex:1;" onclick="confirmDeleteAction('data')"><i class="fas fa-trash"></i> Delete Everything</button>
-                        <button class="btn btn-outline" style="flex:1;" onclick="closeModal()">Cancel</button>
-                    </div>
-                `;
-            } else if (type === 'deleteAccount') {
-                content.innerHTML = `
-                    <div style="text-align:center;margin-bottom:20px;">
-                        <div style="width:60px;height:60px;border-radius:50%;background:var(--rose-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-                            <i class="fas fa-user-times" style="font-size:24px;color:var(--rose);"></i>
-                        </div>
-                        <h3>Delete Your Account?</h3>
-                        <p>This will permanently delete your HealthOnCall account, including all personal data, medical records, appointments, and connected devices. This action <strong>cannot be undone</strong>.</p>
-                    </div>
-                    <div style="margin-bottom:20px;">
-                        <label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">Type <strong>"DELETE ACCOUNT"</strong> to confirm</label>
-                        <input type="text" id="confirmDeleteAccount" placeholder="Type DELETE ACCOUNT here" style="width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid var(--border);background:var(--input-bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;">
-                    </div>
-                    <div class="btn-group" style="justify-content:stretch;">
-                        <button class="btn btn-danger" style="flex:1;" onclick="confirmDeleteAction('account')"><i class="fas fa-trash"></i> Delete Account</button>
-                        <button class="btn btn-outline" style="flex:1;" onclick="closeModal()">Cancel</button>
-                    </div>
-                `;
-            }
+    function resetProfile() {
+        document.getElementById('firstName').value = 'Sarah';
+        document.getElementById('lastName').value = 'Johnson';
+        document.getElementById('emailInput').value = 'sarah.johnson@email.com';
+        document.getElementById('phoneInput').value = '+1 (555) 234-5678';
+        document.getElementById('dobInput').value = '1992-03-15';
+        document.getElementById('genderInput').value = 'female';
+        document.getElementById('bloodInput').value = 'A+';
+        document.getElementById('langInput').value = 'en';
+        document.getElementById('addressInput').value = '456 Oak Avenue, Apt 12B, Brooklyn, NY 11201';
+        showToast('Form reset to defaults', 'info');
+    }
 
-            overlay.classList.add('show');
+    function saveEmergency() { saveSettings(); showToast('Emergency contact saved', 'success'); }
+
+    /* ===== PASSWORD ===== */
+    function togglePass(id, btn) {
+        const inp = document.getElementById(id);
+        const icon = btn.querySelector('i');
+        if (inp.type === 'password') { inp.type = 'text'; icon.className = 'fas fa-eye-slash'; }
+        else { inp.type = 'password'; icon.className = 'fas fa-eye'; }
+    }
+
+    function checkStrength(val) {
+        const bar = document.getElementById('strengthBar');
+        const text = document.getElementById('strengthText');
+        bar.className = 'password-strength';
+        text.className = 'strength-text';
+        if (!val) { text.textContent = ''; return; }
+        let score = 0;
+        if (val.length >= 8) score++;
+        if (/[A-Z]/.test(val)) score++;
+        if (/[0-9]/.test(val)) score++;
+        if (/[^A-Za-z0-9]/.test(val)) score++;
+        const labels = ['', 'Weak', 'Medium', 'Strong', 'Very Strong'];
+        const classes = ['', 'weak', 'medium', 'strong', 'very-strong'];
+        bar.classList.add(classes[score]);
+        text.classList.add(classes[score]);
+        text.textContent = labels[score];
+    }
+
+    document.getElementById('confirmPass').addEventListener('input', function() {
+        const hint = document.getElementById('matchHint');
+        const newP = document.getElementById('newPass').value;
+        if (!this.value) { hint.style.display = 'none'; return; }
+        hint.style.display = 'block';
+        if (this.value === newP) { hint.innerHTML = '<i class="fas fa-check-circle" style="color:var(--accent)"></i> Passwords match'; hint.style.color = 'var(--accent)'; }
+        else { hint.innerHTML = '<i class="fas fa-times-circle" style="color:var(--rose)"></i> Passwords do not match'; hint.style.color = 'var(--rose)'; }
+    });
+
+    function changePassword() {
+        const curr = document.getElementById('currentPass').value;
+        const newP = document.getElementById('newPass').value;
+        const conf = document.getElementById('confirmPass').value;
+        if (!curr) { showToast('Please enter your current password', 'error'); return; }
+        if (newP.length < 8) { showToast('New password must be at least 8 characters', 'error'); return; }
+        if (newP !== conf) { showToast('Passwords do not match', 'error'); return; }
+        if (curr === newP) { showToast('New password must be different from current', 'error'); return; }
+        document.getElementById('currentPass').value = '';
+        document.getElementById('newPass').value = '';
+        document.getElementById('confirmPass').value = '';
+        document.getElementById('matchHint').style.display = 'none';
+        document.getElementById('strengthBar').className = 'password-strength';
+        document.getElementById('strengthText').textContent = '';
+        showToast('Password changed successfully', 'success');
+    }
+
+    function toggle2FA(cb, method) { showToast(method + ' verification ' + (cb.checked ? 'enabled' : 'disabled'), cb.checked ? 'success' : 'info'); }
+
+    function revokeSession(btn) {
+        const card = btn.closest('.session-card');
+        card.style.transition = 'all .4s ease';
+        card.style.opacity = '0';
+        card.style.transform = 'translateX(40px)';
+        setTimeout(() => {
+            card.style.height = card.offsetHeight + 'px';
+            card.style.overflow = 'hidden';
+            requestAnimationFrame(() => { card.style.height = '0'; card.style.marginBottom = '0'; card.style.padding = '0'; card.style.border = 'none'; });
+            setTimeout(() => card.remove(), 400);
+        }, 400);
+        showToast('Session revoked successfully', 'success');
+    }
+
+    function saveNotifPref(key, val) { let p = JSON.parse(localStorage.getItem('hoc-patient-notif') || '{}'); p[key] = val; localStorage.setItem('hoc-patient-notif', JSON.stringify(p)); showToast('Notification preference updated', 'success'); }
+    function savePrivacyPref(key, val) { let p = JSON.parse(localStorage.getItem('hoc-patient-privacy') || '{}'); p[key] = val; localStorage.setItem('hoc-patient-privacy', JSON.stringify(p)); if (key === 'share-records' && typeof HOCMedicalReports !== 'undefined') { var pid = typeof HOC_getPatientId === 'function' ? HOC_getPatientId() : ''; if (pid) HOCMedicalReports.syncPatientConsent(pid, val); } showToast('Privacy setting updated', 'success'); }
+
+    /* ===== APPEARANCE ===== */
+    function setTheme(mode) {
+        if (mode === 'dark') document.body.classList.add('dark-mode');
+        else if (mode === 'light') document.body.classList.remove('dark-mode');
+        else { if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode'); }
+        updateThemeUI(mode);
+        saveSettings();
+        showToast('Theme set to ' + mode, 'success');
+    }
+
+    function updateThemeUI(mode) {
+        document.querySelectorAll('.theme-option').forEach(el => { el.style.borderColor = 'var(--border)'; el.style.background = 'var(--input-bg)'; });
+        let target;
+        if (mode === 'dark') target = document.getElementById('themeDark');
+        else if (mode === 'system') target = document.getElementById('themeSystem');
+        else target = document.getElementById('themeLight');
+        if (target) { target.style.borderColor = 'var(--accent)'; target.style.background = 'var(--accent-soft)'; }
+    }
+
+    function updateFontSize(val) { document.getElementById('fontValue').textContent = val + 'px'; document.body.style.fontSize = val + 'px'; saveSettings(); }
+
+    function setAccent(color) {
+        document.documentElement.style.setProperty('--accent', color);
+        document.querySelectorAll('.accent-dot').forEach(d => { d.style.borderColor = 'transparent'; d.style.boxShadow = 'none'; d.classList.remove('active-accent'); });
+        event.target.style.borderColor = color;
+        event.target.style.boxShadow = '0 2px 12px ' + color + '55';
+        event.target.classList.add('active-accent');
+        showToast('Accent color updated', 'success');
+    }
+
+    function saveSettings() {
+        const s = {
+            name: (document.getElementById('firstName').value + ' ' + document.getElementById('lastName').value).trim(),
+            avatar: document.getElementById('avatarImg').src,
+            dark: document.body.classList.contains('dark-mode'),
+            fontSize: document.getElementById('fontSlider').value,
+            theme: document.body.classList.contains('dark-mode') ? 'dark' : 'light'
+        };
+        localStorage.setItem('hoc-patient-settings', JSON.stringify(s));
+    }
+
+    /* ===== MODAL ===== */
+    function openModal(type) {
+        const overlay = document.getElementById('modalOverlay');
+        const content = document.getElementById('modalContent');
+        if (type === 'deleteData') {
+            content.innerHTML = '<div style="text-align:center;margin-bottom:20px;"><div style="width:60px;height:60px;border-radius:50%;background:var(--rose-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;"><i class="fas fa-trash-alt" style="font-size:24px;color:var(--rose);"></i></div><h3>Delete All Medical Records?</h3><p>This will permanently remove all your medical records, lab results, and prescriptions. This action <strong>cannot be undone</strong>.</p></div><div style="margin-bottom:20px;"><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">Type <strong>"DELETE"</strong> to confirm</label><input type="text" id="confirmDeleteData" placeholder="Type DELETE here" style="width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid var(--border);background:var(--input-bg);color:var(--text);font-family:\'DM Sans\',sans-serif;font-size:14px;outline:none;"></div><div class="btn-group" style="justify-content:stretch;"><button class="btn btn-danger" style="flex:1;" onclick="confirmDeleteAction(\'data\')"><i class="fas fa-trash"></i> Delete Everything</button><button class="btn btn-outline" style="flex:1;" onclick="closeModal()">Cancel</button></div>';
+        } else if (type === 'deleteAccount') {
+            content.innerHTML = '<div style="text-align:center;margin-bottom:20px;"><div style="width:60px;height:60px;border-radius:50%;background:var(--rose-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;"><i class="fas fa-user-times" style="font-size:24px;color:var(--rose);"></i></div><h3>Delete Your Account?</h3><p>This will permanently delete your HealthOnCall account, including all personal data, medical records, appointments, and connected devices. This action <strong>cannot be undone</strong>.</p></div><div style="margin-bottom:20px;"><label style="font-size:12px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:6px;">Type <strong>"DELETE ACCOUNT"</strong> to confirm</label><input type="text" id="confirmDeleteAccount" placeholder="Type DELETE ACCOUNT here" style="width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid var(--border);background:var(--input-bg);color:var(--text);font-family:\'DM Sans\',sans-serif;font-size:14px;outline:none;"></div><div class="btn-group" style="justify-content:stretch;"><button class="btn btn-danger" style="flex:1;" onclick="confirmDeleteAction(\'account\')"><i class="fas fa-trash"></i> Delete Account</button><button class="btn btn-outline" style="flex:1;" onclick="closeModal()">Cancel</button></div>';
         }
+        overlay.classList.add('show');
+    }
 
-        function confirmDeleteAction(type) {
-            if (type === 'data') {
-                const val = document.getElementById('confirmDeleteData').value.trim();
-                if (val !== 'DELETE') { showToast('Please type DELETE to confirm', 'error'); return; }
-                closeModal();
-                showToast('All medical records deleted', 'success');
-            } else if (type === 'account') {
-                const val = document.getElementById('confirmDeleteAccount').value.trim();
-                if (val !== 'DELETE ACCOUNT') { showToast('Please type DELETE ACCOUNT to confirm', 'error'); return; }
-                closeModal();
-                showToast('Account deletion requested. You will be logged out.', 'success');
-                setTimeout(() => { window.location.href = 'logout.html'; }, 2000);
-            }
+    function confirmDeleteAction(type) {
+        if (type === 'data') {
+            const val = document.getElementById('confirmDeleteData').value.trim();
+            if (val !== 'DELETE') { showToast('Please type DELETE to confirm', 'error'); return; }
+            closeModal();
+            showToast('All medical records deleted', 'success');
+        } else if (type === 'account') {
+            const val = document.getElementById('confirmDeleteAccount').value.trim();
+            if (val !== 'DELETE ACCOUNT') { showToast('Please type DELETE ACCOUNT to confirm', 'error'); return; }
+            closeModal();
+            showToast('Account deletion requested. You will be logged out.', 'success');
+            setTimeout(() => { window.location.href = 'logout 1.html'; }, 2000);
         }
+    }
 
-        function closeModal(e) {
-            if (e && e.target !== e.currentTarget) return;
-            document.getElementById('modalOverlay').classList.remove('show');
-        }
+    function closeModal(e) {
+        if (e && e.target !== e.currentTarget) return;
+        document.getElementById('modalOverlay').classList.remove('show');
+    }
 
-        /* ===== TOAST ===== */
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            const icons = { success:'<i class="fas fa-check-circle t-success"></i>', error:'<i class="fas fa-times-circle t-err"></i>', info:'<i class="fas fa-info-circle t-info"></i>' };
-            const colors = { success:'var(--accent)', error:'var(--rose)', info:'#0ea5e9' };
-            toast.style.borderLeftColor = colors[type] || colors.success;
-            toast.innerHTML = (icons[type] || icons.success) + ' ' + message;
-            container.appendChild(toast);
-            requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
-            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 500); }, 3500);
-        }
+    /* ===== TOAST ===== */
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        const icons = { success:'<i class="fas fa-check-circle t-success"></i>', error:'<i class="fas fa-times-circle t-err"></i>', info:'<i class="fas fa-info-circle t-info"></i>' };
+        const colors = { success:'var(--accent)', error:'var(--rose)', info:'#0ea5e9' };
+        toast.style.borderLeftColor = colors[type] || colors.success;
+        toast.innerHTML = (icons[type] || icons.success) + ' ' + message;
+        container.appendChild(toast);
+        requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 500); }, 3500);
+    }
 
-        /* ===== RIPPLE ===== */
-        document.addEventListener('click', function(e) {
-            const btn = e.target.closest('.btn');
-            if (!btn) return;
-            const rect = btn.getBoundingClientRect();
-            const ripple = document.createElement('span');
-            ripple.className = 'ripple';
-            const size = Math.max(rect.width, rect.height);
-            ripple.style.width = ripple.style.height = size + 'px';
-            ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
-            ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
-            btn.appendChild(ripple);
-            setTimeout(() => ripple.remove(), 600);
+    /* ===== RIPPLE ===== */
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn');
+        if (!btn) return;
+        const rect = btn.getBoundingClientRect();
+        const ripple = document.createElement('span');
+        ripple.className = 'ripple';
+        const size = Math.max(rect.width, rect.height);
+        ripple.style.width = ripple.style.height = size + 'px';
+        ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+        ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+        btn.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+    });
+
+    /* ===== SYSTEM THEME WATCH ===== */
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+        const saved = localStorage.getItem('hoc-patient-settings');
+        if (saved) { try { const s = JSON.parse(saved); if (s.theme === 'system') setTheme('system'); } catch(e) {} }
+    });
+
+    (function hocLoadPrivacyFromFirestore(){
+        try {
+            var priv = JSON.parse(localStorage.getItem('hoc-patient-privacy') || '{}');
+            var shareCb = document.querySelector('input[onchange*="share-records"]');
+            if (shareCb && priv['share-records'] === false) shareCb.checked = false;
+        } catch(e) {}
+        if (typeof firebase === 'undefined' || !firebase.auth || typeof HOCMedicalReports === 'undefined') return;
+        HOCMedicalReports.bootstrap();
+        firebase.auth().onAuthStateChanged(function(user){
+            if (!user) return;
+            var pid = typeof HOC_getPatientId === 'function' ? HOC_getPatientId() : '';
+            if (!pid) return;
+            HOCMedicalReports.getPatientConsent(pid).then(function(ok){
+                var shareCb = document.querySelector('input[onchange*="share-records"]');
+                if (shareCb) shareCb.checked = !!ok;
+            });
         });
-
-        /* ===== KEYBOARD: ESC closes modal ===== */
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') closeModal();
-        });
-
-        /* ===== SYSTEM THEME WATCH ===== */
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-            const saved = localStorage.getItem('hoc-patient-settings');
-            if (saved) {
-                try {
-                    const s = JSON.parse(saved);
-                    if (s.theme === 'system') setTheme('system');
-                } catch(e) {}
-            }
-        });
+    })();
     </script>
-
 </body>
 </html>

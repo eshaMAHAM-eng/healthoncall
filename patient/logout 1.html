@@ -6,53 +6,43 @@
     <title>Logout | HealthOnCall</title>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="../doc/hoc-theme-init.js"></script>
+    <link rel="stylesheet" href="../doc/hoc-global-theme.css">
+    <script src="../doc/hoc-firebase-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="../doc/hoc-clinical-shared.js"></script>
+    <script src="../doc/hoc-notifications.js"></script>
+    <script src="hoc-patient-common.js"></script>
+
     <style>
-        :root {
-            --sidebar-bg: #0b1120;
-            --sidebar-hover: rgba(16,185,129,0.08);
-            --sidebar-active-bg: rgba(16,185,129,0.15);
-            --accent: #10b981;
-            --accent-glow: rgba(16,185,129,0.25);
-            --accent-soft: #d1fae5;
-            --accent-dark: #059669;
-            --rose: #f43f5e;
-            --rose-soft: #ffe4e6;
-            --rose-dark: #9f1239;
-            --slate: #64748b;
-            --slate-soft: #f1f5f9;
-            --bg: #f0f4f8;
-            --bg-gradient: linear-gradient(135deg,#f0f4f8 0%,#e8eef5 50%,#f0f4f8 100%);
-            --card: #ffffff;
-            --card-border: rgba(0,0,0,0.04);
-            --text: #0f172a;
-            --text-secondary: #475569;
-            --text-muted: #94a3b8;
-            --border: #e2e8f0;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04),0 1px 2px rgba(0,0,0,0.02);
-            --shadow-md: 0 8px 30px rgba(0,0,0,0.06);
-            --shadow-lg: 0 20px 60px rgba(0,0,0,0.1);
-            --radius: 18px;
-            --radius-lg: 24px;
-            --transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+        :root{
+            --sidebar-bg:#0b1120;--sidebar-hover:rgba(16,185,129,.08);--sidebar-active-bg:rgba(16,185,129,.15);
+            --sidebar-width:280px;
+            --accent:#10b981;--accent-glow:rgba(16,185,129,.25);--accent-soft:#d1fae5;--accent-dark:#059669;
+            --rose:#f43f5e;--rose-soft:#ffe4e6;--rose-dark:#9f1239;
+            --slate:#64748b;--slate-soft:#f1f5f9;
+            --bg:#f0f4f8;--bg-gradient:linear-gradient(135deg,#f0f4f8 0%,#e8eef5 50%,#f0f4f8 100%);
+            --card:#ffffff;--card-border:rgba(0,0,0,.04);
+            --text:#0f172a;--text-secondary:#475569;--text-muted:#94a3b8;--border:#e2e8f0;
+            --shadow-sm:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.02);
+            --shadow-md:0 8px 30px rgba(0,0,0,.06);--shadow-lg:0 20px 60px rgba(0,0,0,.1);
+            --radius:18px;--radius-lg:24px;--transition:all .35s cubic-bezier(.4,0,.2,1);
         }
-        body.dark-mode {
-            --bg: #020617;
-            --bg-gradient: linear-gradient(135deg,#020617 0%,#0a0f1e 50%,#020617 100%);
-            --card: #0f172a;
-            --card-border: rgba(255,255,255,0.06);
-            --text: #f1f5f9;
-            --text-secondary: #cbd5e1;
-            --text-muted: #64748b;
-            --border: #1e293b;
-            --slate-soft: #1e293b;
-            --rose-soft: rgba(244,63,94,.12);
+        body.dark-mode{
+            --bg:#020617;--bg-gradient:linear-gradient(135deg,#020617 0%,#0a0f1e 50%,#020617 100%);
+            --card:#0f172a;--card-border:rgba(255,255,255,.06);--text:#f1f5f9;--text-secondary:#cbd5e1;--text-muted:#64748b;
+            --border:#1e293b;--slate-soft:#1e293b;
+            --rose-soft:rgba(244,63,94,.12);
         }
         *{margin:0;padding:0;box-sizing:border-box;}
+        html{scroll-behavior:smooth;}
         body{font-family:'DM Sans',sans-serif;background:var(--bg-gradient);color:var(--text);min-height:100vh;display:flex;overflow-x:hidden;transition:background .5s,color .4s;}
         h1,h2,h3,h4,h5,h6{font-family:'Sora',sans-serif;}
 
-        /* ===== BLOBS ===== */
-        .bg-blobs{position:fixed;top:0;left:280px;right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;}
+        /* ===== BG BLOBS ===== */
+        .bg-blobs{position:fixed;top:0;left:var(--sidebar-width);right:0;bottom:0;pointer-events:none;z-index:0;overflow:hidden;transition:left .35s cubic-bezier(.4,0,.2,1);}
         .bg-blobs .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.3;animation:blobFloat 20s ease-in-out infinite;transition:opacity .5s;}
         body.dark-mode .bg-blobs .blob{opacity:.1;}
         .blob-1{width:350px;height:350px;background:#10b981;top:-80px;right:5%;animation-delay:0s;}
@@ -61,15 +51,16 @@
         @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1);}25%{transform:translate(30px,-40px) scale(1.1);}50%{transform:translate(-20px,20px) scale(.95);}75%{transform:translate(15px,35px) scale(1.05);}}
 
         /* ===== SIDEBAR ===== */
-        .sidebar{width:280px;height:100vh;position:fixed;left:0;top:0;background:var(--sidebar-bg);z-index:1000;display:flex;flex-direction:column;overflow:hidden;transition:background .5s;}
+        .sidebar{width:var(--sidebar-width);height:100vh;position:fixed;left:0;top:0;background:var(--sidebar-bg);z-index:1000;display:flex;flex-direction:column;overflow:hidden;transition:transform .35s cubic-bezier(.4,0,.2,1);}
         .sidebar::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,185,129,.07) 0%,transparent 40%,transparent 60%,rgba(14,165,233,.05) 100%);pointer-events:none;}
-        .sidebar-brand{padding:32px 28px 28px;position:relative;}
+        .sidebar-brand{padding:32px 28px 28px;position:relative;z-index:1;}
         .sidebar-brand .logo-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;color:white;margin-bottom:16px;box-shadow:0 8px 24px rgba(16,185,129,.3);}
         .sidebar-brand h2{font-size:22px;font-weight:800;color:#f1f5f9;letter-spacing:-.5px;}
         .sidebar-brand h2 span{color:var(--accent);}
         .sidebar-brand p{font-size:11px;color:var(--text-muted);margin-top:4px;font-weight:500;letter-spacing:1px;text-transform:uppercase;}
-        .sidebar-nav{flex:1;padding:0 16px;display:flex;flex-direction:column;gap:4px;position:relative;overflow-y:auto;}
-        .sidebar-nav::-webkit-scrollbar{width:0;}
+        .sidebar-nav{flex:1;padding:0 16px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;-webkit-overflow-scrolling:touch;position:relative;z-index:1;}
+        .sidebar-nav::-webkit-scrollbar{width:3px;}
+        .sidebar-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px;}
         .nav-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;padding:20px 16px 8px;}
         .sidebar-nav a{display:flex;align-items:center;gap:14px;padding:13px 18px;border-radius:14px;text-decoration:none;color:#94a3b8;font-weight:500;font-size:14.5px;transition:var(--transition);position:relative;overflow:hidden;}
         .sidebar-nav a i{width:20px;text-align:center;font-size:16px;transition:var(--transition);}
@@ -83,7 +74,7 @@
         .sidebar-nav a.nav-danger.active{background:rgba(244,63,94,.15);}
         .sidebar-nav a.nav-danger.active i{color:var(--rose);}
         .sidebar-nav a.nav-danger.active::before{background:var(--rose);}
-        .sidebar-footer{padding:20px 24px;border-top:1px solid rgba(255,255,255,.05);position:relative;}
+        .sidebar-footer{padding:20px 24px;border-top:1px solid rgba(255,255,255,.05);position:relative;z-index:1;}
         .sidebar-footer .user-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.03);transition:var(--transition);}
         .sidebar-footer .user-card:hover{background:rgba(255,255,255,.06);}
         .user-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#0ea5e9);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;font-family:'Sora',sans-serif;overflow:hidden;}
@@ -91,139 +82,61 @@
         .user-info .user-name{color:#e2e8f9;font-weight:600;font-size:14px;}
         .user-info .user-role{color:var(--text-muted);font-size:11px;}
 
+        /* ===== SIDEBAR OVERLAY ===== */
+        .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);z-index:999;opacity:0;transition:opacity .3s ease;}
+        .sidebar-overlay.active{display:block;opacity:1;}
+
+        /* ===== MOBILE TOP BAR ===== */
+        .mobile-topbar{display:none;position:fixed;top:0;left:0;right:0;z-index:900;background:var(--card);border-bottom:1px solid var(--border);padding:12px 16px;align-items:center;gap:12px;backdrop-filter:blur(12px);}
+        .hamburger{width:42px;height:42px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);font-size:18px;transition:var(--transition);flex-shrink:0;}
+        .hamburger:hover{border-color:var(--accent);color:var(--accent);}
+        .m-logo{display:flex;align-items:center;gap:10px;}
+        .m-logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),#0ea5e9);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:white;flex-shrink:0;}
+        .m-logo-text{font-family:'Sora',sans-serif;font-weight:800;font-size:17px;color:var(--text);}
+        .m-logo-text span{color:var(--accent);}
+        .m-notif{margin-left:auto;width:42px;height:42px;border-radius:12px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);font-size:16px;transition:var(--transition);flex-shrink:0;}
+        .m-notif:hover{border-color:var(--accent);color:var(--accent);}
+
         /* ===== MAIN ===== */
-        .main{margin-left:280px;flex:1;display:flex;justify-content:center;align-items:center;padding:32px 40px;position:relative;z-index:1;min-height:100vh;}
+        .main{margin-left:var(--sidebar-width);flex:1;display:flex;justify-content:center;align-items:center;padding:32px 40px;position:relative;z-index:1;min-height:100vh;transition:margin-left .35s cubic-bezier(.4,0,.2,1);}
 
         /* ===== LOGOUT CARD ===== */
-        .logout-card{
-            background:var(--card);
-            max-width:480px;
-            width:100%;
-            border-radius:28px;
-            padding:48px 40px 40px;
-            text-align:center;
-            box-shadow:var(--shadow-md);
-            border:1px solid var(--card-border);
-            position:relative;
-            overflow:hidden;
-            transition:var(--transition);
-            animation:cardEntry .6s cubic-bezier(.34,1.56,.64,1);
-        }
+        .logout-card{background:var(--card);max-width:480px;width:100%;border-radius:28px;padding:48px 40px 40px;text-align:center;box-shadow:var(--shadow-md);border:1px solid var(--card-border);position:relative;overflow:hidden;transition:var(--transition);animation:cardEntry .6s cubic-bezier(.34,1.56,.64,1);}
         @keyframes cardEntry{from{opacity:0;transform:translateY(30px) scale(.96);}to{opacity:1;transform:translateY(0) scale(1);}}
         .logout-card:hover{box-shadow:var(--shadow-lg);}
-        .logout-card::before{
-            content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;
-            background:linear-gradient(45deg,transparent 40%,rgba(255,255,255,.03) 50%,transparent 60%);
-            transform:translateX(-100%);transition:transform .8s ease;pointer-events:none;
-        }
+        .logout-card::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:linear-gradient(45deg,transparent 40%,rgba(255,255,255,.03) 50%,transparent 60%);transform:translateX(-100%);transition:transform .8s ease;pointer-events:none;}
         .logout-card:hover::before{transform:translateX(100%);}
-
-        .logout-icon-ring{
-            width:100px;height:100px;
-            margin:0 auto 28px;
-            position:relative;
-            display:flex;align-items:center;justify-content:center;
-        }
-        .logout-icon-ring .ring-bg{
-            position:absolute;inset:0;
-            border-radius:50%;
-            background:var(--rose-soft);
-            animation:ringPulse 2.5s ease-in-out infinite;
-        }
+        .logout-icon-ring{width:100px;height:100px;margin:0 auto 28px;position:relative;display:flex;align-items:center;justify-content:center;}
+        .logout-icon-ring .ring-bg{position:absolute;inset:0;border-radius:50%;background:var(--rose-soft);animation:ringPulse 2.5s ease-in-out infinite;}
         body.dark-mode .logout-icon-ring .ring-bg{background:rgba(244,63,94,.1);}
-        @keyframes ringPulse{
-            0%,100%{transform:scale(1);opacity:1;}
-            50%{transform:scale(1.08);opacity:.7;}
-        }
-        .logout-icon-ring .ring-border{
-            position:absolute;inset:-4px;
-            border-radius:50%;
-            border:2px dashed var(--rose);
-            opacity:.3;
-            animation:ringRotate 12s linear infinite;
-        }
+        @keyframes ringPulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.08);opacity:.7;}}
+        .logout-icon-ring .ring-border{position:absolute;inset:-4px;border-radius:50%;border:2px dashed var(--rose);opacity:.3;animation:ringRotate 12s linear infinite;}
         @keyframes ringRotate{to{transform:rotate(360deg);}}
-        .logout-icon-ring i{
-            font-size:36px;
-            color:var(--rose);
-            position:relative;
-            z-index:2;
-            animation:iconBreathe 3s ease-in-out infinite;
-        }
+        .logout-icon-ring i{font-size:36px;color:var(--rose);position:relative;z-index:2;animation:iconBreathe 3s ease-in-out infinite;}
         @keyframes iconBreathe{0%,100%{opacity:1;}50%{opacity:.6;}}
-
-        .logout-card h2{
-            font-size:24px;font-weight:800;
-            color:var(--text);
-            margin-bottom:12px;
-            letter-spacing:-.5px;
-        }
-        .logout-card .sub-text{
-            color:var(--text-muted);
-            font-size:14.5px;
-            line-height:1.7;
-            margin-bottom:8px;
-        }
-        .logout-card .session-info{
-            display:inline-flex;align-items:center;gap:8px;
-            background:var(--slate-soft);
-            border-radius:10px;
-            padding:8px 16px;
-            font-size:12.5px;
-            font-weight:600;
-            color:var(--text-secondary);
-            margin-bottom:32px;
-        }
+        .logout-card h2{font-size:24px;font-weight:800;color:var(--text);margin-bottom:12px;letter-spacing:-.5px;}
+        .logout-card .sub-text{color:var(--text-muted);font-size:14.5px;line-height:1.7;margin-bottom:8px;}
+        .logout-card .session-info{display:inline-flex;align-items:center;gap:8px;background:var(--slate-soft);border-radius:10px;padding:8px 16px;font-size:12.5px;font-weight:600;color:var(--text-secondary);margin:20px 0 28px;}
         body.dark-mode .logout-card .session-info{background:rgba(255,255,255,.04);}
         .logout-card .session-info i{color:var(--accent);font-size:12px;}
-
-        .btn-stack{display:flex;flex-direction:column;gap:12px;}
-
-        .btn{
-            padding:15px 28px;border-radius:14px;
-            font-family:'DM Sans',sans-serif;
-            font-size:15px;font-weight:700;
-            cursor:pointer;transition:var(--transition);
-            border:none;width:100%;
-            display:inline-flex;align-items:center;justify-content:center;gap:10px;
-            position:relative;overflow:hidden;
-        }
-        .btn-logout{
-            background:linear-gradient(135deg,var(--rose-dark),var(--rose));
-            color:white;
-            box-shadow:0 6px 20px rgba(244,63,94,.3);
-        }
-        .btn-logout:hover{
-            transform:translateY(-2px);
-            box-shadow:0 10px 30px rgba(244,63,94,.4);
-        }
-        .btn-logout:active{transform:translateY(0);}
+        .btn-stack{display:flex;flex-direction:column;gap:12px;margin-top:4px;}
+        .btn{padding:15px 28px;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:var(--transition);border:none;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:10px;position:relative;overflow:hidden;}
+        .btn-logout{background:linear-gradient(135deg,var(--rose-dark),var(--rose));color:white;box-shadow:0 6px 20px rgba(244,63,94,.3);}
+        .btn-logout:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(244,63,94,.4);}
         .btn-logout.logging-out{pointer-events:none;opacity:.85;}
         .btn-logout.logging-out .btn-label{display:none;}
         .btn-logout.logging-out .btn-loader{display:inline-flex;}
+        .btn-logout:active{opacity:.92;}
         .btn-logout .btn-loader{display:none;align-items:center;gap:8px;}
-        .btn-logout .dot-loader{display:flex;gap:5px;}
-        .btn-logout .dot-loader span{
-            width:7px;height:7px;border-radius:50%;
-            background:rgba(255,255,255,.5);
-            animation:dotBounce .6s ease-in-out infinite;
-        }
+        .btn-logout .dot-loader span{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.5);animation:dotBounce .6s ease-in-out infinite;}
         .btn-logout .dot-loader span:nth-child(2){animation-delay:.1s;}
         .btn-logout .dot-loader span:nth-child(3){animation-delay:.2s;}
-        @keyframes dotBounce{
-            0%,100%{transform:translateY(0);opacity:.4;}
-            50%{transform:translateY(-6px);opacity:1;}
-        }
-        .btn-stay{
-            background:var(--slate-soft);
-            color:var(--text-secondary);
-        }
+        @keyframes dotBounce{0%,100%{transform:translateY(0);opacity:.4;}50%{transform:translateY(-6px);opacity:1;}}
+        .btn-stay{background:var(--slate-soft);color:var(--text-secondary);}
         body.dark-mode .btn-stay{background:rgba(255,255,255,.06);color:var(--text-muted);}
-        .btn-stay:hover{
-            background:var(--border);
-            color:var(--text);
-            transform:translateY(-1px);
-        }
+        .btn-stay:hover{background:var(--border);color:var(--text);transform:translateY(-1px);}
+
+        .logout-form.hide{display:none!important;}
 
         /* Ripple */
         .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.3);transform:scale(0);animation:rippleAnim .6s ease-out;pointer-events:none;}
@@ -232,55 +145,21 @@
         /* ===== LOGGED OUT STATE ===== */
         .logged-out-state{display:none;text-align:center;}
         .logged-out-state.show{display:block;}
-        .logout-form.hide{display:none;}
-
-        .success-check{
-            width:100px;height:100px;
-            margin:0 auto 24px;
-            border-radius:50%;
-            background:var(--accent-soft);
-            display:flex;align-items:center;justify-content:center;
-            animation:checkPop .5s cubic-bezier(.34,1.56,.64,1);
-        }
+        .success-check{width:100px;height:100px;margin:0 auto 24px;border-radius:50%;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;animation:checkPop .5s cubic-bezier(.34,1.56,.64,1);}
         body.dark-mode .success-check{background:rgba(16,185,129,.15);}
         @keyframes checkPop{from{transform:scale(0);opacity:0;}to{transform:scale(1);opacity:1;}}
         .success-check i{font-size:42px;color:var(--accent);}
-
-        .logged-out-state h2{
-            font-size:22px;font-weight:800;
-            color:var(--text);margin-bottom:8px;
-            letter-spacing:-.5px;
-            animation:fadeUp .4s ease .15s both;
-        }
-        .logged-out-state p{
-            color:var(--text-muted);font-size:14px;
-            margin-bottom:28px;line-height:1.6;
-            animation:fadeUp .4s ease .25s both;
-        }
+        .logged-out-state h2{font-size:22px;font-weight:800;color:var(--text);margin-bottom:8px;letter-spacing:-.5px;animation:fadeUp .4s ease .15s both;}
+        .logged-out-state p{color:var(--text-muted);font-size:14px;margin-bottom:28px;line-height:1.65;max-width:36em;margin-left:auto;margin-right:auto;animation:fadeUp .4s ease .25s both;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
-
-        .btn-login{
-            background:linear-gradient(135deg,var(--accent-dark),var(--accent));
-            color:white;
-            box-shadow:0 6px 20px rgba(16,185,129,.3);
-            animation:fadeUp .4s ease .35s both;
-        }
-        .btn-login:hover{
-            transform:translateY(-2px);
-            box-shadow:0 10px 30px rgba(16,185,129,.4);
-        }
-
-        .redirect-timer{
-            font-size:12px;color:var(--text-muted);
-            margin-top:16px;
-            animation:fadeUp .4s ease .45s both;
-        }
+        .btn-login{background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:white;box-shadow:0 6px 20px rgba(16,185,129,.3);animation:fadeUp .4s ease .35s both;}
+        .btn-login:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(16,185,129,.4);}
+        .redirect-timer{font-size:12px;color:var(--text-muted);margin-top:16px;animation:fadeUp .4s ease .45s both;}
         .redirect-timer span{color:var(--accent);font-weight:700;}
 
         /* ===== TOAST ===== */
-        .toast-container{position:fixed;top:24px;right:24px;z-index:5000;display:flex;flex-direction:column;gap:10px;}
-        .toast{background:var(--card);border-radius:14px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.12);border-left:4px solid var(--accent);font-size:14px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);min-width:300px;}
-        body.dark-mode .toast{background:var(--card);}
+        .toast-container{position:fixed;top:24px;right:24px;z-index:5000;display:flex;flex-direction:column;gap:10px;pointer-events:none;}
+        .toast{background:var(--card);border-radius:14px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.12);border-left:4px solid var(--accent);font-size:14px;font-weight:600;color:var(--text);transform:translateX(120%);transition:transform .5s cubic-bezier(.34,1.56,.64,1);min-width:300px;pointer-events:auto;}
         .toast.show{transform:translateX(0);}
         .toast i{font-size:18px;}
         .toast .t-success{color:var(--accent);}
@@ -290,18 +169,49 @@
         /* ===== RESPONSIVE ===== */
         @media(max-width:768px){
             .sidebar{transform:translateX(-100%);}
-            .main{margin-left:0;padding:20px;}
-            .logout-card{padding:36px 24px 28px;border-radius:22px;}
-            .logout-icon-ring{width:80px;height:80px;}
+            .sidebar.open{transform:translateX(0);}
+            .sidebar-overlay.active{display:block;opacity:1;}
+            .mobile-topbar{display:flex!important;}
+            .main{margin-left:0;padding:76px 16px 24px;align-items:flex-start;}
+            .bg-blobs{left:0;}
+            .logout-card{padding:36px 24px 28px;border-radius:22px;max-width:100%;}
+            .logout-icon-ring{width:80px;height:80px;margin-bottom:22px;}
             .logout-icon-ring i{font-size:28px;}
             .logout-card h2{font-size:20px;}
-            .toast{min-width:260px;font-size:13px;}
+            .logout-card .sub-text{font-size:14px;}
+            .logged-out-state h2{font-size:18px;}
+            .toast-container{top:76px;left:12px;right:12px;}
+            .toast{min-width:0;width:100%;font-size:13px;padding:12px 16px;}
         }
-        html{scroll-behavior:smooth;}
+        @media(max-width:480px){
+            .main{padding:72px 12px 20px;}
+            .logout-card{padding:28px 18px 24px;border-radius:18px;}
+            .success-check{width:80px;height:80px;}
+            .logout-card h2{font-size:18px;}
+            .btn{padding:14px 20px;font-size:14px;}
+            .m-logo-text{font-size:15px;}
+        }
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
     </style>
+    <link rel="stylesheet" href="../doc/SIDEBAR.CSS">
+    <link rel="stylesheet" href="../doc/shared sidebar footer.css">
+    <script src="../doc/hoc-sidebar.js" defer></script>
 </head>
 <body>
+<script>try{HOC_applyThemeFromStorage();}catch(e){}</script>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="hocSbOverlay"></div>
+
+    <!-- Mobile Top Bar -->
+    <div class="mobile-topbar" id="mobTopbar">
+        <button class="hamburger" id="hocHamburger" aria-label="Open menu"><i class="fas fa-bars"></i></button>
+        <div class="m-logo">
+            <div class="m-logo-icon"><i class="fas fa-heartbeat"></i></div>
+            <span class="m-logo-text">Health<span>OnCall</span></span>
+        </div>
+        <button class="m-notif" aria-label="Notifications"><i class="fas fa-bell"></i></button>
+    </div>
 
     <!-- Blobs -->
     <div class="bg-blobs">
@@ -311,17 +221,20 @@
     </div>
 
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="hocSidebar">
         <div class="sidebar-brand">
             <div class="logo-icon"><i class="fas fa-heartbeat"></i></div>
-            <h2>Health<span>OnCall</span></h2>
-            <p>Patient Portal</p>
+            <div>
+                <h2>Health<span>OnCall</span></h2>
+                <p>Patient Portal</p>
+            </div>
         </div>
         <nav class="sidebar-nav">
             <div class="nav-label">Menu</div>
             <a href="Patient Dashboard Home Page p1.html"><i class="fas fa-th-large"></i> Home</a>
-            <a href="find doc 1.html"><i class="fas fa-search"></i> Find Specialist</a>
-            <a href="services 1.html"><i class="fas fa-concierge-bell"></i> Services</a>
+             
+            <a href="book-appointment.html"><i class="fas fa-calendar-plus"></i> Book Appointment</a>
+            <a href="Patient Dashboard Home Page p1.html#messages"><i class="fas fa-comments"></i> Messages</a>
             <a href="assistant 1.html"><i class="fas fa-robot"></i> AI Assistant</a>
             <a href="feedback 1.html"><i class="fas fa-star"></i> Feedback</a>
             <div class="nav-label">Account</div>
@@ -330,9 +243,9 @@
         </nav>
         <div class="sidebar-footer">
             <div class="user-card">
-                <div class="user-avatar"><img src="https://ui-avatars.com/api/?name=Sarah+Johnson&background=10b981&color=fff&bold=true&size=80" alt="" id="sidebarAvatarImg"></div>
+                <div class="user-avatar"><img id="sidebarAvatarImg" src="https://ui-avatars.com/api/?name=Esha+Maham&background=10b981&color=fff&bold=true&size=80" alt=""></div>
                 <div class="user-info">
-                    <div class="user-name" id="sidebarName">Sarah Johnson</div>
+                    <div class="user-name" id="sidebarName">Esha Maham</div>
                     <div class="user-role">Patient</div>
                 </div>
             </div>
@@ -360,14 +273,11 @@
                 </div>
 
                 <div class="btn-stack">
-                    <button class="btn btn-logout" id="logoutBtn" onclick="confirmLogout()">
+                    <button type="button" class="btn btn-logout" id="logoutBtn" onclick="confirmLogout()">
                         <span class="btn-label"><i class="fas fa-sign-out-alt"></i> Log Out</span>
-                        <span class="btn-loader">
-                            <span class="dot-loader"><span></span><span></span><span></span></span>
-                            Ending session...
-                        </span>
+                        <span class="btn-loader"><span class="dot-loader"><span></span><span></span><span></span></span>Ending session...</span>
                     </button>
-                    <button class="btn btn-stay" onclick="cancelLogout()">
+                    <button type="button" class="btn btn-stay" onclick="cancelLogout()">
                         <i class="fas fa-arrow-left"></i> Stay Logged In
                     </button>
                 </div>
@@ -380,10 +290,10 @@
                 </div>
                 <h2>Session Ended</h2>
                 <p>You have been successfully logged out. Stay healthy and take care — we'll be here when you need us.</p>
-                <button class="btn btn-login" onclick="goToLogin()">
+                <button type="button" class="btn btn-login" onclick="goToLogin()">
                     <i class="fas fa-sign-in-alt"></i> Sign In Again
                 </button>
-                <div class="redirect-timer">Redirecting to login in <span id="countdown">10</span> seconds...</div>
+                <div class="redirect-timer">Redirecting to login in <span id="countdown">5</span> seconds...</div>
             </div>
 
         </div>
@@ -393,163 +303,177 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
-        /* ===== SESSION TIMER ===== */
-        let sessionSeconds = 0;
-        let timerInterval = null;
-        let countdownInterval = null;
+    /* ===== SIDEBAR TOGGLE ===== */
+    var sidebar = document.getElementById('hocSidebar');
+    var overlay = document.getElementById('hocSbOverlay');
+    var hamburger = document.getElementById('hocHamburger');
 
-        const sessionStart = localStorage.getItem('hoc-patient-session-start');
-        if (sessionStart) {
-            sessionSeconds = Math.floor((Date.now() - parseInt(sessionStart)) / 1000);
-        } else {
-            localStorage.setItem('hoc-patient-session-start', Date.now().toString());
-        }
+    function hocToggleSidebar(){
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+        document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    }
+    function hocCloseSidebar(){
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
 
-        function updateSessionDisplay() {
-            const m = Math.floor(sessionSeconds / 60);
-            const s = sessionSeconds % 60;
-            document.getElementById('sessionDuration').textContent = `Session active for ${m}m ${s}s`;
-        }
+    hamburger.addEventListener('click', hocToggleSidebar);
+    overlay.addEventListener('click', hocCloseSidebar);
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape') hocCloseSidebar(); });
+    window.addEventListener('resize', function(){ if(window.innerWidth > 768) hocCloseSidebar(); });
 
+    /* ===== SESSION TIMER ===== */
+    let sessionSeconds = 0;
+    let timerInterval = null;
+    let countdownInterval = null;
+
+    const sessionStart = localStorage.getItem('hoc-patient-session-start');
+    if (sessionStart) {
+        sessionSeconds = Math.floor((Date.now() - parseInt(sessionStart)) / 1000);
+    } else {
+        localStorage.setItem('hoc-patient-session-start', Date.now().toString());
+    }
+
+    function updateSessionDisplay() {
+        const m = Math.floor(sessionSeconds / 60);
+        const s = sessionSeconds % 60;
+        document.getElementById('sessionDuration').textContent = 'Session active for ' + m + 'm ' + s + 's';
+    }
+
+    updateSessionDisplay();
+    timerInterval = setInterval(function() {
+        sessionSeconds++;
         updateSessionDisplay();
-        timerInterval = setInterval(() => {
-            sessionSeconds++;
-            updateSessionDisplay();
+    }, 1000);
+
+    /* ===== LOAD USER INFO ===== */
+    function loadUserInfo() {
+        var saved = localStorage.getItem('hoc-patient-settings');
+        if (saved) {
+            try {
+                var s = JSON.parse(saved);
+                var sn = document.getElementById('sidebarName');
+                var sa = document.getElementById('sidebarAvatarImg');
+                if (sn && s.name) sn.textContent = s.name;
+                if (sa && s.avatar) sa.src = s.avatar;
+                if (s.dark) document.body.classList.add('dark-mode');
+            } catch(e) {}
+        }
+        if (typeof HOC_getPatientName === 'function') {
+            var sn2 = document.getElementById('sidebarName');
+            if (sn2 && (!sn2.textContent || !sn2.textContent.trim())) sn2.textContent = HOC_getPatientName();
+        }
+    }
+    loadUserInfo();
+
+    /* ===== LOGOUT ===== */
+    function confirmLogout() {
+        var btn = document.getElementById('logoutBtn');
+        if (!btn || btn.classList.contains('logging-out')) return;
+        btn.classList.add('logging-out');
+        clearInterval(timerInterval);
+        showToast('Ending your session...', 'info');
+        setTimeout(function() {
+            try { localStorage.removeItem('hoc-patient-session-start'); } catch (e0) {}
+            localStorage.removeItem('hoc_current_role');
+            localStorage.removeItem('hoc_user');
+            localStorage.removeItem('hoc_appointments');
+            localStorage.removeItem('hoc_new_booking_signal');
+            try { localStorage.removeItem('hoc_flow_tracker'); } catch (e) {}
+            localStorage.setItem('hoc_manual_logout', '1');
+            try {
+                if (typeof hocForceSignOut === 'function') hocForceSignOut(null);
+                else if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length && firebase.auth) {
+                    firebase.auth().signOut().catch(function() {});
+                }
+            } catch (e) {}
+            var lf = document.getElementById('logoutForm');
+            var lo = document.getElementById('loggedOutState');
+            if (lf) lf.classList.add('hide');
+            if (lo) lo.classList.add('show');
+            showToast('Successfully logged out', 'success');
+            startCountdown(5);
+        }, 1800);
+    }
+
+    function goToLogin() {
+        clearInterval(countdownInterval);
+        if (typeof hocLogoutAndGoHome === 'function') {
+            hocLogoutAndGoHome();
+            return;
+        }
+        localStorage.setItem('hoc_manual_logout', '1');
+        window.location.href = '../index.html?signedout=1';
+    }
+
+    function cancelLogout() {
+        showToast('Welcome back!', 'success');
+        setTimeout(function(){ window.location.href = 'Patient Dashboard Home Page p1.html'; }, 800);
+    }
+
+    /* ===== COUNTDOWN ===== */
+    function startCountdown(seconds) {
+        var remaining = seconds;
+        var el = document.getElementById('countdown');
+        if(el) el.textContent = remaining;
+        countdownInterval = setInterval(function() {
+            remaining--;
+            if(el) el.textContent = remaining;
+            if (remaining <= 0) { clearInterval(countdownInterval); goToLogin(); }
         }, 1000);
+    }
 
-        /* ===== LOAD USER INFO ===== */
-        function loadUserInfo() {
-            const saved = localStorage.getItem('hoc-patient-settings');
-            if (saved) {
-                try {
-                    const s = JSON.parse(saved);
-                    if (s.name) {
-                        document.getElementById('sidebarName').textContent = s.name;
-                    }
-                    if (s.avatar) {
-                        document.getElementById('sidebarAvatarImg').src = s.avatar;
-                    }
-                    if (s.dark) {
-                        document.body.classList.add('dark-mode');
-                    }
-                } catch(e) {}
-            }
-        }
-        loadUserInfo();
-
-        /* ===== LOGOUT ===== */
-        function confirmLogout() {
-            const btn = document.getElementById('logoutBtn');
-            btn.classList.add('logging-out');
+    /* ===== VISIBILITY CLEANUP ===== */
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
             clearInterval(timerInterval);
-
-            showToast('Ending your session...', 'info');
-
-            setTimeout(() => {
-                localStorage.removeItem('hoc-patient-session-start');
-
-                document.getElementById('logoutForm').classList.add('hide');
-                document.getElementById('loggedOutState').classList.add('show');
-
-                showToast('Successfully logged out', 'success');
-                startCountdown(10);
-            }, 1800);
-        }
-
-        /* ===== CANCEL ===== */
-        function cancelLogout() {
-            showToast('Welcome back, Sarah!', 'success');
-            setTimeout(() => {
-                window.location.href = 'Patient Dashboard Home Page.html';
-            }, 800);
-        }
-
-        /* ===== COUNTDOWN ===== */
-        function startCountdown(seconds) {
-            let remaining = seconds;
-            const el = document.getElementById('countdown');
-            el.textContent = remaining;
-
-            countdownInterval = setInterval(() => {
-                remaining--;
-                el.textContent = remaining;
-                if (remaining <= 0) {
-                    clearInterval(countdownInterval);
-                    goToLogin();
-                }
-            }, 1000);
-        }
-
-        /* ===== GO TO LOGIN ===== */
-        function goToLogin() {
             clearInterval(countdownInterval);
-            showToast('Redirecting to login page...', 'info');
-            setTimeout(() => {
-                window.location.href = 'patient-login.html';
-            }, 600);
-        }
-
-        /* ===== RIPPLE ===== */
-        document.querySelectorAll('.btn').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                const rect = this.getBoundingClientRect();
-                const ripple = document.createElement('span');
-                ripple.className = 'ripple';
-                const size = Math.max(rect.width, rect.height);
-                ripple.style.width = ripple.style.height = size + 'px';
-                ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
-                ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
-                this.appendChild(ripple);
-                setTimeout(() => ripple.remove(), 600);
-            });
-        });
-
-        /* ===== TOAST ===== */
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-
-            const icons = {
-                success: '<i class="fas fa-check-circle t-success"></i>',
-                error: '<i class="fas fa-times-circle t-err"></i>',
-                info: '<i class="fas fa-info-circle t-info"></i>'
-            };
-            const colors = {
-                success: 'var(--accent)',
-                error: 'var(--rose)',
-                info: '#0ea5e9'
-            };
-
-            toast.style.borderLeftColor = colors[type] || colors.success;
-            toast.innerHTML = (icons[type] || icons.success) + ' ' + message;
-            container.appendChild(toast);
-
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => toast.classList.add('show'));
-            });
-
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 500);
-            }, 3500);
-        }
-
-        /* ===== VISIBILITY CLEANUP ===== */
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                clearInterval(timerInterval);
-                clearInterval(countdownInterval);
-            } else {
-                if (!document.getElementById('logoutForm').classList.contains('hide')) {
-                    timerInterval = setInterval(() => {
-                        sessionSeconds++;
-                        updateSessionDisplay();
-                    }, 1000);
-                }
+        } else {
+            var lf = document.getElementById('logoutForm');
+            if (lf && !lf.classList.contains('hide')) {
+                timerInterval = setInterval(function() {
+                    sessionSeconds++;
+                    updateSessionDisplay();
+                }, 1000);
             }
-        });
-    </script>
+        }
+    });
 
+    /* ===== RIPPLE ===== */
+    document.querySelectorAll('.btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            var rect = this.getBoundingClientRect();
+            var ripple = document.createElement('span');
+            ripple.className = 'ripple';
+            var size = Math.max(rect.width, rect.height);
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+            ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+            this.appendChild(ripple);
+            setTimeout(function(){ ripple.remove(); }, 600);
+        });
+    });
+
+    /* ===== TOAST ===== */
+    function showToast(message, type) {
+        type = type || 'success';
+        var container = document.getElementById('toastContainer');
+        var toast = document.createElement('div');
+        toast.className = 'toast';
+        var icons = {
+            success: '<i class="fas fa-check-circle t-success"></i>',
+            error: '<i class="fas fa-times-circle t-err"></i>',
+            info: '<i class="fas fa-info-circle t-info"></i>'
+        };
+        var colors = { success:'var(--accent)', error:'var(--rose)', info:'#0ea5e9' };
+        toast.style.borderLeftColor = colors[type] || colors.success;
+        toast.innerHTML = (icons[type] || icons.success) + ' ' + message;
+        container.appendChild(toast);
+        requestAnimationFrame(function(){ requestAnimationFrame(function(){ toast.classList.add('show'); }); });
+        setTimeout(function(){ toast.classList.remove('show'); setTimeout(function(){ toast.remove(); }, 500); }, 3500);
+    }
+    </script>
 </body>
 </html>
