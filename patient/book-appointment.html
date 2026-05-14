@@ -17,6 +17,7 @@
 <script src="../doc/hoc-feedback-ratings.js"></script>
 <script src="../doc/hoc-notifications.js"></script>
 <script src="../doc/hoc-stripe-pay.js"></script>
+<script src="../doc/hoc-safepay-pay.js"></script>
 <script src="hoc-patient-common.js"></script>
 <link rel="stylesheet" href="../doc/hoc-global-theme.css">
 
@@ -465,10 +466,10 @@ body.dark-mode .symptom-chip{background:#1e293b;border-color:var(--border)}
             <div style="font-size:11px;font-weight:700;color:var(--accent-dark);">Cash</div>
             <div style="font-size:9px;color:var(--text-muted);">On Delivery</div>
           </div>
-          <div class="pay-opt" data-pay="JazzCash" onclick="selectPayment('JazzCash')" style="background:var(--slate-soft);border:2px solid var(--card-border);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .3s;">
-            <i class="fas fa-mobile-alt" style="font-size:18px;color:#e11d48;display:block;margin-bottom:6px;"></i>
-            <div style="font-size:11px;font-weight:700;color:var(--text);">JazzCash</div>
-            <div style="font-size:9px;color:var(--text-muted);">Mobile Wallet</div>
+          <div class="pay-opt" data-pay="Safepay" onclick="selectPayment('Safepay')" style="background:var(--slate-soft);border:2px solid var(--card-border);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .3s;">
+            <i class="fas fa-shield-halved" style="font-size:18px;color:#0d9488;display:block;margin-bottom:6px;"></i>
+            <div style="font-size:11px;font-weight:700;color:var(--text);">Safepay</div>
+            <div style="font-size:9px;color:var(--text-muted);">PK Card / Wallet</div>
           </div>
           <div class="pay-opt" data-pay="EasyPaisa" onclick="selectPayment('EasyPaisa')" style="background:var(--slate-soft);border:2px solid var(--card-border);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .3s;">
             <i class="fas fa-wallet" style="font-size:18px;color:#059669;display:block;margin-bottom:6px;"></i>
@@ -1130,6 +1131,10 @@ function hocPaymentIsPaid(){
     var ref=document.getElementById('payAccountInput')?document.getElementById('payAccountInput').value.trim():'';
     return !!(sp&&sp.sessionId)||!!ref;
   }
+  if(selectedPayment==='Safepay'){
+    var sf=typeof HOC_safepayPaidSession==='function'?HOC_safepayPaidSession():null;
+    return !!(sf&&sf.tracker);
+  }
   var ref2=document.getElementById('payAccountInput')?document.getElementById('payAccountInput').value.trim():'';
   return !!ref2;
 }
@@ -1137,6 +1142,10 @@ function hocPaymentRefValue(){
   if(selectedPayment==='Card'){
     var sp=typeof HOC_stripePaidSession==='function'?HOC_stripePaidSession():null;
     if(sp&&sp.sessionId)return sp.sessionId;
+  }
+  if(selectedPayment==='Safepay'){
+    var sf=typeof HOC_safepayPaidSession==='function'?HOC_safepayPaidSession():null;
+    if(sf&&sf.tracker)return sf.tracker;
   }
   return document.getElementById('payAccountInput')?document.getElementById('payAccountInput').value.trim():'';
 }
@@ -1150,6 +1159,12 @@ function hocLaunchStripePay(){
     description:(selectedService||'HealthOnCall')+' appointment fee',
     metadata:{service:selectedService||'',fee:String(fee)}
   }).catch(function(e){showToast((e&&e.message)||'Stripe checkout failed','err');});
+}
+function hocLaunchSafepayPay(){
+  var fee=hocBookingFeeAmount();
+  if(!fee){showToast('Select service and doctor first','err');return;}
+  if(typeof HOC_startSafepayCheckout!=='function'){showToast('Safepay module not loaded','err');return;}
+  HOC_startSafepayCheckout({ amount: fee }).catch(function(e){showToast((e&&e.message)||'Safepay checkout failed','err');});
 }
 
 function selectPayment(method){
@@ -1190,6 +1205,20 @@ function selectPayment(method){
     var sp=typeof HOC_stripePaidSession==='function'?HOC_stripePaidSession():null;
     var inp=document.getElementById('payAccountInput');
     if(inp){inp.placeholder='Filled after Stripe checkout';if(sp&&sp.sessionId)inp.value=sp.sessionId;}
+  }
+  else if(method==='Safepay'){
+    onlineFields.style.display='block';
+    if(label)label.textContent='Safepay Tracker';
+    var linkS=document.getElementById('payNowLink');
+    if(linkS){
+      linkS.href='#';
+      linkS.style.background='#0d9488';
+      linkS.onclick=function(e){e.preventDefault();hocLaunchSafepayPay();};
+      linkS.innerHTML='<i class="fas fa-shield-halved"></i> Pay with <span id="payMethodLabel">Safepay</span>';
+    }
+    var sf=typeof HOC_safepayPaidSession==='function'?HOC_safepayPaidSession():null;
+    var inpS=document.getElementById('payAccountInput');
+    if(inpS){inpS.placeholder='Filled after Safepay checkout';if(sf&&sf.tracker)inpS.value=sf.tracker;}
   }
   else if(method==='Insurance'){onlineFields.style.display='block';if(label)label.textContent='Insurance Policy Number';document.getElementById('payAccountInput').placeholder='Policy ID';}
   else if(method==='BankTransfer'){onlineFields.style.display='block';if(label)label.textContent='Transaction Reference Number';document.getElementById('payAccountInput').placeholder='TXN-XXXXXXXX';}
@@ -1237,7 +1266,8 @@ function confirmBooking(){
   if(needsAddr&&!ad){document.getElementById('addrGroup').classList.add('error');ok=false;}else document.getElementById('addrGroup').classList.remove('error');
   if(!ok){showToast('Please fill all required fields','err');return;}
   if(selectedPayment==='Card'&&!hocPaymentIsPaid()){showToast('Complete Stripe payment first (Pay with Stripe)','err');return;}
-  if(selectedPayment!=='Cash'&&selectedPayment!=='Card'&&!hocPaymentIsPaid()){showToast('Enter transaction / reference ID after payment','err');return;}
+  if(selectedPayment==='Safepay'&&!hocPaymentIsPaid()){showToast('Complete Safepay payment first (Pay with Safepay)','err');return;}
+  if(selectedPayment!=='Cash'&&selectedPayment!=='Card'&&selectedPayment!=='Safepay'&&!hocPaymentIsPaid()){showToast('Enter transaction / reference ID after payment','err');return;}
   if(typeof hocValidateFutureDate==='function'){var dv=hocValidateFutureDate(dt);if(!dv.ok){document.getElementById('dateGroup').classList.add('error');showToast(dv.msg,'err');return;}}
   var reasonCheck=validateReasonForService(selectedService,rs);
   if(!reasonCheck.ok){
@@ -1304,6 +1334,11 @@ try { renderServices(); } catch(e) { console.warn('renderServices error:', e); }
 if(typeof HOC_captureStripeReturn==='function'){
   var _hocStripePaid=HOC_captureStripeReturn();
   if(_hocStripePaid){selectPayment('Card');showToast('Stripe payment received — tap Confirm Booking','success');}
+}
+if(typeof HOC_captureSafepayReturn==='function'){
+  HOC_captureSafepayReturn().then(function(row){
+    if(row){selectPayment('Safepay');showToast('Safepay payment received — tap Confirm Booking','success');}
+  });
 }
 (function(){
   var ri=document.getElementById('reasonInput');

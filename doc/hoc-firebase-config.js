@@ -14,3 +14,5 @@ window.HOC_FIREBASE_CONFIG = {
 
 /** Stripe — set STRIPE_SECRET_KEY in Vercel env; optional publishable key for Elements later */
 window.HOC_STRIPE_PUBLISHABLE_KEY = "";
+
+/** Safepay (PK) — Vercel env: SAFEPAY_API_KEY, SAFEPAY_SECRET_KEY, SAFEPAY_ENV=sandbox|production */

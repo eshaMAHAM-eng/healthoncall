@@ -226,17 +226,19 @@
     _wireBell: function (btn, st) {
       if (!btn || btn.getAttribute('data-hoc-bell')) return;
       btn.setAttribute('data-hoc-bell', '1');
+      btn.setAttribute('type', btn.getAttribute('type') || 'button');
       btn.classList.add('hoc-bell-wrap');
       var badge = document.createElement('span');
       badge.className = 'hoc-bell-badge';
       badge.textContent = '0';
       btn.appendChild(badge);
       st.bells.push(btn);
+      var self = this;
       btn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        this._togglePanel();
-      }.bind(this));
+        self._togglePanel(btn);
+      });
     },
 
     _ensurePanel: function () {
@@ -250,13 +252,19 @@
       var self = this;
       document.getElementById('hocBellMarkAll').onclick = function () { self.markAllRead(); };
       document.getElementById('hocBellClose').onclick = function () { self._closePanel(); };
+      if (!global._hocBellEscBound) {
+        global._hocBellEscBound = true;
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') self._closePanel();
+        });
+      }
     },
 
-    _togglePanel: function () {
+    _togglePanel: function (anchorBtn) {
       var p = document.getElementById(PANEL_ID);
       if (!p) return;
       if (p.classList.contains('open')) { this._closePanel(); return; }
-      var rect = (this._state.bells[0] || document.body).getBoundingClientRect();
+      var rect = (anchorBtn || (this._state && this._state.bells[0]) || document.body).getBoundingClientRect();
       p.style.top = (rect.bottom + 8) + 'px';
       p.style.right = Math.max(12, window.innerWidth - rect.right) + 'px';
       p.classList.add('open');
@@ -337,16 +345,17 @@
       if (!st || !st.db) return;
       var batch = [];
       st.items.forEach(function (it) {
-        if (!it.read) {
+        if (!it.read && it.type !== 'chat') {
           it.read = true;
           batch.push(st.db.collection('Notifications').doc(it.id).update({ read: true }));
         }
       });
       this._updateBadge();
       this._renderList();
-      Promise.all(batch).catch(function () {});
-      this._closePanel();
+      Promise.all(batch).catch(function (e) { console.warn('markAllRead', e); });
     },
+
+    closePanel: function () { this._closePanel(); },
 
     markNotifRead: function () { this.markAllRead(); },
 
@@ -379,11 +388,11 @@
         q = st.db.collection('Notifications').where('targetUid', '==', st.uid).limit(80);
       }
       if (q) {
+        var firstLoad = true;
         var unsubN = q.onSnapshot(function (snap) {
-          var first = !st.items.length && !_knownNotifIds[st.role];
           var hadNew = false;
           snap.forEach(function (doc) {
-            if (!_knownNotifIds[doc.id] && !first) hadNew = true;
+            if (!_knownNotifIds[doc.id] && !firstLoad) hadNew = true;
             _knownNotifIds[doc.id] = true;
           });
           st.items = [];
@@ -401,12 +410,41 @@
             var tb = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
             return tb - ta;
           });
-          if (first) _knownNotifIds[st.role] = true;
+          if (firstLoad) _knownNotifIds[st.role + (st.uid || '')] = true;
           else if (hadNew) global.hocPlayNotifSound();
           self._updateBadge();
           if (st.panelOpen) self._renderList();
+          firstLoad = false;
         }, function (e) { console.warn('Notifications listener', e); });
         st.unsub.push(unsubN);
+      }
+
+      if (st.role === 'doctor' && st.profileId) {
+        var unsubDocId = st.db.collection('Notifications')
+          .where('targetRole', '==', 'doctor')
+          .where('targetId', '==', st.profileId)
+          .limit(40)
+          .onSnapshot(function (snap) {
+            var map = {};
+            st.items.forEach(function (it) { map[it.id] = it; });
+            snap.forEach(function (doc) {
+              var d = doc.data();
+              if (d.type === 'chat') return;
+              var isNew = !_knownNotifIds[doc.id];
+              map[doc.id] = { id: doc.id, read: !!d.read, title: d.title, body: d.body, type: d.type, createdAt: d.createdAt };
+              if (isNew && _knownNotifIds[st.role + (st.uid || '')]) global.hocPlayNotifSound();
+              _knownNotifIds[doc.id] = true;
+            });
+            st.items = Object.keys(map).map(function (k) { return map[k]; });
+            st.items.sort(function (a, b) {
+              var ta = a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
+              var tb = b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
+              return tb - ta;
+            });
+            self._updateBadge();
+            if (st.panelOpen) self._renderList();
+          }, function () {});
+        st.unsub.push(unsubDocId);
       }
 
       function hocChatRoomMatchesPatient(id, d, profileId) {
@@ -513,6 +551,12 @@
           snap.forEach(function (doc) {
             var d = doc.data();
             if (typeof global.hocIsLabAppointment === 'function' && !global.hocIsLabAppointment(d)) return;
+            if (st.uid) {
+              var mine = d.assignedLabTechUid === st.uid;
+              var myIds = [st.profileId].filter(Boolean);
+              if (d.assignedLabTechId && myIds.indexOf(d.assignedLabTechId) >= 0) mine = true;
+              if (d.assignedLabTechUid || d.assignedLabTechId) { if (!mine) return; }
+            }
             var id = doc.id;
             var prev = prevLabAppt[id];
             if (prev && prev.status !== 'staff-approved' && d.status === 'staff-approved') {
